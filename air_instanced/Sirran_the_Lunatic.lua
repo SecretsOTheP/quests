@@ -38,7 +38,6 @@ function event_say(e)
 	elseif(e.message:findi("veil") and qglobals[sirranName] == "1") then
 		e.self:Say("The veil is dissolving!  Centuries ago, when Veeshan brought me to this place, she sealed the plane with the Veil.  By you being here, it is evidence that the Veil is lifting.");
 	end
-	end
 end
 
 function event_trade(e)
