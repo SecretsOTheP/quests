@@ -9,7 +9,7 @@ end
 function event_death_complete(e)
 
 	local expansion_flag = eq.get_current_expansion();
-	if(expansion_flag >= 2.0 and math.random(100) > 24) then
+	if(expansion_flag >= 1.0 and math.random(100) > 24) then
 		eq.spawn2(72105,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading());
 	end
 end
