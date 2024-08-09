@@ -137,7 +137,9 @@ function enchant_bars.check_bars_quest_dialogue(self, other, message)
             enchant_bars.check_bar_quest_dialogue(self, other, message, bar_data);
         end
 
-        if(message:findi("enchantments")) then
+        if(message:findi("Hail")) then
+            self:Say("Are you in need of [enchantments]? If so, I may be able to help you.");
+        elseif(message:findi("enchantments")) then
             self:Say("You wish to explore the deeper mysteries of metallurgy and magic? A noble path. The enchantment of metal is a delicate art. I can enchant [silver], [electrum], [gold], [platinum], [velium], [clay], [mithril], [adamantite], [steel], and [brellium]. Which do you seek?");
         end
         
