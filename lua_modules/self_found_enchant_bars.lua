@@ -54,7 +54,7 @@ function enchant_bars._get_bar_data()
             -- gold
             bar_name = "gold",
             component_name = "Gold Bar",
-            required_level = 24,
+            required_level = 20,
             bar_id = 16502,
             reward_id = 16506,
             plat_cost = 25,
@@ -63,7 +63,7 @@ function enchant_bars._get_bar_data()
             -- platinum
             bar_name = "platinum",
             component_name = "Platinum Bar",
-            required_level = 34,
+            required_level = 24,
             bar_id = 16503,
             reward_id = 16507,
             plat_cost = 50,
