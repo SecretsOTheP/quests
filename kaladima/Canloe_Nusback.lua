@@ -2,11 +2,11 @@ function event_say(e)
 	if(e.message:findi("hail")) then
 		e.self:Say("Step forward and speak up, young " .. e.other:GetCleanName() .. "! Kaladim can always use another warrior. Are you [ready to serve Kaladim] or has a yellow streak appeared down your back?");
 	elseif(e.message:findi("ready to serve kaladim")) then
-		e.self:Say("Then serve you shall. Let your training begin on the battlefields of Faydwer. Seek out and destroy all [Crushbone orcs]. Return their belts to me.  I shall also reward you for every two orc legionnaire shoulder pads  returned.  A warrior great enough to slay one legionnaire shall surely have no problem with another.  Go. and let the cleansing of Faydwer begin.");
+		e.self:Say("Then serve you shall. Let your training begin on the battlefields of Faydwer. Seek out and destroy all [Crushbone orcs]. Return their belts to me. I shall also reward you for every two orc legionnaire shoulderpads returned. A warrior great enough to slay one legionnaire shall surely have no problem with another. Go, and let the cleansing of Faydwer begin.");
 	elseif(e.message:findi("crushbone orcs")) then
 		e.self:Say("The army of the Crushbone orcs is deadly indeed. They are great military strategists. It was a legion of them that brought down the great [Trondle Ogrebane]. Speak with Furtog Ogrebane about the Crushbones. He has need of warriors such as you.");
 	elseif(e.message:findi("trondle")) then
-		e.self:Say("Trondle Ogrebane is the legary dwarven warrior who single-handedly exterminated the ogre clan called the [Mudtoes]. He was recently killed in battle. It took an entire legion of Crushbone orcs to bring him down. Furtog is still fuming about that.");
+		e.self:Say("Trondle Ogrebane is the legendary dwarven warrior who single-handedly exterminated the ogre clan called the [Mudtoes]. He was recently killed in battle. It took an entire legion of Crushbone orcs to bring him down. Furtog is still fuming about that.");
 	elseif(e.message:findi("mudtoes")) then
 		e.self:Say("The Mudtoes were a small clan of ogres. They lived somewhere in the Butcherblock Mountains. They had an insatiable appetite for dwarves. They were finally destroyed by the hand of Trondle Ogrebane.");
 	elseif(e.message:findi("irontoe")) then
@@ -14,7 +14,7 @@ function event_say(e)
 	elseif(e.message:findi("tumpy")) then
 		e.self:Say("If you frequent the pubs, you just may run into Tumpy Irontoe. He was once the brave leader of the Irontoe Brigade. Whatever you do, do not mention the Battle of Busted Skull. I am sure that would bring back some bad memories for him.");
 	elseif(e.message:findi("battle of busted skull")) then
-		e.self:Say("The Battle of Busted Skull was fought in the land of the Crushbone orcs.  King Kazon sent the entire Irontoe Brigade to retrieve an ancient artifact from an old dwarven outpost.  The battle was fierce.  At its end, only a handful of Irontoes made it back.  After that, the Irontoe Brigade survivors left Kaladim for good.  All except Tumpy Irontoe.");
+		e.self:Say("The Battle of Busted Skull was fought in the land of the Crushbone orcs. King Kazon sent the entire Irontoe Brigade to retrieve an ancient artifact from an old dwarven outpost. The battle was fierce. At its end, only a handful of Irontoes made it back. After that, the Irontoe Brigade survivors left Kaladim for good. All except Tumpy Irontoe.");
 	end
 end
 
