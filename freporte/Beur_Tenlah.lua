@@ -1,8 +1,8 @@
 function event_say(e)
 	if(e.message:findi("hail")) then
-		e.self:Say("Heya. " .. e.other:GetCleanName() .. "!  I've been on watch duty all night.  Kinda makes a man thirsty. ya know?  Why don't you be a good little scamp and run up to the bar and get me a [dwarven ale]?  That sure would hit the spot right about now.");
+		e.self:Say("Heya, " .. e.other:GetCleanName() .. "! I've been on watch duty all night. Kinda makes a man thirsty, ya know? Why don't you be a good little scamp and run up to the bar and get me a [dwarven ale]? That sure would hit the spot right about now.");
 	elseif(e.message:findi("dwarven ale")) then
-		e.self:Say("Ahhh..  Dwarven ale is the best.  You gotta hand it to those stinky little dirt diggers. they know how to make a good brew.  Now if they could just learn to shower. huh. Harkin? Ha ha ha!");
+		e.self:Say("Ahhh.. Dwarven ale is the best. You gotta hand it to those stinky little dirt diggers, they know how to make a good brew. Now if they could just learn to shower, huh, Harkin? Ha ha ha!");
 	end
 end
 
