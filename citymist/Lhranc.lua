@@ -16,7 +16,7 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	if(e.other:GetFactionValue(e.self) >= -58) then --True Spirit
-		if(item_lib.check_turn_in(e.self, e.trade, {item1 = 14367, item2 = 14368, item3 = 14369, item4 = 14370})) then --Corrupted Ghoulbane, Heart of the Innocent, Head of the Valiant, Will of Innoruuk
+		if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 14367, item2 = 14368, item3 = 14369, item4 = 14370})) then --Corrupted Ghoulbane, Heart of the Innocent, Head of the Valiant, Will of Innoruuk
 			e.self:Say("Ahh, at last I can free myself of this prison! Centuries have passed since I enjoyed the fruits of mortality.' He hurls the components above his head where they remain suspended in midair. They hover in place while he chants the words of an ancient spell. As he speaks, the items begin to rotate around his head, slowly at first, then faster as the chanting grows louder, until it spins in a blur. Soon, the room is filled with a deafening shriek that pierces you to the core.");
 			e.other:Faction(e.self,404, 10); --True Spirit
 			e.other:QuestReward(e.self,0,0,0,0,14384); --Lhranc's Token

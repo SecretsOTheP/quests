@@ -15,7 +15,7 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 14384})) then
+	if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 14384})) then
 			e.self:Say("Very good, I will go deliver this right away.");
 			e.other:Faction(e.self,404, -53); --True Spirit
 			e.other:QuestReward(e.self,0,0,0,0,14383);
