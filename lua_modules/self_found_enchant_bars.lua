@@ -42,7 +42,7 @@ function enchant_bars._get_bar_data()
             component_name = "Silver Bar",
             bar_id = 16500,
             reward_id = 16504,
-            plat_cost = 5,
+            plat_cost = 1,
             required_level = 8
         },
         {
@@ -52,7 +52,7 @@ function enchant_bars._get_bar_data()
             required_level = 16,
             bar_id = 16501,
             reward_id = 16505,
-            plat_cost = 10,
+            plat_cost = 1,
         },
         {
             -- gold
@@ -61,7 +61,7 @@ function enchant_bars._get_bar_data()
             required_level = 20,
             bar_id = 16502,
             reward_id = 16506,
-            plat_cost = 25,
+            plat_cost = 1,
         },
         {
             -- platinum
@@ -70,7 +70,7 @@ function enchant_bars._get_bar_data()
             required_level = 24,
             bar_id = 16503,
             reward_id = 16507,
-            plat_cost = 50,
+            plat_cost = 1,
         },
         {
             -- velium
@@ -79,7 +79,7 @@ function enchant_bars._get_bar_data()
             required_level = 44,
             bar_id = 22098,
             reward_id = 22099,
-            plat_cost = 125,
+            plat_cost = 1,
         },
         {
             -- clay
@@ -88,7 +88,7 @@ function enchant_bars._get_bar_data()
             required_level = 8,
             bar_id = 16902,
             reward_id = 16896,
-            plat_cost = 5,
+            plat_cost = 1,
         },
         {
             -- mithril
@@ -97,7 +97,7 @@ function enchant_bars._get_bar_data()
             required_level = 20,
             bar_id = 10476,
             reward_id = 10455,
-            plat_cost = 50,
+            plat_cost = 1,
         },
         {
             -- adamantite
@@ -106,7 +106,7 @@ function enchant_bars._get_bar_data()
             required_level = 20,
             bar_id = 10475,
             reward_id = 10449,
-            plat_cost = 60,
+            plat_cost = 1,
         },
         {
             -- steel
@@ -115,7 +115,7 @@ function enchant_bars._get_bar_data()
             required_level = 20,
             bar_id = 10469,
             reward_id = 10440,
-            plat_cost = 30,
+            plat_cost = 1,
         },
         {
             -- brellium
@@ -124,7 +124,7 @@ function enchant_bars._get_bar_data()
             required_level = 20,
             bar_id = 10474,
             reward_id = 10434,
-            plat_cost = 30,
+            plat_cost = 1,
         },
         {
             -- Vial of Viscous Mana
@@ -133,7 +133,7 @@ function enchant_bars._get_bar_data()
             required_level = 8,
             bar_id = 10024,
             reward_id = 10250,
-            plat_cost = 10,
+            plat_cost = 2,
         },
         {
             -- Vial of Cloudy Mana
@@ -142,7 +142,7 @@ function enchant_bars._get_bar_data()
             required_level = 12,
             bar_id = 10028,
             reward_id = 10251,
-            plat_cost = 20,
+            plat_cost = 2,
         },
         {
             -- Vial of Clear Mana
@@ -151,7 +151,7 @@ function enchant_bars._get_bar_data()
             required_level = 16,
             bar_id = 10029,
             reward_id = 10252,
-            plat_cost = 30,
+            plat_cost = 2,
         },
         {
             -- Vial of Distilled Mana
@@ -160,7 +160,7 @@ function enchant_bars._get_bar_data()
             required_level = 20,
             bar_id = 10034,
             reward_id = 10253,
-            plat_cost = 300,
+            plat_cost = 107, -- +1 Sapphire (105pp), Poison Vial (1.5p), Tip
         },
         {
             -- Vial of Purified Mana
@@ -169,7 +169,7 @@ function enchant_bars._get_bar_data()
             required_level = 24,
             bar_id = 10035,
             reward_id = 10254,
-            plat_cost = 700,
+            plat_cost = 400, -- +3x Rubies (394pp), Poison Vial (1.5pp), Tip
         },
     };
 end
