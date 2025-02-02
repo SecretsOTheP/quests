@@ -14,7 +14,7 @@ function event_say(e)
 end
 
 function event_timer(e)
-	eq.depop();
+	eq.depop_with_timer();
 end
 
 function event_trade(e)
