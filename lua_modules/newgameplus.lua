@@ -446,12 +446,13 @@ function ng.HandleReborn(e)
 	local has_input, is_complete = ng.ValidateInput(e, data, true);
 
 	if (not has_input) then
-		e.self:Say("To be [reborn] is to shed the weight of your past trials and embrace a new beginning. Through the path of Discord, you may start anew, carrying forward the wisdom of your journey. Fear not, your hard-won items and treasured equipment shall remain with you, symbols of your strength and perseverance. Those who walk this road will earn the title 'the Reborn' - a badge of both your sacrifice and your triumph. Speak to me again and declare your [reborn] [race], [class], [gender], [deity], [home city], and [attribute points].");
+		e.self:Say("To be [reborn] is to shed the weight of your past trials and embrace a new beginning. Through the path of Discord, you may start anew, carrying forward the wisdom of your journey. Fear not, your hard-won items and treasured equipment shall remain with you, symbols of your strength and perseverance. Those who walk this road, and are of the 60th season, will earn the title 'the Reborn' - a badge of both your sacrifice and your triumph. Speak to me again and declare your [reborn] [race], [class], [gender], [deity], [home city], and [attribute points].");
 		e.other:Message(15, "Your level will be reset back to level 10, along with your faction and location. Your spells, AAs, and skill ranks will remain intact.");
 		if (e.other:GetLevel() > 59) then
 			e.other:Message(15, "Your surname will be changed to a Norrathian numeral indicating how many times you have been reborn. It will be possible to change the surname's style in the future.");
 		else
-			e.other:Message(13, "Your surname will be NOT changed as a result of this process.");
+			e.other:Message(13, "Your surname will NOT be changed as a result of this process.");
+			e.other:Message(18, "You are currently level " .. e.other:GetLevel() .. ". You will not get credit, and thus be ineligible for a title (i.e. 'the Reborn') or an increment to a numeral in your surname if you perform this action now.  You require level 60 to get credit or award for this action.");
 		end
 		ng.PrintModes(e);
 		return;
