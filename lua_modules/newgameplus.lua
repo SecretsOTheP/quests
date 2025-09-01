@@ -119,8 +119,8 @@ function ng.FindRace(message)
 		return 12;
 	elseif (message:findi("iksar")) then
 		return 128;
-	--elseif (message:findi("vah shir") or message:findi("vahshir")) then
-		--return 130;
+	elseif (message:findi("vah shir") or message:findi("vahshir")) then
+		return 130;
 	end
 	return -1;
 end
@@ -201,8 +201,8 @@ function ng.FindCityChoice(message)
 		return 11;
 	elseif (message:findi("cabilis")) then
 		return 12;
-	--elseif (message:findi("sharvahl") or message:findi("shar vahl")) then
-		--return 13;
+	elseif (message:findi("sharvahl") or message:findi("shar vahl")) then
+		return 13;
 	end
 	return -1;
 end
