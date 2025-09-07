@@ -161,7 +161,7 @@ function ng.FindDeity(message)
 		return 210;
 	elseif (message:findi("rallos")) then
 		return 211;
-	elseif (message:findi("rodect")) then
+	elseif (message:findi("rodcet")) then
 		return 212;
 	elseif (message:findi("solusek")) then
 		return 213;
