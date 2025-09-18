@@ -25,6 +25,11 @@ function event_trade(e)
 		e.self:Say("Thank you, " .. e.other:GetCleanName() .. ". I did not think you would track down Najena and slay her. I think that I am going to return to my old life in Neriak. I am sick of the way Kazen has been treating me. He never seems to teach me anything worthwhile. Don't forget to give his lapdog that symbol with the reagents. I'm sure he will give you a new one.");
 		e.other:QuestReward(e.self,0,0,0,0,20649,500);
 	end
+	if (e.other:IsSelfFound() >= 1 or e.other:IsSoloOnly() >= 1) then
+		if(item_lib.check_turn_in(e.self, e.trade, {item1 = 11819, item2 = 11820, platinum = 50})) then -- Words of Refuge, Word of Absorption
+			e.other:QuestReward(e.self,0,0,0,0,15199,0); -- Spell: Harmshield
+		end
+	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
 

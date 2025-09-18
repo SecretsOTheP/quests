@@ -1,3 +1,9 @@
+function event_say(e)
+	if(e.message:findi("hail")) then
+		e.self:Say("Greetings, " .. e.other:GetCleanName() .. ". Thank you for breaking Corbin free!");
+	end
+end
+
 function event_trade(e)
 	local item_lib = require("items");
 	
@@ -8,7 +14,6 @@ function event_trade(e)
 		e.other:Faction(e.self,448,-1); -- Kromzek
 		e.other:Faction(e.self,419,-7); -- Kromrif
 		e.other:QuestReward(e.self,0,0,0,0,1047,5000);
-		eq.unique_spawn(116036,0,0,-3188,-574,158,62); -- NPC: Dobbin_Crossaxe
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)

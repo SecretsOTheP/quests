@@ -2,7 +2,7 @@ function event_say(e)
 	local enchant_bars_lib = require("self_found_enchant_bars");
 	-- enchant_bars_lib.check_bars_quest_dialogue(e.self, e.other, e.message);
 
-	local is_self_found = e.other:IsSelfFound() == 1 or e.other:IsSoloOnly() == 1;
+	local is_self_found = e.other:IsSelfFound() >= 1 or e.other:IsSoloOnly() == 1;
     if(is_self_found) then
 
         local bar_data_list = enchant_bars_lib._get_bar_data();

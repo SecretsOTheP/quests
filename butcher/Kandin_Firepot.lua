@@ -10,7 +10,6 @@ function event_say(e)
 		end
 	end
 end
-
 function event_trade(e)
 	local item_lib = require("items");
 	

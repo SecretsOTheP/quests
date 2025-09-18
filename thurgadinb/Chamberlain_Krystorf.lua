@@ -21,9 +21,8 @@ function event_trade(e)
 		if(not e.other:HasItem(17651)) then
 			e.other:QuestReward(e.self,{itemid = 17651}); -- Item: Empty Coldain Issue Kit
 		end
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(129003) == false and eq.get_entity_list():IsMobSpawnedByNpcTypeID(129101) == false) then
-			eq.spawn_condition("thurgadinb",3,0);
-			eq.spawn_condition("thurgadinb",3,1);
+		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(129003) == false) then
+			eq.unique_spawn(129003,0,0,5, 769, 62, 130); -- NPC: Dain Frostreaver IV
 		end
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 8895}, 0)) then
 		e.self:Say("As I stated previously, you should show this to the Dain.");

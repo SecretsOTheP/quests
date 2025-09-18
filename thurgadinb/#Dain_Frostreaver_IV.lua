@@ -29,9 +29,9 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 8886}, 0)) then -- Coldain Standard Issue Kit
+	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 8886}, 0) or item_lib.check_turn_in(e.self, e.trade, {item1 = 8898}, 0)) then -- Coldain Standard Issue Kit, Approved Issue Kit
 		e.self:Say("Excellent work " .. e.other:GetCleanName() .. ". If I didn't know I would assume this was made by our most skilled artisans.  You must hurry, General Bragmur has formed camp in Iceclad. Take the kit to the General, he had to drudge forward without any armor. His [mission] must be a success if we hope to successfully defend Thurgadin against the Giants.");
-		e.other:QuestReward(e.self,{items = {8898,8897}}); -- Expedition Orders, Approved Issue Kit
+		e.other:QuestReward(e.self,{items = {8898,8897}}); -- Approved Issue Kit, Expedition Orders
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 1199}, 0) or item_lib.check_turn_in(e.self, e.trade, {item1 = 8895}, 0)) then
 		e.self:Say("Ah " .. e.other:GetCleanName() .. ". I was hoping to see you. We require your skilled hand. The Armory is overtaxed preparing armor for the war we are preparing to wage on the Kromzek. We need you to help by creating some Field Plate for a mission that is near to execution. Go see Loremaster Solstrin in the Hall of Ancestors, give him these orders. He holds the lore recorded on how to make the field plate. Return to me when you have completed a Standard Issue Kit.");
 		e.other:QuestReward(e.self,{items = {8895,8896}}); -- Royal Coldain Orders, Runed Coldain Prayer Shawl (mark 2)

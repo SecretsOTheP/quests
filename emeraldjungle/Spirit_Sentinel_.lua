@@ -26,10 +26,10 @@ function event_trade(e)
 		e.self:Say("So, the truth is found!  Nak mourned over the loss of his child instead of relishing the blessing of his god, Cazic-Thule. His wife and the High Scale then abandoned him in disgust, but even that was an aftereffect of what caused the king to turn his back on his faith. The child is the key!  If we put the child to rest, Nak may repent of what he has done and the mantle may be lifted. The most difficult task is now at hand. Find the child, then take proof of her passing to Nak. I can feel the mantle's foundation crumbling!  Now, go!");
 		e.other:Faction(e.self,404,1000); -- Faction: True Spirit
 		e.other:QuestReward(e.self,0,0,0,0,0,75000);
-	elseif(e.other:GetFactionValue(e.self) >= 1900 and item_lib.check_turn_in(e.self, e.trade, {item1 = 1674})) then --Part of Shaman Epic 1.0
+	elseif(e.other:GetLevel() >= 46 and e.other:GetFactionValue(e.self) >= 1900 and item_lib.check_turn_in(e.self, e.trade, {item1 = 1674})) then --Part of Shaman Epic 1.0
 		e.self:Emote("What is this?  The scale of Rak'Ashiir's father?  Then Rak has repented his mistake?  But why is the mantle still in place?  If Rak has repented, then the mantle should have dissolved since he was the one who initiated its construction.  But is its initiation the key?  How could we have been so blind?  Kirn said Rak'Ashiir had the blood of his people on his hands but that is false. Rak merely pointed to a path that would lead them to destruction.  It was the people who chose to follow. Now all [is lost].");
 		e.other:Faction(e.self,404,-2000); -- Faction: True Spirit
-		e.other:QuestReward(e.self,0,0,0,0,10651,75000);
+		e.other:QuestReward(e.self,0,0,0,0,10651,75000); -- Spear of Fate
 	end
 	local returned = item_lib.return_items(e.self, e.other, e.trade, false)
 	if ( returned ) then

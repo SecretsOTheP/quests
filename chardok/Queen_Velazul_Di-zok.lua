@@ -16,7 +16,7 @@ function event_trade(e)
 	-- 6477 spirit wracked urn
 	-- 6478 undead dragon sinew
 	-- 5727 regal band of bathezid
-	if(e.other:GetFaction(e.self) <= 1 and item_lib.check_turn_in(e.self, e.trade, {item1 = 6477, item2 = 6478, item3 = 5727})) then
+	if(e.other:GetFaction(e.self) <= 1 and item_lib.check_turn_in_nomq(e.self, e.trade, {item1 = 6477, item2 = 6478, item3 = 5727})) then
 		e.self:Say("Amazing! You have returned the trophies I asked for, against impossible odds. Here is your reward, worthy minion, may it serve you well.");
 		e.other:Faction(e.self,451,3); -- Faction: Brood of Di`Zok
 		e.other:Faction(e.self,307,3)

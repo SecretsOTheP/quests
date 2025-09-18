@@ -65,10 +65,10 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	local text1 = "Excuse me, " .. e.other:GetCleanName() .. ", aren't you forgetting something?";	
-	
+
 ---------------------------
 --  Ring 1 Reward        --
----------------------------	
+---------------------------
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 30135}, 0)) then
 		e.self:Say("Ahh, that'll do fine. Take this, it is but a trinket for now, but continue to serve the Coldain and it will grow in power. I must get some rest now, for I have been told my [nephew] has disappeared again and I will need to track him down tomorrow.");
 		-- Faction confirmed live
@@ -79,7 +79,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30131,1000);
 ---------------------------
 --  Ring 2 Reward        --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 30131,item2 = 30267},1,text1)) then
 		e.self:Say("Well done friend! My nephew is safe at home and his thirst for adventure is quenched for now. The beast will claim no more of our people. I couldn't have handled it better myself. Now I can get back to the business of [hunting].");
 		-- Faction confirmed live
@@ -90,7 +90,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30133,2000);
 ---------------------------
 --  Ring 3 Reward        --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 30133,item2 = 30137},1,text1)) then
 		e.self:Say("Hrmm, not quite the work of a Coldain. Barely functional, in fact. I'll be needing to touch this up a bit. Fetch me a Coldain [smithing hammer] and I'll be sure to tell my associates in Thurgadin of your deeds.");
 		-- Faction confirmed live
@@ -101,7 +101,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30132,3000);
 ---------------------------
 --  Ring 4 Reward        --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 30140,item2 = 30132},1,text1)) then
 		e.self:Say("Ahh, there we go now, that's more like it. It would be time to return to the hunt were it not for the [plans] our spies have discovered.");
 		-- Faction confirmed live
@@ -112,7 +112,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30134,4000);
 ---------------------------
 --  Ring 5 Reward        --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 30141,item2 = 30134},1,text1)) then
 		e.self:Say("Without your assistance, we would have lost our camp and our lives. Again, I thank you. Now that you have proven your loyalty to the throne I have a special [favor] to ask of you.");
 		-- Faction confirmed live
@@ -123,7 +123,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30268,5000);
 ---------------------------
 --  Ring 6 Reward        --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 1045,item2 = 18084,item3 = 30268},1,text1)) then
 		e.self:Emote("lowers his head and mutters, 'At least there will be some closure for their families, thanks to you. The Ry`gorr will pay for this with their lives! I will ask you to help us in the invasion of Ry`gorr keep, but first I have a delicate [mission] I was hoping you'd handle.");
 		-- Faction confirmed live
@@ -134,7 +134,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30162,6000);
 ---------------------------
 --  Ring 7 Reward        --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 1047},0)) then
 		e.self:Emote("Thank you, " .. e.other:GetCleanName() .. ", your service to our people has been most helpful. The time has come for our people to make war with the Ry`gorr. They must pay for their transgressions against our people. We are just waiting on you. Prepare yourself for glorious battle and tell me when you are [ready].");
 		-- Faction confirmed live
@@ -145,7 +145,7 @@ function event_trade(e)
 		e.other:QuestReward(e.self,0,0,0,0,30163,7000);
 ---------------------------
 --  Ring 8 Quest         --
----------------------------			
+---------------------------
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 30163},0)) then
 		e.self:Emote("Give this to Gloradin and return to me immediately, it is time. May Brell be with us!");
 		-- Faction confirmed live
@@ -154,6 +154,18 @@ function event_trade(e)
 		e.other:Faction(e.self,448,-1); -- Kromzek
 		e.other:Faction(e.self,419,-7); -- Kromrif
 		e.other:QuestReward(e.self,0,0,0,0,1093,3500);
+---------------------------
+--  Ring 8 Reward        --
+---------------------------
+	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 1092}, 0)) then
+		e.self:Say("Good work friend! The Dain will hear of this right away. We couldn't have defeated the Ry'gorr  without your help. Take this ring as proof that you have served the Coldain well. You may wish to show it to the Seneschal should you ever stop in our fine city. Farewell, " .. e.other:GetCleanName() .. ", it has been my pleasure knowing you.");
+		-- Faction confirmed live
+		e.other:Faction(e.self,406,35); -- Coldain
+		e.other:Faction(e.self,405,8); -- Dain Frostreaver IV
+		e.other:Faction(e.self,448,-3); -- Kromzek
+		e.other:Faction(e.self,419,-17); -- Kromrif
+		e.other:QuestReward(e.self,0,0,0,0,30164,8000);
 	end
-	item_lib.return_items(e.self, e.other, e.trade)
+	item_lib.return_items(e.self, e.other, e.trade);
 end
+

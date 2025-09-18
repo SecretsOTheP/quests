@@ -9,7 +9,6 @@ function event_trade(e)
 		e.other:Faction(e.self,448,-3); -- Kromzek
 		e.other:Faction(e.self,419,-17); -- Kromrif
 		e.other:QuestReward(e.self,0,0,0,0,30164,8000);
-		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end

@@ -59,6 +59,10 @@ local GRID = {
 };
 
 function ControllerSignal(e)
+	
+	sleeper:Shout("RRRRRAAAAAAAAAAAAAAAH!!!!!! What have you done, Druzzil?! Once I regain my strength, I shall slay you and the Gods you cherish in every reality! I swear it!");
+	return;
+
 	if ( e.signal == 1 ) then
 		local sleeper = eq.get_entity_list():GetNPCByNPCTypeID(SLEEPER_TYPE);
 		if ( not sleeper.valid ) then

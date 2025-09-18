@@ -1,7 +1,7 @@
 local module = {}
 
 function module.check_dialog(self, other, message)
-    local is_self_found = other:IsSelfFound() == 1 or other:IsSoloOnly() == 1;
+    local is_self_found = other:IsSelfFound() >= 1 or other:IsSoloOnly() == 1;
     local is_warrior = other:GetClass() == 1;
     if(is_self_found) then
         if(message:findi("rebreather")) then
@@ -19,7 +19,7 @@ function module.check_dialog(self, other, message)
 end
 
 function module.check_turn_in(item_lib, self, other, trade)
-    local is_self_found = other:IsSelfFound() == 1 or other:IsSoloOnly() == 1;
+    local is_self_found = other:IsSelfFound() >= 1 or other:IsSoloOnly() == 1;
     local is_warrior = other:GetClass() == 1;
     if(is_self_found) then
         if (is_warrior and other:GetLevel() >= 46) then

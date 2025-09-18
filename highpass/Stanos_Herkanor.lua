@@ -90,7 +90,7 @@ function event_trade(e)
 		e.other:Faction(e.self,330,5,0); -- Faction: The Freeport Militia
 		e.other:QuestReward(e.self,0,0,0,0,28012,500); -- Combined Parchment
 		eq.depop();
-	elseif(e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 28013,item2 = 7506,item3 = 7505},1,text)) then
+	elseif(e.other:GetLevel() >= 46 and e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 28013,item2 = 7506,item3 = 7505},1,text)) then
 		e.self:Say("Very well done.  I leave now to confront Hanns with this evidence.  Even so, it will not be easy to regain his trust.  That is why I need those daggers, in case all else fails.<chuckle>   Bristlebane grant me luck - I can no longer live like a hunted dog.  In any case, I am grateful for your aid.  Take this wretched blade, I can bear it no longer.    I must warn you, I feel it carries Innoruuk's curse; all who are near it learn the meaning of hate. <chuckle>  Ironic, isn't it?  You went to all that work to redeem yourself for a rapier, yet the true reward came when you redeemed another. <chuckle>.  Good luck, "..e.other:GetName()..", for much as I, you will need it.");
 		e.other:Faction(e.self,332,100,0); -- Faction: Highpass Guards
 		e.other:Faction(e.self,329,15,0); -- Faction: Carson McCabe

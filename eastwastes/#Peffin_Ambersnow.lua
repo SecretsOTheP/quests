@@ -18,3 +18,8 @@ function event_timer(e)
 	eq.depop_all(116040);
 	eq.depop();
 end
+
+function event_death_complete(e)
+	eq.depop_all(116040);
+	eq.depop_all(116182);
+end

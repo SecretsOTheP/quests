@@ -8,6 +8,7 @@ function event_trade(e)
 	local item_lib = require("items");
 	
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 8898}, 0)) then
+		e.other:QuestReward(e.self,0,0,0,0,8898,0); -- return the Approved Issue Kit (hand in at end to Avatar with Shawl)
 		e.self:Emote("begins to put the armor on, 'Finally the Dain has gotten word of my arrival here.  I await his final orders before proceeding.'");
 		eq.spawn2(110017,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading());
 		eq.depop_with_timer();

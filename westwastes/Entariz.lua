@@ -35,7 +35,7 @@ function event_trade(e)
 		e.other:Faction(e.self,436,1);  -- Yelinak
 		e.other:Faction(e.self,448,-2); -- Kromzek
 		e.other:QuestReward(e.self,{items = {1908,1893},exp = 1000}); -- Jualicn's Token, Rune of Eradication
-		eq.depop_with_timer();
+		--eq.depop_with_timer();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end

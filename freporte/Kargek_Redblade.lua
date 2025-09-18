@@ -14,7 +14,7 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 20684,item2 = 20679})) then -- Tenal's Note to Kargek & Spiroc Wingblade
+	if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 20684,item2 = 20679})) then -- Tenal's Note to Kargek & Spiroc Wingblade
 		e.self:Say("What is this? A note from my brother? Thank you for the gift as well.' Kargek reads the note and hands you the huge sword hilt. Your mind is filled with the sound of battle and a voice. 'Place the ancient sword blade, ancient blade, finely crafted dragon head hilt and the jeweled dragon head hilt into the scabbard to receive your rewards. If you think you are worthy, place your rewards into the scabbard and see what havoc you can unleash on the world. Kargek addresses you as you turn to leave. 'One more thing. Gartrog over there has told me of a great discovery. Seems there are all sorts of stones being found in the recently discovered lost dungeons scattered around Antonica. The Wayfarer's Brotherhood has found a way to make items even more powerful by using the stones with existing items.");
 		e.other:QuestReward(e.self,0,0,0,0,17859,1000000); -- Red Scabbard
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 20674})) then -- Tiny Lute

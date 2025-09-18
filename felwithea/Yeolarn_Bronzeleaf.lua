@@ -37,52 +37,52 @@ function event_trade(e)
 	local item_lib = require("items");
 	local text1 = "I requested four Ghast hearts!";
 
-	if(e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 13073,item2 = 13073,item3 = 13073,item4 = 13073})) then --Bone Chips x 4
-		if(eq.is_the_ruins_of_kunark_enabled()) then
-			e.self:Say("Praise Tunare! I knew you would be victorious. I reward you with this spell, and pray that it will help you in your fight against the unholy forces of Innoruuk. When you are ready you will make a fine [Initiate of Tunare].");
-			e.other:Faction(e.self,226,2,0);  --Clerics of Tunare
-			e.other:Faction(e.self,279,2,0); --King Tearis Thex
-			e.other:Faction(e.self,5002,1,0);   --Anti-mage
-			e.other:QuestReward(e.self,0,0,0,0,15014,4400); --Spell: Strike , Verified experience reward live data
-		else
-			e.self:Say("Praise Tunare! I knew you would be victorious. I reward you with this spell, and pray that it will help you in your fight against the unholy forces of Innoruuk."); --made up dialogue
-			e.other:Faction(e.self,226,2,0);  --Clerics of Tunare
-			e.other:Faction(e.self,279,2,0); --King Tearis Thex
-			e.other:Faction(e.self,5002,1,0);   --Anti-mage
-			e.other:QuestReward(e.self,0,0,0,0,15014,4400); --Spell: Strike , Verified experience reward live data
-		end
-	elseif(e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 10199,item2 = 10199,item3 = 10199,item4 = 10199},1,text1)) then --Putrescent Heart x 4
-		e.self:Say("Praise Tunare!! You have done well young Initiate. Here the symbol of your station within our faith. Return to me when you are ready to [slay the necromancer] that has been creating the undead.");
-		e.other:Faction(e.self,226,15,0);  --Clerics of Tunare
-		e.other:Faction(e.self,279,15,0); --King Tearis Thex
-		e.other:Faction(e.self,5002,11,0);   --Anti-mage
-		e.other:QuestReward(e.self,0,0,0,0,1570,3250); --Initiate Symbol of Tunare
-	elseif(e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 1570,item2 = 12514,item3 = 19065,item4 = 12513})) then --Initiate Symbol of Tunare, Larik Z`Vole's Head, Teir`Dal Couriers Head, Teir`Dal Crate
-		if(eq.is_the_ruins_of_kunark_enabled()) then
-			e.self:Say("Praise Tunare! The Mother smiles on you this day Disciple " .. e.other:GetCleanName() .. "! I present you with the symbol of your new station among the Priests of Tunare. Return to me when you are ready to become a [Warden of Tunare]?");
+	if(e.other:GetFactionValue(e.self) >= 0) then
+		local bone_chips_4 = item_lib.count_handed_item(e.self, e.trade, {13073}, 4);
+		if(bone_chips_4 > 0) then --Bone Chips x 4
+			repeat
+				if(eq.is_the_ruins_of_kunark_enabled()) then
+					e.self:Say("Praise Tunare! I knew you would be victorious. I reward you with this spell, and pray that it will help you in your fight against the unholy forces of Innoruuk. When you are ready you will make a fine [Initiate of Tunare].");
+				else
+					e.self:Say("Praise Tunare! I knew you would be victorious. I reward you with this spell, and pray that it will help you in your fight against the unholy forces of Innoruuk."); --made up dialogue
+				end
+				e.other:Faction(e.self,226,2,0);  --Clerics of Tunare
+				e.other:Faction(e.self,279,2,0); --King Tearis Thex
+				e.other:Faction(e.self,5002,1,0);   --Anti-mage
+				e.other:QuestReward(e.self,0,0,0,0,15014,4400); --Spell: Strike , Verified experience reward live data	
+				bone_chips_4 = bone_chips_4 - 1
+			until bone_chips_4 <= 0
+		elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 10199,item2 = 10199,item3 = 10199,item4 = 10199},1,text1)) then --Putrescent Heart x 4
+			e.self:Say("Praise Tunare!! You have done well young Initiate. Here the symbol of your station within our faith. Return to me when you are ready to [slay the necromancer] that has been creating the undead.");
+			e.other:Faction(e.self,226,15,0);  --Clerics of Tunare
+			e.other:Faction(e.self,279,15,0); --King Tearis Thex
+			e.other:Faction(e.self,5002,11,0);   --Anti-mage
+			e.other:QuestReward(e.self,0,0,0,0,1570,3250); --Initiate Symbol of Tunare
+		elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 1570,item2 = 12514,item3 = 19065,item4 = 12513})) then --Initiate Symbol of Tunare, Larik Z`Vole's Head, Teir`Dal Couriers Head, Teir`Dal Crate
+			if(eq.is_the_ruins_of_kunark_enabled()) then
+				e.self:Say("Praise Tunare! The Mother smiles on you this day Disciple " .. e.other:GetCleanName() .. "! I present you with the symbol of your new station among the Priests of Tunare. Return to me when you are ready to become a [Warden of Tunare]?");
+			else
+				e.self:Say("Praise Tunare! The Mother smiles on you this day Disciple " .. e.other:GetCleanName() .. "! I present you with the symbol of your new station among the Priests of Tunare. Return to me at a later time and we can discuss what to do next."); -- made up text
+			end
 			e.other:Faction(e.self,226,30,0);  --Clerics of Tunare
 			e.other:Faction(e.self,279,30,0); --King Tearis Thex
 			e.other:Faction(e.self,5002,22,0);   --Anti-mage
 			e.other:QuestReward(e.self,0,0,0,0,1571,4000); -- Disciple Symbol of Tunare
+		elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 1571,item2 = 1599})) then --Disciple Symbol of Tunare, Powder of Unanimation
+			e.self:Say("Praise Tunare!! I will have our sorcerers examine this power immediately to see if we can reproduce it in quantities enough to eliminate the undead plague. I award you the rank of Warden of Tunare, the All Mother smiles upon you, " .. e.other:GetCleanName() .. "!");
+			e.other:Faction(e.self,226,40,0);  --Clerics of Tunare
+			e.other:Faction(e.self,279,40,0); --King Tearis Thex
+			e.other:Faction(e.self,5002,30,0);   --Anti-mage
+			e.other:QuestReward(e.self,0,0,0,0,1572,5000); -- Warden Symbol of Tunare
+		elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 18780})) then --Tattered Note
+			e.self:Say("Welcome, friend, to the Clerics of Tunare. I am Yeolarn Bronzeleaf, head of the guild and devout follower of Tunare. Here is your guild tunic - it will help to protect you against this world's evils.");
+			e.other:Faction(e.self,226,100,0);  --Clerics of Tunare
+			e.other:Faction(e.self,279,100,0); --King Tearis Thex
+			e.other:Faction(e.self,5002,75,0);   --Anti-mage
+			e.other:QuestReward(e.self,0,0,0,0,13590,20); --Faded Gold Training Tunic*
 		else
-			e.self:Say("Praise Tunare! The Mother smiles on you this day Disciple " .. e.other:GetCleanName() .. "! I present you with the symbol of your new station among the Priests of Tunare. Return to me at a later time and we can discuss what to do next."); -- made up text
-			e.other:Faction(e.self,226,30,0);  --Clerics of Tunare
-			e.other:Faction(e.self,279,30,0); --King Tearis Thex
-			e.other:Faction(e.self,5002,22,0);   --Anti-mage
-			e.other:QuestReward(e.self,0,0,0,0,1571,4000); -- Disciple Symbol of Tunare		
+			e.self:Say("Your faith has not grown strong enough to undertake that task young one.");
 		end
-	elseif(e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 1571,item2 = 1599})) then --Disciple Symbol of Tunare, Powder of Unanimation
-		e.self:Say("Praise Tunare!! I will have our sorcerers examine this power immediately to see if we can reproduce it in quantities enough to eliminate the undead plague. I award you the rank of Warden of Tunare, the All Mother smiles upon you, " .. e.other:GetCleanName() .. "!");
-		e.other:Faction(e.self,226,40,0);  --Clerics of Tunare
-		e.other:Faction(e.self,279,40,0); --King Tearis Thex
-		e.other:Faction(e.self,5002,30,0);   --Anti-mage
-		e.other:QuestReward(e.self,0,0,0,0,1572,5000); -- Warden Symbol of Tunare
-	elseif(e.other:GetFactionValue(e.self) >= 0 and item_lib.check_turn_in(e.self, e.trade, {item1 = 18780})) then --Tattered Note
-		e.self:Say("Welcome, friend, to the Clerics of Tunare. I am Yeolarn Bronzeleaf, head of the guild and devout follower of Tunare. Here is your guild tunic - it will help to protect you against this world's evils.");
-		e.other:Faction(e.self,226,100,0);  --Clerics of Tunare
-		e.other:Faction(e.self,279,100,0); --King Tearis Thex
-		e.other:Faction(e.self,5002,75,0);   --Anti-mage
-		e.other:QuestReward(e.self,0,0,0,0,13590,20); --Faded Gold Training Tunic*
 	else
 		e.self:Say("Your faith has not grown strong enough to undertake that task young one.");
 	end

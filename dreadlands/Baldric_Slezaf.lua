@@ -20,7 +20,7 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 20376, item2 = 20383, item3 = 20377, item4 = 20538})) then
+	if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 20376, item2 = 20383, item3 = 20377, item4 = 20538})) then
 		e.self:Emote("looks shocked as you hand him the pages and the mystical lute. 'I will put on a symphony the likes of which the gods have never seen. Thank you so much, " .. e.other:GetCleanName() .. ". Please take this sword as a token of my gratitude.");
 		e.other:QuestReward(e.self,0,0,0,0,20542,350000);
 	end

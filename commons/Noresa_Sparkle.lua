@@ -4,7 +4,7 @@ function event_say(e)
 	elseif(e.message:findi("Kizdean")) then
 		e.self:Say("Sshhh..Please..save me. Get..rid..of..him.");
 	end
-	if(e.other:IsSelfFound() == 1 or e.other:IsSoloOnly() == 1) then
+	if(e.other:IsSelfFound() >= 1 or e.other:IsSoloOnly() == 1) then
 		if(e.message:findi("Hail")) then
 			e.self:Say("You might also call to Glyssa Sonshaw in Freeport if you seek enchantments of silver and gold.");
 		end

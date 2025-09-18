@@ -19,5 +19,8 @@ function event_combat(e)
 end
 
 function event_death_complete(e)
-	eq.delete_global("Avatar");
+	local qglobals = eq.get_qglobals();
+	local avatarName = "Avatar";
+	avatarName = avatarName .. eq.get_zone_guild_id();
+	eq.delete_global(avatarName);
 end

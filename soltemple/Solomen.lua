@@ -14,10 +14,10 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 14340})) then
+	if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 14340})) then
 		e.self:Say("You actually did it! I never would have thought that anyone could have truly followed this path. This is a tribute to your intelligence and patience. Here, take this staff and know that you have made Solusek Ro and all the wizards of the world proud this day.");
 		e.other:Faction(e.self,404, -50,0); -- Truespirit
-		e.other:QuestReward(e.self,0,0,0,0,14341);
+		e.other:QuestReward(e.self,0,0,0,0,14341); -- Staff of the Four
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end

@@ -5,16 +5,16 @@ end
 function TunareTimer(e)
 	if(e.timer == "SpawnTunare") then
 		eq.stop_timer("SpawnTunare");
-		eq.unique_spawn(127001,0,0,-1632,1525,206,0); -- Tunare back in her tree.
+		eq.unique_spawn(127001,0,1,-1632,1525,206,0); -- Tunare back in her tree.
 	end
 end
 
 function TunareSignal(e)
 	if(e.signal == 1) then
-		eq.unique_spawn(127002,0,0,-247,1609,-40,424); -- NPC: #Tunare
+		eq.unique_spawn(127002,0,1,-247,1609,-40,424); -- NPC: #Tunare
 		eq.depop(127001);
 	elseif(e.signal == 2) then
-		eq.unique_spawn(127001,0,0,-1632,1525,206,0); -- reset Tunare back in her tree.
+		eq.unique_spawn(127001,0,1,-1632,1525,206,0); -- reset Tunare back in her tree.
 		eq.depop(127002);
 	elseif(e.signal == 3) then
 		eq.depop_with_timer(); -- set the respawn timer

@@ -196,6 +196,9 @@ function WarSignal(e)
 		eq.set_timer("WarEnd",120000);
 	elseif(e.signal == 4) then
 		eq.set_timer("Reset", 7200000);
+	elseif(e.signal == 5) then
+               eq.stop_timer("StartWave");
+               eq.set_timer("StartWave", 1000);
 	end
 end
 
@@ -405,6 +408,9 @@ function Zrelik2Say(e)
 		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(118048)) then
 			CorbinHelp(e);
 		end
+	elseif(e.message:findi("the kromrif are attacking") and wave < 19) then
+		e.self:Shout("" .. e.other:GetCleanName() .. " has spotted tha' next wave! Charge!");
+                eq.signal(118137, 5);
 	end
 end
 
@@ -857,12 +863,17 @@ function KromrifEliteGuard(e)
 end
 
 function WarLose(e)
-	eq.spawn_condition("thurgadina",1,0);
-	eq.spawn_condition("thurgadina",1,1);
-	eq.spawn_condition("thurgadina",2,1);
-	eq.spawn_condition("thurgadinb",4,0);
-	eq.spawn_condition("thurgadinb",4,1);
-	eq.spawn_condition("thurgadinb",5,1);
+	
+	local instanceID = eq.get_zone_guild_id();
+	
+	if(instanceID == 4294967295) then
+		eq.spawn_condition("thurgadina",1,0);
+		eq.spawn_condition("thurgadina",1,1);
+		eq.spawn_condition("thurgadina",2,1);
+		eq.spawn_condition("thurgadinb",4,0);
+		eq.spawn_condition("thurgadinb",4,1);
+		eq.spawn_condition("thurgadinb",5,1);
+	end
 	eq.signal(118137,2);
 	eq.depop_all(118043); -- Royal_Soldier
 	eq.depop_all(118041); -- Royal_Guard
@@ -1063,22 +1074,27 @@ function CheckSurvivor(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(118055)) then -- check Churn
 		ChurnSurvive = 1;
 		eq.depop(118055);
+		e.self:AddItem(1746, 1, false); -- Crown of Narandi, do not equip
 	end
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(118048)) then -- check Corbin
 		CorbinSurvive = 1;
 		eq.depop(118048);
+		e.self:AddItem(1744, 4, false); -- Earring of the Frozen Skull, 4 charges, do not equip
 	end
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(118057)) then -- check Dobbin
 		DobbinSurvive = 1;
 		eq.depop(118057);
+		e.self:AddItem(1743, 1, false); -- Faceguard of Bentos the Hero, do not equip
 	end
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(118058)) then -- check Garadain
 		GaradainSurvive = 1;
 		eq.depop(118058);
+		e.self:AddItem(1742, 1, false); -- Choker of the Wretched, do not equip
 	end
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(118056)) then -- check Kargin
 		KarginSurvive = 1;
 		eq.depop(118056);
+		e.self:AddItem(1745, 1, false); -- Eye of Narandi, do not equip
 	end
 end
 
@@ -1130,7 +1146,7 @@ function Churn2Trade(e)
 		e.other:Faction(e.self,405,25); -- dain
 		e.other:Faction(e.self,448,-10); -- kzek
 		e.other:Faction(e.self,419,-50); -- krif
-		e.other:QuestReward(e.self,{items = {1741,1746},exp = 5000}); -- Crown of Narandi
+		e.other:QuestReward(e.self,{items = {1741},exp = 5000});
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
@@ -1145,7 +1161,7 @@ function Corbin2Trade(e)
 		e.other:Faction(e.self,405,25); -- dain
 		e.other:Faction(e.self,448,-10); -- kzek
 		e.other:Faction(e.self,419,-50); -- krif
-		e.other:QuestReward(e.self,{items = {1741,1744},exp = 5000}); -- Earring of the Frozen Skull
+		e.other:QuestReward(e.self,{items = {1741},exp = 5000});
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
@@ -1160,7 +1176,7 @@ function Dobbin2Trade(e)
 		e.other:Faction(e.self,405,25); -- dain
 		e.other:Faction(e.self,448,-10); -- kzek
 		e.other:Faction(e.self,419,-50); -- krif
-		e.other:QuestReward(e.self,{items = {1741,1743},exp = 5000}); -- Faceguard of Bentos the Hero.
+		e.other:QuestReward(e.self,{items = {1741},exp = 5000});
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
@@ -1175,7 +1191,7 @@ function Garadain2Trade(e)
 		e.other:Faction(e.self,405,25); -- dain
 		e.other:Faction(e.self,448,-10); -- kzek
 		e.other:Faction(e.self,419,-50); -- krif
-		e.other:QuestReward(e.self,{items = {1741,1742},exp = 5000}); -- Choker of the Wretched
+		e.other:QuestReward(e.self,{items = {1741},exp = 5000});
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
@@ -1190,7 +1206,7 @@ function Kargin2Trade(e)
 		e.other:Faction(e.self,405,25); -- dain
 		e.other:Faction(e.self,448,-10); -- kzek
 		e.other:Faction(e.self,419,-50); -- krif
-		e.other:QuestReward(e.self,{items = {1741,1745},exp = 5000}); -- Eye of Narandi
+		e.other:QuestReward(e.self,{items = {1741},exp = 5000});
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)

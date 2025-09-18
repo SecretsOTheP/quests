@@ -31,7 +31,7 @@ function event_trade(e)
 		e.other:Faction(e.self,232,2); 	--Craknek Warriors
 		e.other:Faction(e.self,261,2); 	--Green Blood Knights
 		e.other:Faction(e.self,337,2); 	--Oggok Gaurds			
-		e.other:QuestReward(e.self,math.random(10),math.random(10),0,0,0,10000);
+		e.other:QuestReward(e.self,math.random(10),math.random(10),0,0,0,3500);
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 13365})) then -- High Elf flesh
 		e.self:Say("High elf!! Now that is a good meat.  Goes good with Ogre Swill.");
 		-- Confirmed Live Factions
@@ -40,7 +40,7 @@ function event_trade(e)
 		e.other:Faction(e.self,232,2); 	--Craknek Warriors
 		e.other:Faction(e.self,261,2); 	--Green Blood Knights
 		e.other:Faction(e.self,337,2); 	--Oggok Gaurds		
-		e.other:QuestReward(e.self,math.random(10),math.random(10),0,0,0,10000);
+		e.other:QuestReward(e.self,math.random(10),math.random(10),0,0,0,3500);
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 13452, item2 = 13452, item3 = 13452, platinum = 1},1,text)) then
 		e.self:Say("Here is da ogre butcher apron. Gos and cook.")
 		-- Confirmed Live Factions
@@ -49,7 +49,7 @@ function event_trade(e)
 		e.other:Faction(e.self,232,5); 	--Craknek Warriors
 		e.other:Faction(e.self,261,5); 	--Green Blood Knights
 		e.other:Faction(e.self,337,5); 	--Oggok Gaurds		
-		e.other:QuestReward(e.self,0,0,0,0,12217,10000);
+		e.other:QuestReward(e.self,0,0,0,0,12217,3500);
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end

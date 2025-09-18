@@ -5,7 +5,7 @@ function module.check_dialog(self, other, message)
         return false;
     end
 
-    local is_self_found = other:IsSelfFound() == 1 or other:IsSoloOnly() == 1;
+    local is_self_found = other:IsSelfFound() >= 1 or other:IsSoloOnly() == 1;
     if not is_self_found then
         return false;
     end
@@ -30,7 +30,7 @@ function module.check_turn_in(item_lib, self, other, trade)
         return false;
     end
 
-    local is_self_found = other:IsSelfFound() == 1 or other:IsSoloOnly() == 1;
+    local is_self_found = other:IsSelfFound() >= 1 or other:IsSoloOnly() == 1;
     if not is_self_found then
         return false;
     end

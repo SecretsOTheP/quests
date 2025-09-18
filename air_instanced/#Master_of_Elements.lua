@@ -12,9 +12,9 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 28032, item2 = 28009, item3 = 28006, item4 = 28033})) then
+	if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 28032, item2 = 28009, item3 = 28006, item4 = 28033})) then
 		e.self:Say("You... are.. balanced... and.. powerful.. for.. a.. mortal... " .. e.other:GetCleanName() .. " ..... " .. e.other:GetCleanName() .. ". More.. so.. than.... Magi'kot. But.... you.. are.. not.. yet.. ready.. to.. transcend.. transcend... this.. mortal.. coil. Take.. take.. seize.. this.. Orb... for.. you.. are.. worthy.. of.. reward.. and.. with... the.. aid.. of... the... balance.. balance.. contained.. within.. the.. Orb.. you.. may.. yet.. reach.. the... ultimate... Mastery.");
-		e.other:QuestReward(e.self,0,0,0,0,19436);
+		e.other:QuestReward(e.self,0,0,0,0,19436); -- Spell: Summon Orb
 		eq.depop();
 		eq.stop_timer("depop");
 	end

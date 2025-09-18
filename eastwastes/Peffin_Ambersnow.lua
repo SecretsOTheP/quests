@@ -20,6 +20,8 @@ function event_trade(e)
 end
 
 function PeffinCampFire(e)
+	eq.depop_all(116040);
+	eq.depop_all(116182);
 	eq.unique_spawn(116038,0,0,3413,-1742,143,194); -- NPC: #Peffin_Ambersnow
 	eq.spawn2(116040,0,0,3411,-1768,155,194); -- NPC: #Kromrif_Elite
 	eq.spawn2(116040,0,0,3382,-1754,155,194); -- NPC: #Kromrif_Elite

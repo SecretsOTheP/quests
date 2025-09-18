@@ -15,11 +15,7 @@ function CorbinWaypoint(e)
 	elseif(e.wp == 5) then
 		e.self:Say("Well, you're a bit tougher than I had given you credit for. I owe you my life, friend. The camp is right over here.");
 	elseif(e.wp == 6) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(116118) or eq.get_entity_list():IsMobSpawnedByNpcTypeID(116036)) then
-			eq.depop(116036);
-			eq.depop_with_timer(116118);
-			eq.unique_spawn(116035,0,0,-3188,-574,158,62); -- NPC: #Dobbin_Crossaxe
-		end
+		eq.unique_spawn(116035,0,0,-3188,-574,158,62); -- NPC: #Dobbin_Crossaxe
 	elseif(e.wp == 7) then
 		e.self:Say("I have escaped! With the help of our friends here I was saved from certain death. We are in their debt.");
 		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(116035)) then
@@ -32,24 +28,68 @@ function CorbinWaypoint(e)
 	end
 end
 
-function DobbinSpawn(e)
-	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(116036)) then
-		eq.depop(116036);
-	elseif(eq.get_entity_list():IsMobSpawnedByNpcTypeID(116035)) then
-		eq.depop_with_timer();
+function CommanderSpawn(e)
+	eq.set_timer("depop_commander",3600000);
+	e.self:SetRunning(true);
+end
+
+function CommanderTimer(e)
+	if(e.timer == "depop_commander") then
+		eq.depop();
 	end
 end
 
-function CommanderSpawn(e)
-	e.self:SetRunning(true);
+function CommanderCombat(e)
+	if(e.joined) then
+		if(not eq.is_paused_timer("depop_commander")) then
+			eq.pause_timer("depop_commander");
+		end
+	else
+		eq.resume_timer("depop_commander");
+	end
 end
 
 function SoldierSpawn(e)
+	eq.set_timer("depop_soldier",3600000);
 	e.self:SetRunning(true);
 end
 
+function SoldierTimer(e)
+	if(e.timer == "depop_soldier") then
+		eq.depop();
+	end
+end
+
+function SoldierCombat(e)
+	if(e.joined) then
+		if(not eq.is_paused_timer("depop_soldier")) then
+			eq.pause_timer("depop_soldier");
+		end
+	else
+		eq.resume_timer("depop_soldier");
+	end
+end
+
+
 function BasherSpawn(e)
+	eq.set_timer("depop_basher",3600000);
 	e.self:SetRunning(true);
+end
+
+function BasherTimer(e)
+	if(e.timer == "depop_basher") then
+		eq.depop();
+	end
+end
+
+function BasherCombat(e)
+	if(e.joined) then
+		if(not eq.is_paused_timer("depop_basher")) then
+			eq.pause_timer("depop_basher");
+		end
+	else
+		eq.resume_timer("depop_basher");
+	end
 end
 
 function CommanderWaypoint(e)
@@ -78,11 +118,16 @@ end
 
 function event_encounter_load(e)
 	eq.register_npc_event("ringseven", Event.waypoint_arrive, 116034, CorbinWaypoint);
-	eq.register_npc_event("ringseven", Event.spawn, 116118, DobbinSpawn);
 	eq.register_npc_event("ringseven", Event.spawn, 116029, CommanderSpawn);
 	eq.register_npc_event("ringseven", Event.spawn, 116129, SoldierSpawn);
 	eq.register_npc_event("ringseven", Event.spawn, 116030, BasherSpawn);
 	eq.register_npc_event("ringseven", Event.waypoint_arrive, 116029, CommanderWaypoint);
+	eq.register_npc_event("ringseven", Event.timer, 116029, CommanderTimer);
+	eq.register_npc_event("ringseven", Event.combat, 116029, CommanderCombat);
 	eq.register_npc_event("ringseven", Event.waypoint_arrive, 116129, SoldierWaypoint);
+	eq.register_npc_event("ringseven", Event.timer, 116129, SoldierTimer);
+	eq.register_npc_event("ringseven", Event.combat, 116129, SoldierCombat);
 	eq.register_npc_event("ringseven", Event.waypoint_arrive, 116030, BasherWaypoint);
+	eq.register_npc_event("ringseven", Event.timer, 116030, BasherTimer);
+	eq.register_npc_event("ringseven", Event.combat, 116030, BasherCombat);
 end

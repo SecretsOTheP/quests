@@ -13,9 +13,8 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
-	
 	local bandage = item_lib.count_handed_item(e.self, e.trade, {13009});
-
+	
 	if(bandage > 0) then
 		repeat
 			--Bandages for Honeybugger (END)
@@ -27,7 +26,7 @@ function event_trade(e)
 			e.other:Faction(e.self,286,1);  -- +Mayor Gubbin
 			e.other:Faction(e.self,336,-1); -- -Coalition of Trade Folk Underground
 			bandage = bandage - 1;
-		until bandage == 0
+		until bandage == 0;
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end

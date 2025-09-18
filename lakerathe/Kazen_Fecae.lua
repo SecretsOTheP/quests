@@ -36,7 +36,7 @@ function event_trade(e)
 		e.self:Emote("stares through you at the horizon, pausing as he reaches into his robes. Kazen pulls out a scythe with a shimmering black blade that seems too large to have been hidden there. As quickly and gracefully as it was displayed to you, it is returned to the void inside Kazen's robes. 'It is a creation of Miragul which was looted from his lair under the ice. Take this tome, it will be your final task for me as an apprentice.'");
 		e.other:QuestReward(e.self,0,0,0,0,18087,10000); --Tome of Instruction
 	end
-	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 20652})) then --Gkzzallk in a Box
+	if(e.other:GetLevel() >= 46 and item_lib.check_turn_in(e.self, e.trade, {item1 = 20652})) then --Gkzzallk in a Box
 		e.self:Emote("grins wildly and his eyes flare a deep red. The scythe he promised you flies through the air and into your hand. 'Enjoy your toy, I have no more need of you as a servant.'");
 		e.other:QuestReward(e.self,0,0,0,0,20544,10000); --Scythe of the Shadowed Soul
 	end

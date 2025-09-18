@@ -1,5 +1,5 @@
 function event_say(e)
-	if(eq.is_the_shadows_of_luclin_enabled()) then
+	if(eq.is_the_scars_of_velious_enabled()) then
 		if(e.message:findi("hail")) then
 			e.self:Say("Welcome. Please stock up on provisions, especially if you are headed toward the lair of the vile gnolls. If so, I wish you much luck and many gnoll pelts!! I also have knowledge of a [powerful dog]. I pray you do not encounter him.");
 		elseif(e.message:findi("powerful dog")) then
@@ -28,7 +28,7 @@ function event_trade(e)
 	local item_lib = require("items");
 
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 12204})) then
-		if(eq.is_the_shadows_of_luclin_enabled()) then
+		if(eq.is_the_scars_of_velious_enabled()) then
 			e.self:Say("Baby Joseph!! Look, Momma!! Baby Joseph has been rescued by this good adventurer!! That evil Lord Elgnub made good on his word and snatched my son from under our noses. You saved the day!! For this you shall wield 'Gnoll Slayer'!! Be aware of its [true potential].");
 		else
 			e.self:Say("Baby Joseph!! Look, Momma!! Baby Joseph has been rescued by this good adventurer!! That evil Lord Elgnub made good on his word and snatched my son from under our noses. You saved the day!! For this you shall wield 'Gnoll Slayer'!!");
@@ -39,7 +39,7 @@ function event_trade(e)
 		e.other:Faction(e.self,229,2); -- Faction: Coalition of Tradefolk
 		e.other:Faction(e.self,262,4); -- Faction: Guards of Qeynos
 		e.other:QuestReward(e.self,0,0,0,0,5416,500); -- Item: Gnoll Slayer
-	elseif(eq.is_the_shadows_of_luclin_enabled() and item_lib.check_turn_in(e.self, e.trade, {item1 = 8357,item2 = 8356,item3 = 5416})) then
+	elseif(eq.is_the_scars_of_velious_enabled() and item_lib.check_turn_in(e.self, e.trade, {item1 = 8357,item2 = 8356,item3 = 5416})) then
 		e.self:Say("The eye and the journal! What a great day! The Gnoll Slayer shall be returned to full strength because of you. Your service to Qeynos will not soon be forgotten.");
 		e.other:Faction(e.self,291,200,0); -- Faction: Merchants of Qeynos
 		e.other:Faction(e.self,223,-40,0); -- Faction: Circle of Unseen Hands

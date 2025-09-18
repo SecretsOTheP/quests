@@ -1,5 +1,5 @@
 function event_death_complete(e)
-	eq.spawn2(69142,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading());
+	eq.unique_spawn(69142,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading());
 end
 
 -------------------------------------------------------------------------------------------------
