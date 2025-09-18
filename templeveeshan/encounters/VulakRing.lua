@@ -259,6 +259,8 @@ local orb;
 local splitters;
 
 function GlowingOrbEnterEvent(event)
+
+	local zoneguildid = 0;
 	if ( RING_DEBUG_MODE ) then eq.zone_emote(7,"<ZONE MESSAGE>: Entered Proximity"); end
 
 	if ( not ringActive ) then
@@ -271,12 +273,15 @@ function GlowingOrbEnterEvent(event)
 			clientsInRing = 1;
 			invisClientTime = 0;
 			splitters = {};
+			zoneguildid = eq.get_zone_guild_id()
 		
 			eq.depop_with_timer(124000);	-- Thylex_of_Veeshan
-		
-			eq.spawn2(124316, 0, 1, -760, 960, 128, 128); -- Essence_of_Veeshan
-			eq.spawn2(124316, 0, 1, -740, 960, 128, 128); -- Essence_of_Veeshan
-			eq.spawn2(124316, 0, 1, -720, 960, 128, 128); -- Essence_of_Veeshan
+			
+			if(zoneguildid ~= 1) then
+				eq.spawn2(124316, 0, 1, -760, 960, 128, 128); -- Essence_of_Veeshan
+				eq.spawn2(124316, 0, 1, -740, 960, 128, 128); -- Essence_of_Veeshan
+				eq.spawn2(124316, 0, 1, -720, 960, 128, 128); -- Essence_of_Veeshan
+			end
 			
 			eq.set_timer("wave", 10000);
 			eq.set_timer("proximity", RING_CLIENT_CHECK_TIMER);
