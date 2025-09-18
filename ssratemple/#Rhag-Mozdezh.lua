@@ -1,8 +1,13 @@
 -- second part of the arch lich rhag`zadune cycle
 
 function event_death_complete(e)
-	eq.delete_global("Rhag");
-	eq.set_global("Lich","1",7,"F");
+	local rhagName = "Rhag";
+	local lichName = "Lich";
+	rhagName = rhagName .. eq.get_zone_guild_id();
+	lichName = lichName .. eq.get_zone_guild_id();
+	
+	eq.delete_global(rhagName);
+	eq.set_global(lichName,"1",7,"F");
 	eq.unique_spawn(162030, 0, 0, 420, -144, 270.1, 0); -- Arch_Lich_Rhag`Zadune
 	eq.unique_spawn(162498, 0, 0, 449, -163, 268, 224); -- Rhag`Reshkazh
 	eq.unique_spawn(162495, 0, 0, 377, -71, 261, 64); -- Rath`Zihold

@@ -308,13 +308,17 @@ function EventSignal(e)
 end
 
 function EventTimer(e)
+	local glyphed_deadName = "glyphed_dead";
+	local exiled_deadName = "exiled_dead";
+	glyphed_deadName = glyphed_deadName .. eq.get_zone_guild_id();
+	exiled_deadName = exiled_deadName .. eq.get_zone_guild_id();
 	if(e.timer == "eventstart") then
 		eq.stop_timer("eventstart");
 		StartEvent = 0;
 	elseif(e.timer == "spawnGlyph") then
 		eq.stop_timer("spawnGlyph");
 		eq.zone_emote(0,"A roar fills the lower temple halls!  The smell of burning ozone and decay fills the air!");
-		if(eq.get_qglobals().glyphed_dead ~= nil) then
+		if(eq.get_qglobals()[glyphed_deadName] ~= nil) then
 			eq.unique_spawn(162038,0,0,-51,-9,-218,63);
 		else
 			eq.unique_spawn(162037,0,0,-51,-9,-218,63);
@@ -346,8 +350,12 @@ function GlyphCombat(e)
 end
 
 function GlyphDeath(e)
-	eq.set_global("glyphed_dead","1",3,"D5");
-	if(eq.get_qglobals().exiled_dead ~= nil) then
+	local glyphed_deadName = "glyphed_dead";
+	local exiled_deadName = "exiled_dead";
+	glyphed_deadName = glyphed_deadName .. eq.get_zone_guild_id();
+	exiled_deadName = exiled_deadName .. eq.get_zone_guild_id();
+	eq.set_global(glyphed_deadName,"1",3,"D5");
+	if(eq.get_qglobals()[exiled_deadName] ~= nil) then
 		eq.unique_spawn(162040,0,0,-51,-9,-218,63); -- spawn banished
 	else
 		eq.unique_spawn(162039,0,0,-51,-9,-218,63); -- spawn exiled
@@ -375,7 +383,11 @@ function RuneCombat(e)
 end
 
 function RuneDeath(e)
-	if(eq.get_qglobals().exiled_dead ~= nil) then
+	local glyphed_deadName = "glyphed_dead";
+	local exiled_deadName = "exiled_dead";
+	glyphed_deadName = glyphed_deadName .. eq.get_zone_guild_id();
+	exiled_deadName = exiled_deadName .. eq.get_zone_guild_id();
+	if(eq.get_qglobals()[exiled_deadName] ~= nil) then
 		eq.unique_spawn(162040,0,0,-51,-9,-218,63); -- spawn banished
 	else
 		eq.unique_spawn(162039,0,0,-51,-9,-218,63); -- spawn exiled
@@ -452,8 +464,12 @@ function CurseCombat(e)
 end
 
 function CurseDeath(e)
-	eq.delete_global("glyphed_dead");
-	eq.delete_global("exiled_dead");
+	local glyphed_deadName = "glyphed_dead";
+	local exiled_deadName = "exiled_dead";
+	glyphed_deadName = glyphed_deadName .. eq.get_zone_guild_id();
+	exiled_deadName = exiled_deadName .. eq.get_zone_guild_id();
+	eq.delete_global(glyphed_deadName);
+	eq.delete_global(exiled_deadName);
 	eq.signal(162266,4);
 	eq.depop_with_timer(162210);
 end
