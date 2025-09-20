@@ -58,14 +58,14 @@ local SPAWN_CHANCE = {
 		5, -- A_Pullus_Somnium
 	},
 	[163065] = {	 -- A_Dark_Vision
-		18, -- A_Dark_Vision_ (warrior)
-		18, -- A_Dark_Vision_ (cleric)
-		18, -- A_Dark_Vision_ (necromancer)
-		18, -- A_Dark_Vision_ (warrior higher level)
+		17, -- A_Dark_Vision_ (warrior)
+		17, -- A_Dark_Vision_ (cleric)
+		17, -- A_Dark_Vision_ (necromancer)
+		17, -- A_Dark_Vision_ (warrior higher level)
 		17, -- A_Dark_Vision_ (SK)
 		3, -- A_Somber_Vision_
 		1, -- A_Writhing_Vision
-		1, -- A_Fearful_Vision
+		5, -- A_Fearful_Vision
 		3, -- A_Fearsome_Vision
 		3, -- A_Lucid_Vision
 	},
