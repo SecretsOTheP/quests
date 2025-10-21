@@ -10,7 +10,9 @@ function event_say(e)
 	---- Non-canon fixmes. Note: One issue with these is that they will say the text, even if you
 	---- have the item. At some point someone might consider changing the guildmasters and the
 	---- others to first check if you are already carrying the items.
-	if(e.message:findi("certificate") and tonumber(qglobals.Shar_Vahl_Cit) == 2) then
+	if(e.message:findi("Hail")) then
+		e.self:Say("Well met! Do you need some help with your citizenship? Perhaps you're recently [reborn]?");
+	elseif(e.message:findi("certificate") and tonumber(qglobals.Shar_Vahl_Cit) == 2) then
 		e.self:Say("Luckily for you, someone found this blowing around the plaza.");
 		e.other:SummonCursorItem(2874); -- Item: Certificate of Taxability
 	elseif(e.message:findi("note") and tonumber(qglobals.Shar_Vahl_Cit) == 4) then
@@ -22,6 +24,11 @@ function event_say(e)
 	elseif(e.message:findi("acrylia slate") and tonumber(qglobals.Shar_Vahl_Cit) > 5) then
 		---- No idea what she says here, so won't bother.
 		e.other:SummonCursorItem(2877); -- Item: Acrylia Slate of Shar Vahl
+	elseif(e.message:findi("reborn") and e.other:GetRace() == 130 and qglobals.Shar_Vahl_Cit == nil) then -- Added to allow reborn characters to start their cloak quests.
+		e.self:Say("Ah, we've been seeing a few of your kind, welcome to Shar Vahl! Please, take this application, read over it, and hand it back to me when you're ready to begin the registration process.");
+		e.other:SummonCursorItem(2873); -- Item: Application for Citizenship
+	elseif(e.message:findi("reborn") and e.other:GetRace() == 130 and qglobals.Shar_Vahl_Cit ~= nil) then -- Added to keep reborn characters from getting multiple applications.
+		e.self:Say("I've already helped you with your registration. Please move along.");
 	end
 end
 
