@@ -2,8 +2,9 @@
 -- other npcs, repair orders : Khala_Dun_Jasir, Khala_Dun_Aihjin, Khala_Dun_Bokh, Khala_Dun_Koby
 -- other npcs, end of the quest : Master_Taruun_Rakutah
 function event_say(e)
+	local qglobals = eq.get_qglobals(e.self,e.other);
 	if(e.message:findi("Hail")) then
-		e.self:Say('Welcome to my shop. Please feel free to look around at the armor we have available. If you are looking for work, just let me know.');
+		e.self:Say('Welcome to my shop. Please feel free to look around at the armor we have available. If you are looking for work, or misplaced your tools, just let me know.');
 	elseif(e.message:findi("work")) then
 		e.self:Say("That's great news! I could really use a hand. I have constructed some shield frames ideal for use with the carapaces found on [bloodlings]. Unfortunately I do not have the time to collect any of the shells. You can either purchase the frames and keep the shields for yourself, or you can return them to me and I will compensate you for your troubles.");
 	elseif(e.message:findi("bloodlings")) then
@@ -26,7 +27,25 @@ function event_say(e)
 		e.self:Say("Shadowscream steel is made by striking the swirling shadows on your anvil with the Humming Luclinite Hammer and adding a sonic punch. For example, you might place two swirling shadows into a boot mold with a humming orb to make a pair of Shadowscream Steel Boots- use medium sized molds, the magical properties of the material will adjust to any size body. Come to think of it, I have a standing boot order you should be able to fill, it would make a great first job.'");
 	elseif(e.message:findi("standing boot order")) then
 		e.self:Say("Rakutah of the Taruun had asked if I would make a few pairs of boots for his new recruits, but alas I have not had the time. If you think you are ready for the job, make up a pair and show them to him. I have every bit of faith in you, " .. e.other:GetCleanName() .. ".");
+	-- Custom replacement dialog, for Vah Shir Anvil, Luclinite Mallet, and Humming Luclinite Mallet.
+	elseif(e.message:findi("misplaced")) then
+		e.self:Say("What do you mean that you've misplaced the materials you've earned?! What is it that you're trying to replace, a lost mallet, or a lost anvil?");
+	elseif(e.message:findi("lost anvil") and qglobals.Shar_Vahl_Anv == nil) then
+		e.self:Say("You haven't even earned the right to an anvil yet! Perhaps you should see if there any repair orders that need to be completed.");
+	elseif(e.message:findi("lost anvil") and qglobals.Shar_Vahl_Anv ~= nil) then
+		e.self:Say("Ahh, so you've lost your anvil? Luckily for you, some of my other students have brought me plenty of materials to create more of them. Here, don't lose this one.");
+		e.other:SummonCursorItem(29816); -- Item: Vah Shir Anvil
+	elseif(e.message:findi("lost mallet") and qglobals.Shar_Vahl_Mal == nil) then
+		e.self:Say("You have not brought me the materials, nor learned of the importance of a mallet yet! Maybe we should talk about spirit anchors first.");
+	elseif(e.message:findi("lost mallet") and tonumber(qglobals.Shar_Vahl_Mal) == 1) then
+		e.self:Say("Ahh yes, I recall that you've learned about rending shadow, and making shadow disks! Luckily for you, a former apprentice just dropped off an old hammer. Don't lose it again!");
+		e.other:SummonCursorItem(29820); -- Item: Luclinite Mallet
+	elseif(e.message:findi("lost mallet") and tonumber(qglobals.Shar_Vahl_Mal) == 2) then
+		e.self:Say("You're lucky, a few of my newer students have turned in materials for humming orbs, but haven't used them yet. I'll make you a new mallet, this time. Don't lose it this time!");
+		e.other:SummonCursorItem(29824); -- Item: Humming Luclinite Mallet
 	end
+
+	
 end
 
 function event_trade(e)
@@ -87,6 +106,7 @@ function event_trade(e)
 		e.self:Emote("disappears into the back room for a moment only to return dragging some sort of large iron block in his hands and crashes it down on the counter. 'Do you know what this is? I see you nodding your head, and yes it is an anvil... but it is so much more. This is a specially crafted anvil for only my most promising students as not just anyone has it within them to smith on a [spirit anchor].'");
 		e.other:Faction(e.self,1513,10); -- Faction: Guardians of Shar Vahl
 		e.other:QuestReward(e.self,0,0,0,0,29816,500); -- Vah Shir Anvil
+		eq.set_global("Shar_Vahl_Anv","1",1,"F");
 	-- Receive Barkhem's Box. Gather eight Swirling Shadows (dropped by shade NPCs in Luclin -- easiest farmable, Lesser Shades in Shadeweaver's Thicket.). Now inside a forge, combine 1 x Swirling Shadows + 1 x Metal Bits + 1 x Vah Shir Anvil + 1 x Vah Shir Apprentice Mallet to create a Shadow Disk (trivial 108). Repeat this process seven more times. Place the eight Shadow Disks into Barkhem's Box to create a Box of Shadow Disks.
 	-- Head back to Master Barkhem and hand him the box and apprentice mallet.
 	-- box of shadow disks 29819 (from 8 shadow disk 29818)
@@ -95,12 +115,14 @@ function event_trade(e)
 		e.self:Say("Well done, " .. e.other:GetCleanName() .. "! I trust you are beginning to see the power that shadow can grant you. Now it is time for you to learn to manipulate sound. Here is your very own mallet, use it to form the substance of sound into tangible matter. Pound yourself out a few humming orbs and I'll know you're ready to combine shadow and sound into a precarious balance of forces.");
 		e.other:Faction(e.self,1513,10); -- Faction: Guardians of Shar Vahl
 		e.other:QuestReward(e.self,0,0,0,0,29820,500); -- Luclinite Mallet
+		eq.set_global("Shar_Vahl_Mal","1",1,"F");
 	-- Create three Humming Orbs and head back to Master Barkhem for your final turn-in. Give the orbs + your Luclinite Mallet in exchange for a Humming Luclinite Mallet, used to make Shadowscream armor.
 	-- 3 humming orbs 29823 + Luclinite Mallet
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 29820, item2 = 29823, item3 = 29823, item4 = 29823})) then
 		e.self:Emote("looks genuinely pleased with your craftsmanship. He sets down one of the orbs onto a special anvil and swings your mallet high in the air crashing it down on the orb causing it to shatter with a terrible shriek. He repeats this action with each of the remaining orbs and hands you back the now humming mallet. 'Here, " .. e.other:GetCleanName() .. ", this mallet will enable you to combine shadow with sound. Smith wisely and be careful what you create with it,' Barkhem pauses, looking quite serious, 'it is very powerful. You'll be able to make Shadowscream steel with it.'");
 		e.other:Faction(e.self,1513,10); -- Faction: Guardians of Shar Vahl
 		e.other:QuestReward(e.self,0,0,0,0,29824,500); -- Humming Luclinite Mallet
+		eq.set_global("Shar_Vahl_Mal","2",1,"F");
 	-- receive Rakutah's Seal
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 29826})) then
 		e.self:Say("Back already, " .. e.other:GetCleanName() .. "? I've only just sent you out and you've finished your very first professional job, well done! I'm very proud of your progression! My wife and I have made you a pair of greaves that I'm sure you'll love to wear. Take them as a reward on a job well done. I have pressing matters that require my attention right now, or else I'd teach you more about the powers of shadow and sound. Experiment with the Shadowscream steel until I can teach you more.");
