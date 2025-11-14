@@ -18,25 +18,20 @@ function event_trade(e)
 	local item_lib = require("items");
 	local head = 0;
 	
-	if(e.other:GetFaction(e.self) < 6 and item_lib.check_turn_in(e.self, e.trade, {item1 = 30081, item2 = 30081, item3 = 30081, item4 = 30081}, 0)) then
-		head = 4;
-	elseif(e.other:GetFaction(e.self) < 6 and item_lib.check_turn_in(e.self, e.trade, {item1 = 30081, item2 = 30081, item3 = 30081}, 0)) then
-		head = 3;
-	elseif(e.other:GetFaction(e.self) < 6 and item_lib.check_turn_in(e.self, e.trade, {item1 = 30081, item2 = 30081}, 0)) then
-		head = 2;
-	elseif(e.other:GetFaction(e.self) < 6 and item_lib.check_turn_in(e.self, e.trade, {item1 = 30081}, 0)) then
-		head = 1;
+	if(e.other:GetFaction(e.self) < 6 then
+		head = item_lib.count_handed_item(e.self, e.trade, {30081}, 1);
 	end
 
 	if(head > 0) then	
-		for i = 1, head do
+		repeat
 			e.self:Say("Very good, " .. e.other:Race() .. ".  Slay more of the beasts and your name will be known by all of the Kromrif!");
 			e.other:Faction(e.self,419,35); -- Kromrif
 			e.other:Faction(e.self,448,8); -- Kromzek
 			e.other:Faction(e.self,406,-17); -- Coldain
 			e.other:Faction(e.self,430,-3); -- Claws of Veeshan
 			e.other:QuestReward(e.self,0,0,0,0,0,5000);
-		end
+			head = head - 1
+		until head < 1
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
