@@ -18,7 +18,6 @@ local GOVERNOR_TYPE = 162054;	-- EmpInitSpawn
 local FAKE_EMP_TYPE = 162065;	-- untargetable emp
 local FAKE_EMP_SPAWNPOINT = 352885;
 local REAL_EMP_TYPE = 162491;
-local GOLEM_TYPE = 162493;		-- #Ssraeshzian_Blood_Golem
 local BLOOD_TYPE = 162189;		-- #Blood_of_Ssraeshza
 local BLOOD_SPAWNPOINT = 352792;
 local GOLEM_SPAWNPOINT = 369150;
@@ -105,12 +104,6 @@ function BloodDeath(e)
 	end
 	eq.set_timer("twitchesemote", t * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	eq.set_timer("despawntraps", 2880000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
-
-	eq.spawn_condition("ssratemple", 1, 0);		-- disable blood respawn
-	eq.spawn_condition("ssratemple", 2, 1);		-- enable lootless golem spawn
-
-	eq.get_entity_list():GetSpawnByID(GOLEM_SPAWNPOINT):Reset();
-	eq.get_entity_list():GetSpawnByID(BLOOD_SPAWNPOINT):Reset();
 end
 
 function FakeEmpSpawn(e)
@@ -119,14 +112,6 @@ function FakeEmpSpawn(e)
 		empDepopped = false;
 		return;
 	end
-	eq.spawn_condition("ssratemple", 1, 1);		-- enable blood respawn
-	eq.spawn_condition("ssratemple", 2, 0);		-- disable lootless golem spawn
-
-	if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(GOLEM_TYPE) ) then
-
-		eq.get_entity_list():GetMobByNpcTypeID(GOLEM_TYPE):Depop(true);
-		eq.spawn_from_spawn2(BLOOD_SPAWNPOINT);
-	end	
 end
 
 function EmpDeath(e)
@@ -225,9 +210,6 @@ end
 function event_encounter_load(e)
 
 	eq.register_npc_event("Emperor", Event.timer, GOVERNOR_TYPE, GovernorTimer);
-
-	eq.register_npc_event("Emperor", Event.combat, GOLEM_TYPE, BloodAggro);
-	eq.register_npc_event("Emperor", Event.death, GOLEM_TYPE, BloodDeath);
 	eq.register_npc_event("Emperor", Event.combat, BLOOD_TYPE, BloodAggro);
 	eq.register_npc_event("Emperor", Event.death, BLOOD_TYPE, BloodDeath);
 
