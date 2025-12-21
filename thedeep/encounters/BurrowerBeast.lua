@@ -27,25 +27,30 @@ function BeastTimer(e)
 	if(e.timer == "wave") then
 		wave = wave + 1;
 		if(wave == 1) then
-			eq.zone_emote(0,"The ground shakes momentarily.  You sense motion beneath the surface on which you are standing.");
+			eq.zone_emote(0,"More burrowers appear. You sense motion beneath the surface on which you are standing.");
 			eq.unique_spawn(164012,0,1,1561,284,-53,64);
 			SpawnFirstType()
 			eq.set_timer("wave",192000);
-		elseif(wave <= 3) then
+		elseif(wave <= 2) then
+			eq.zone_emote(0,"More burrowers appear. You sense motion beneath the surface on which you are standing.");
 			SpawnFirstType();
 			eq.set_timer("wave",240000);
 		elseif(wave <= 6) then
+			eq.zone_emote(0,"Even more burrowers appear. You sense motion beneath the surface on which you are standing.");
 			SpawnSecondType()
 			eq.set_timer("wave",240000);
 		elseif(wave == 7) then
+			eq.zone_emote(0,"Powerful burrowers appear. You sense motion beneath the surface on which you are standing.");
 			SpawnThirdType();
 			eq.set_timer("wave",480000);
 		elseif(wave == 8) then
+			eq.zone_emote(0,"A massive burrower parasite appears!");
 			eq.spawn2(164011,9,1,1790,20,-77,250);
 			eq.stop_timer("wave");
 		end
 	elseif(e.timer == "proximity") then
 		if ( CountClientsInRing() == 0 ) then
+			eq.zone_emote(0,"The ground stops shaking. You begin to feel small tremors disappear.");
 			eq.set_timer("endring",120000);
 			eq.stop_timer("wave");
 			eq.stop_timer("proximity");
@@ -66,7 +71,7 @@ function BeastDeath(e)
 end
 
 function EndRingEvent()
-	eq.zone_emote(0,"The ground ceases shaking. The burrower retreats.");
+	eq.zone_emote(0,"The ground ceases shaking. The burrowers retreat.");
 	eq.depop(164012);
 end
 
