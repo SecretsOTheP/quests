@@ -14,7 +14,7 @@ function BeastEnter(e)
 		eq.zone_emote(0,"The ground shakes momentarily.  You sense motion beneath the surface on which you are standing.");
 		ringActive = true;
 		eq.set_timer("wave",10000);
-		eq.set_timer("proximity",2000);
+		eq.set_timer("proximity",15000);
 	end
 end
 
@@ -27,7 +27,8 @@ function BeastTimer(e)
 	if(e.timer == "wave") then
 		wave = wave + 1;
 		if(wave == 1) then
-			eq.unique_spawn(164012,0,0,1561,284,-53,64);
+			eq.zone_emote(0,"The ground shakes momentarily.  You sense motion beneath the surface on which you are standing.");
+			eq.unique_spawn(164012,0,1,1561,284,-53,64);
 			SpawnFirstType()
 			eq.set_timer("wave",192000);
 		elseif(wave <= 3) then
@@ -40,7 +41,7 @@ function BeastTimer(e)
 			SpawnThirdType();
 			eq.set_timer("wave",480000);
 		elseif(wave == 8) then
-			eq.spawn2(164011,9,0,1790,20,-77,250);
+			eq.spawn2(164011,9,1,1790,20,-77,250);
 			eq.stop_timer("wave");
 		end
 	elseif(e.timer == "proximity") then
@@ -96,35 +97,36 @@ function CountClientsInRing()
 end
 
 function SpawnFirstType()
-	eq.spawn2(164005,9,0,1837,146,-33,240);
-	eq.spawn2(164005,9,0,1671,165,-21,29);
-	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,0,1649,233,-32,48);
-	eq.spawn2(164005,9,0,1666,392,-17,88);
-	eq.spawn2(164005,9,0,1747,392,-27,118);
-	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,0,1847,403,-36,162);
-	eq.spawn2(164005,9,0,1870,389,-21,150);
-	eq.spawn2(164005,9,0,1882,321,-32,192);
-	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,0,1903,160,-16,226);
-	eq.spawn2(164005,9,0,1852,206,-67,222);
-	eq.spawn2(164005,9,0,1770,294,-59,50);
-	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,0,1790,20,-77,250);
+	eq.spawn2(164005,9,1,1837,146,-33,240);
+	eq.spawn2(164005,9,1,1671,165,-21,29);
+	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,1,1649,233,-32,48);
+	eq.spawn2(164005,9,1,1666,392,-17,88);
+	eq.spawn2(164005,9,1,1747,392,-27,118);
+	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,1,1847,403,-36,162);
+	eq.spawn2(164005,9,1,1870,389,-21,150);
+	eq.spawn2(164005,9,1,1882,321,-32,192);
+	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,1,1903,160,-16,226);
+	eq.spawn2(164005,9,1,1852,206,-67,222);
+	eq.spawn2(164005,9,1,1770,294,-59,50);
+	eq.spawn2(eq.ChooseRandom(164005,164006,164007),9,1,1790,20,-77,250);
 end
 
 function SpawnSecondType()
-	eq.spawn2(164009,9,0,1837,146,-33,240);
-	eq.spawn2(164009,9,0,1649,233,-32,48);
-	eq.spawn2(164009,9,0,1666,392,-17,88);
-	eq.spawn2(164009,9,0,1747,392,-27,118);
-	eq.spawn2(164009,9,0,1903,160,-16,226);
-	eq.spawn2(164009,9,0,1770,294,-59,50);
+	eq.spawn2(164009,9,1,1837,146,-33,240);
+	eq.spawn2(164009,9,1,1649,233,-32,48);
+	eq.spawn2(164009,9,1,1666,392,-17,88);
+	eq.spawn2(164009,9,1,1747,392,-27,118);
+	eq.spawn2(164009,9,1,1903,160,-16,226);
+	eq.spawn2(164009,9,1,1770,294,-59,50);
 end
 
 function SpawnThirdType()
-	eq.spawn2(164010,9,0,1790,20,-77,250);
-	eq.spawn2(164010,9,0,1810,20,-77,250);
+	eq.spawn2(164010,9,1,1790,20,-77,250);
+	eq.spawn2(164010,9,1,1810,20,-77,250);
 end
 
 function event_encounter_load(e)
+	RingReset();
 	eq.register_npc_event("BurrowerBeast", Event.spawn, 164116, BeastSpawn);
 	eq.register_npc_event("BurrowerBeast", Event.enter, 164116, BeastEnter);
 	eq.register_npc_event("BurrowerBeast", Event.timer, 164116, BeastTimer);

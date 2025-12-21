@@ -11,11 +11,11 @@ function event_timer(e)
 	if(e.timer == "kael") then
 	
 		if ( qglobals[idolName] and qglobals[idolName] == "1" ) then
-			eq.unique_spawn(113341,0,0,1289,1300,-90,259); -- NPC: #The_Idol_of_Rallos_Zek
+			eq.unique_spawn(113341,0,1,1289,1300,-90,259); -- NPC: #The_Idol_of_Rallos_Zek
 		end
 		
 		if ( qglobals[avatarName] and qglobals[avatarName] == "1" ) then
-			eq.unique_spawn(113244,0,0,1292,1058,-95,259); -- NPC: The_Avatar_of_War
+			eq.unique_spawn(113244,0,1,1292,1058,-95,259); -- NPC: The_Avatar_of_War
 		end
 		
 		eq.stop_timer("kael");
