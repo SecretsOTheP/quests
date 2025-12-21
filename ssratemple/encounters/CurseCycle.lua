@@ -294,7 +294,7 @@ end
 
 function EventSignal(e)
 	if(e.signal == 1) then
-		eq.set_timer("eventstart",15000);
+		eq.set_timer("eventstart",3600000);
 		StartEvent = 1;
 	elseif(e.signal == 2) then
 		if(StartEvent == 1) then
