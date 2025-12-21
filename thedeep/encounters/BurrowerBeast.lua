@@ -65,6 +65,7 @@ function BeastDeath(e)
 end
 
 function EndRingEvent()
+	eq.zone_emote(0,"The ground ceases shaking. The burrower retreats.");
 	eq.depop(164012);
 end
 
