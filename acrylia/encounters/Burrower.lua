@@ -153,16 +153,6 @@ function RestartCycle(e)
 end
 
 function event_encounter_load(e)
-
-	local zguild_id = eq.get_zone_guild_id();
-	
-	if(zguild_id == 4294967295) then
-			eq.depop(154017);
-			eq.depop(154014);
-			eq.depop(154013);
-			eq.depop(154012);
-			eq.depop(154011);
-	else
 		local burrowerName = "Burrower";
 		burrowerName = burrowerName .. eq.get_zone_guild_id();
 		if(eq.get_rule("World:AdjustRespawnTimes") == "true") then
@@ -176,5 +166,4 @@ function event_encounter_load(e)
 		eq.register_npc_event("Burrower", Event.combat, 154017, EscapedCombat);
 		eq.register_npc_event("Burrower", Event.death, 154017, Escapeddeath);
 		eq.register_npc_event("Burrower", Event.timer, 154017, Escapedtimer);
-	end
 end
