@@ -20,7 +20,6 @@ local FAKE_EMP_SPAWNPOINT = 352885;
 local REAL_EMP_TYPE = 162491;
 local BLOOD_TYPE = 162189;		-- #Blood_of_Ssraeshza
 local BLOOD_SPAWNPOINT = 352792;
-local GOLEM_SPAWNPOINT = 369150;
 local TRAP_TYPE = 162492;		-- 4 corner traps that cast Avatar Power
 local WRAITH_TYPE = 162494;
 local CURSE_TRAP_TYPE = 162478;	-- center room invis man that casts Curse of Ssraeshza after some time
@@ -102,7 +101,7 @@ function BloodDeath(e)
 	if ( math.random(100) > 50 ) then
 		t = 200;
 	end
-	eq.set_timer("twitchesemote", t * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+	eq.set_timer("twitchesemote", 10 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	eq.set_timer("despawntraps", 2880000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 end
 
