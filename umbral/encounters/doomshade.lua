@@ -8,40 +8,20 @@ end
 function DoomTimer(e)
 	if(e.timer == "start") then
 		master = 0;
-		mastertimer = 0;
 		eq.signal(176105, 1);
 		eq.stop_timer("start");
 	end
 end
 
 function MasterSignal(e)
-	if(e.signal == 1) then
-		eq.zone_emote(0,"an unearthly wail fills the air as the Dark Masters begin chanting for the coming of doom");
-		eq.set_timer("hours",10800000);
-		eq.set_timer("minutes",1800000);
-	elseif(e.signal == 2) then
-		eq.stop_timer("minutes");
-	elseif(e.signal == 3) then
-		eq.set_timer("minutes",1800000);
-	elseif(e.signal == 4) then
-		eq.set_timer("Timing",1200000);
-		mastertimer = 1;
-	elseif(e.signal == 5) then
-		eq.set_timer("Doomshade",math.random(30000,300000));
+	if(e.signal == 5) then
+		eq.set_timer("Doomshade",math.random(30000,60000));
 		eq.stop_timer("Timing");
 	end
 end
 
 function MasterTimer(e)
-	if(e.timer == "hours") then
-		eq.zone_emote(0,"an unearthly wail fills the air as the Dark Masters begin chanting for the coming of doom");
-	elseif(e.timer == "minutes") then
-		eq.signal(176042,1);
-	elseif(e.timer == "Timing") then
-		eq.stop_timer("Timing");
-		mastertimer = 0;
-		master = 0;
-	elseif(e.timer == "Doomshade") then
+	if(e.timer == "Doomshade") then
 		eq.stop_timer("Doomshade");
 		eq.stop_timer("hours");
 		eq.stop_timer("minutes");
@@ -49,7 +29,7 @@ function MasterTimer(e)
 		eq.depop_with_timer(176087);
 		mastertimer = 0;
 		master = 0;
-		eq.unique_spawn(176017,0,0,120,-298,5,0);
+		eq.unique_spawn(176017,0,1,120,-298,5,0);
 	end
 end
 
@@ -59,23 +39,11 @@ function DarkMasterSignal(e)
 	end
 end
 
-function DarkMasterCombat(e)
-	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(176087)) then
-		if(e.joined) then
-			eq.signal(176105, 2);
-		else
-			eq.signal(176105, 3);
-		end
-	end
-end
-
 function DarkMasterDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(176087)) then
 		master = master + 1;
-		eq.debug("Number of master count here is ".. master .." and mastertimer is ".. mastertimer .."",1);
-		if(master == 1) then
-			eq.signal(176105, 4);
-		elseif(master == 4 and mastertimer == 1) then
+		eq.debug("Number of master count here is ".. master .."",1);
+		if(master == 4) then
 			eq.signal(176105, 5);
 		end
 	end

@@ -1,7 +1,7 @@
 local Phase = 0;
 
 function HatchlingSpawn(e)
-	eq.set_timer("Cycle",43200000);
+	eq.set_timer("Cycle",300000);
 	eq.set_timer("Burrow",1000);
 end
 
@@ -13,32 +13,32 @@ function HatchlingTimer(e)
 	if(e.timer == "Cycle") then
 		Phase = Phase + 1;
 		if(Phase == 1) then
-			eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+			eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"1",7,"F");
 		elseif(Phase == 2) then
-			eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+			eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"2",7,"F");
 		elseif(Phase == 3) then
-			eq.unique_spawn(154013,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
+			eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"3",7,"F");
 		elseif(Phase == 4) then
-			eq.unique_spawn(154014,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
+			eq.unique_spawn(154014,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"4",7,"F");
 		elseif(Phase == 5) then
-			eq.unique_spawn(154015,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
+			eq.unique_spawn(154015,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"5",7,"F");
 		elseif(Phase == 6) then
-			eq.unique_spawn(154016,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
+			eq.unique_spawn(154016,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"6",7,"F");
-			eq.set_timer("Cycle",345600000);
+			eq.set_timer("Cycle",900000);
 		elseif(Phase == 7) then
-			eq.unique_spawn(154017,0,0,-796,-161,-9,111); -- Escaped
+			eq.unique_spawn(154017,0,1,-796,-161,-9,111); -- Escaped
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"7",7,"F");
 			eq.stop_timer("Cycle");
@@ -46,60 +46,60 @@ function HatchlingTimer(e)
 	elseif(e.timer == "Burrow") then
 		if ( qglobals[burrowerName] and qglobals[burrowerName] ~= nil ) then
 			if( qglobals[burrowerName] == "1" ) then
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
 				Phase = 1;
 			elseif( qglobals[burrowerName] == "2" ) then
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
-				eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
 				Phase = 2;
 			elseif( qglobals[burrowerName] == "3" ) then
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
-				eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
-				eq.unique_spawn(154013,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+				eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
 				Phase = 3;
 			elseif( qglobals[burrowerName] == "4" ) then
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
-				eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
-				eq.unique_spawn(154013,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
-				eq.unique_spawn(154014,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+				eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
+				eq.unique_spawn(154014,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
 				Phase = 4;
 			elseif( qglobals[burrowerName] == "5" ) then
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
-				eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
-				eq.unique_spawn(154013,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
-				eq.unique_spawn(154014,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
-				eq.unique_spawn(154015,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+				eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
+				eq.unique_spawn(154014,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
+				eq.unique_spawn(154015,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
 				Phase = 5;
 			elseif( qglobals[burrowerName] == "6" ) then
-				eq.set_timer("Cycle",345600000);
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
-				eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
-				eq.unique_spawn(154013,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
-				eq.unique_spawn(154014,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
-				eq.unique_spawn(154015,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
-				eq.unique_spawn(154016,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
+				eq.set_timer("Cycle",300000);
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+				eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
+				eq.unique_spawn(154014,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
+				eq.unique_spawn(154015,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
+				eq.unique_spawn(154016,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
 				Phase = 6;
 			elseif( qglobals[burrowerName] == "7" ) then
 				eq.stop_timer("Cycle");
-				eq.unique_spawn(154011,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
-				eq.unique_spawn(154012,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
-				eq.unique_spawn(154013,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
-				eq.unique_spawn(154014,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
-				eq.unique_spawn(154015,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
-				eq.unique_spawn(154016,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
-				eq.unique_spawn(154017,0,0,-796,-161,-9,111); -- Escaped
+				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
+				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
+				eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
+				eq.unique_spawn(154014,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Crawler
+				eq.unique_spawn(154015,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
+				eq.unique_spawn(154016,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
+				eq.unique_spawn(154017,0,1,-796,-161,-9,111); -- Escaped
 			end
 		end
 		eq.stop_timer("Burrow");
 	elseif(e.timer == "EscapedSpawn") then
 		eq.stop_timer("EscapedSpawn");
-		eq.unique_spawn(154017,0,0,-796,-161,-9,111); -- Escaped
+		eq.unique_spawn(154017,0,1,-796,-161,-9,111); -- Escaped
 	end
 end
 
 function HatchlingSignal(e)
 	if(e.signal == 1) then
-		eq.set_timer("EscapedSpawn",math.random(79200000,93600000));
+		eq.set_timer("EscapedSpawn",math.random(7200000,9200000));
 	elseif(e.signal == 2) then
 		eq.stop_timer("Cycle");
 		eq.stop_timer("EscapedSpawn");	
