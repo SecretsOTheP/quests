@@ -217,14 +217,14 @@ function event_encounter_load(e)
 	eq.register_npc_event("Emperor", Event.death, REAL_EMP_TYPE, EmpDeath);
 	eq.register_npc_event("Emperor", Event.spawn, REAL_EMP_TYPE, function()
 		eq.set_timer("sploitcheck", 5000);
-		eq.set_timer("depop", 2700000);
+		eq.set_timer("depop", 7200000);
 	end);
 	eq.register_npc_event("Emperor", Event.timer, REAL_EMP_TYPE, EmpTimer);
 	eq.register_npc_event("Emperor", Event.combat, REAL_EMP_TYPE, DepopCombat);
 
 	eq.register_npc_event("Emperor", Event.combat, WRAITH_TYPE, DepopCombat);
 	eq.register_npc_event("Emperor", Event.spawn, WRAITH_TYPE, function()
-		eq.set_timer("depop", 2700000);
+		eq.set_timer("depop", 7200000);
 	end);
 	eq.register_npc_event("Emperor", Event.timer, WRAITH_TYPE, function()
 		eq.depop();
