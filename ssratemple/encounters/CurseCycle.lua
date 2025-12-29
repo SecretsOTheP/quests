@@ -13,25 +13,11 @@ end
 
 function KavamezhDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -40,26 +26,12 @@ function KavamezhDeath(e)
 end
 
 function KeuzozhDeath(e)
-	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -69,25 +41,11 @@ end
 
 function MikazhaDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -97,25 +55,11 @@ end
 
 function RevanDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -125,25 +69,11 @@ end
 
 function VezhkahDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -153,25 +83,11 @@ end
 
 function ZerumazDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -181,25 +97,11 @@ end
 
 function ZheDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -209,25 +111,11 @@ end
 
 function WardenDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		if(	eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
+		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258) and
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
@@ -237,26 +125,11 @@ end
 
 function SsrakezhDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
+		if(
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
+		elseif(	not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162089)
 			) then
 			eq.signal(162266,2);
 		end
@@ -266,25 +139,11 @@ end
 
 function SsravizhDeath(e)
 	if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162210)) then
-		if(eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
+		if(
 			eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258)
 			) then
 			eq.signal(162266,1);
-		elseif(not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162012) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162021) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162013) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162060) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162024) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162011) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162059) and
-			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162023) and
+		elseif(
 			not eq.get_entity_list():IsMobSpawnedByNpcTypeID(162258)
 			) then
 			eq.signal(162266,2);
