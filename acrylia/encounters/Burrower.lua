@@ -36,8 +36,9 @@ function HatchlingTimer(e)
 			eq.unique_spawn(154016,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Restless
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"6",7,"F");
-			eq.set_timer("Cycle",900000);
+			eq.set_timer("Cycle",3600000);
 		elseif(Phase == 7) then
+			eq.depop(154016);
 			eq.unique_spawn(154017,0,1,-796,-161,-9,111); -- Escaped
 			eq.delete_global(burrowerName);
 			eq.set_global(burrowerName,"7",7,"F");
@@ -71,7 +72,7 @@ function HatchlingTimer(e)
 				eq.unique_spawn(154015,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Burrower
 				Phase = 5;
 			elseif( qglobals[burrowerName] == "6" ) then
-				eq.set_timer("Cycle",300000);
+				eq.set_timer("Cycle",3600000);
 				eq.unique_spawn(154011,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Larva
 				eq.unique_spawn(154012,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Pupa
 				eq.unique_spawn(154013,0,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading()); -- Worm
