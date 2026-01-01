@@ -12,19 +12,19 @@ function event_timer(e)
 	if(e.timer == "ssra") then
 	
 		if ( qglobals[rhagName] and qglobals[rhagName] == "1" ) then
-			eq.unique_spawn(162192, 0, 0, 644, -280, 152, 196); -- rhag`mozdezh
-			eq.unique_spawn(162194, 0, 0, 660, -310, 149.5, 218); -- Rhag`Hilath
-			eq.unique_spawn(162196, 0, 0, 561, -324, 142, 0); -- Rhag`Rithal
-			eq.unique_spawn(162193, 0, 0, 561, -236, 142, 130); -- Rhag`Vithil
-			eq.unique_spawn(162195, 0, 0, 660, -247, 149.5, 165); -- Rhag`Zerath
+			eq.unique_spawn(162192, 0, 1, 644, -280, 152, 196); -- rhag`mozdezh
+			eq.unique_spawn(162194, 0, 1, 660, -310, 149.5, 218); -- Rhag`Hilath
+			eq.unique_spawn(162196, 0, 1, 561, -324, 142, 0); -- Rhag`Rithal
+			eq.unique_spawn(162193, 0, 1, 561, -236, 142, 130); -- Rhag`Vithil
+			eq.unique_spawn(162195, 0, 1, 660, -247, 149.5, 165); -- Rhag`Zerath
 		end
 		
 		if ( qglobals[lichName] and qglobals[lichName] == "1" ) then
-			eq.unique_spawn(162030, 0, 0, 420, -144, 270.1, 0); -- Arch_Lich_Rhag`Zadune
-			eq.unique_spawn(162498, 0, 0, 449, -163, 268, 224); -- Rhag`Reshkazh
-			eq.unique_spawn(162495, 0, 0, 377, -71, 261, 64); -- Rath`Zihold
-			eq.unique_spawn(162496, 0, 0, 465, -71, 261, 192); -- Rath`Giloth
-			eq.unique_spawn(162497, 0, 0, 389, -163, 268, 32); -- Rhag`Vezozh
+			eq.unique_spawn(162030, 0, 1, 420, -144, 270.1, 0); -- Arch_Lich_Rhag`Zadune
+			eq.unique_spawn(162498, 0, 1, 449, -163, 268, 224); -- Rhag`Reshkazh
+			eq.unique_spawn(162495, 0, 1, 377, -71, 261, 64); -- Rath`Zihold
+			eq.unique_spawn(162496, 0, 1, 465, -71, 261, 192); -- Rath`Giloth
+			eq.unique_spawn(162497, 0, 1, 389, -163, 268, 32); -- Rhag`Vezozh
 		end
 	
 	end
