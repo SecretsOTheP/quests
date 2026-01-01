@@ -110,7 +110,7 @@ function TriggerNPCTimerEvent(e)
 		end
 		
 	elseif ( e.timer == "warder" ) then	
-		warder = eq.spawn2(WARDER_TYPE, 0, 0, 441, -401, 28, 192); -- a_grimling_warder
+		warder = eq.spawn2(WARDER_TYPE, 0, 1, 441, -401, 28, 192); -- a_grimling_warder
 		eq.stop_timer("warder");
 	end
 end
@@ -133,13 +133,13 @@ function SummonedGrimlingDeathEvent(e)
 	local x, y, z, h = 433, -297, 42, 64;
 	
 	if ( roll <= 25 ) then
-		eq.spawn2(WITCHDOCTOR_TYPE, 0, 0, x, y, z, h);
+		eq.spawn2(WITCHDOCTOR_TYPE, 0, 1, x, y, z, h);
 	elseif ( roll <= 50 ) then
-		eq.spawn2(SUMMONED_GRIMLINGS[1], 0, 0, x, y, z, h);
+		eq.spawn2(SUMMONED_GRIMLINGS[1], 0, 1, x, y, z, h);
 	elseif ( roll <= 75 ) then
-		eq.spawn2(SUMMONED_GRIMLINGS[2], 0, 0, x, y, z, h);
+		eq.spawn2(SUMMONED_GRIMLINGS[2], 0, 1, x, y, z, h);
 	else
-		eq.spawn2(SUMMONED_GRIMLINGS[3], 0, 0, x, y, z, h);
+		eq.spawn2(SUMMONED_GRIMLINGS[3], 0, 1, x, y, z, h);
 	end
 end
 

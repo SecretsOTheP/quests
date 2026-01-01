@@ -28,10 +28,10 @@ local TRASH = {
 };
 
 function SpawnTatrua()
-	eq.unique_spawn(DIABO_TATRUA_TYPE, 0, 0, -1778, 1128, 19.7, 64);
-	eq.unique_spawn(THALL_TATRUA_TYPE, 0, 0, -1778, 1108, 19.7, 64);
-	eq.unique_spawn(TAVUEL_TATRUA_TYPE, 0, 0, -1778, 1058, 18.2, 64);
-	eq.unique_spawn(VA_TATRUA_TYPE, 0, 0, -1778, 1038, 18.2, 64);
+	eq.unique_spawn(DIABO_TATRUA_TYPE, 0, 1, -1778, 1128, 19.7, 64);
+	eq.unique_spawn(THALL_TATRUA_TYPE, 0, 1, -1778, 1108, 19.7, 64);
+	eq.unique_spawn(TAVUEL_TATRUA_TYPE, 0, 1, -1778, 1058, 18.2, 64);
+	eq.unique_spawn(VA_TATRUA_TYPE, 0, 1, -1778, 1038, 18.2, 64);
 end
 
 function FakeCombatEvent(e)

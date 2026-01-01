@@ -30,10 +30,10 @@ function ShackleTimer(e)
 				end
 				rand = math.random(1,2);
 				if(rand == 2) then
-					eq.spawn2(154019,9,0,150,-690,2,0);
-					eq.spawn2(154019,9,0,153,-695,2,0);
+					eq.spawn2(154019,9,1,150,-690,2,0);
+					eq.spawn2(154019,9,1,153,-695,2,0);
 				else
-					eq.spawn2(154019,9,0,150,-690,2,0);
+					eq.spawn2(154019,9,1,150,-690,2,0);
 				end
 			elseif(wave < 31) then
 				if(wave == 16) then
@@ -41,29 +41,29 @@ function ShackleTimer(e)
 				end
 				rand = math.random(1,2);
 				if(rand == 2) then
-					eq.spawn2(154020,9,0,150,-690,2,0);
-					eq.spawn2(154020,9,0,153,-695,2,0);
+					eq.spawn2(154020,9,1,150,-690,2,0);
+					eq.spawn2(154020,9,1,153,-695,2,0);
 				else
-					eq.spawn2(154020,9,0,150,-690,2,0);
+					eq.spawn2(154020,9,1,150,-690,2,0);
 				end
 			elseif(wave < 46) then
 				if(wave == 31) then
 					eq.get_entity_list():GetMobByNpcTypeID(154107):Shout("Master, the tresspassers persist. I beg, make them pay for their foolishness!");
 				end				
 				if(rand == 2) then
-					eq.spawn2(154021,9,0,150,-690,2,0);
-					eq.spawn2(154021,9,0,153,-695,2,0);
+					eq.spawn2(154021,9,1,150,-690,2,0);
+					eq.spawn2(154021,9,1,153,-695,2,0);
 				else
-					eq.spawn2(154021,9,0,150,-690,2,0);
+					eq.spawn2(154021,9,1,150,-690,2,0);
 				end
 			elseif(wave == 46) then
 				eq.get_entity_list():GetMobByNpcTypeID(154107):Shout("Master! The minions have failed. I beg, empower me to rid the realm of the vile unbelievers!");
 				eq.get_entity_list():GetClientByID(client_target):MovePC(154,142,-690,3,0);
 				eq.depop_with_timer(154107);
 				if(math.random(100) > 20) then
-					eq.unique_spawn(154022,0,0,142,-690,3,66); -- a_grimling_high_priest (targetable)
+					eq.unique_spawn(154022,0,1,142,-690,3,66); -- a_grimling_high_priest (targetable)
 				else
-					eq.unique_spawn(154023,0,0,142,-690,3,66); -- High_Priest_Gakkernog
+					eq.unique_spawn(154023,0,1,142,-690,3,66); -- High_Priest_Gakkernog
 				end
 			end
 		end

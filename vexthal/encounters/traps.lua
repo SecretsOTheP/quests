@@ -153,7 +153,7 @@ function TrapCombatEvent(e)
 	if ( e.joined ) then
 		local myType = e.self:GetNPCTypeID();
 		if ( TYPES[myType] ) then
-			eq.spawn2(TYPES[myType][math.random(1, #TYPES[myType])], 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
+			eq.spawn2(TYPES[myType][math.random(1, #TYPES[myType])], 0, 1, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
 		end
 		eq.depop_with_timer();
 	end

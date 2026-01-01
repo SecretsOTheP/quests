@@ -15,10 +15,10 @@ function TrondolTrade(e)
 	
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 6554}, 0)) then -- Grimling Shackle Key
 		e.self:Say("I am too weak to make an escape, I warned you not to bother with me. I'll do my best, but I fear it is all in vain...");
-		eq.spawn2(154346,0,0,-191,-703,2,99);
-		eq.spawn2(154346,0,0,-219,-709,2,68);
-		eq.spawn2(154346,0,0,-186,-730,2,231);
-		eq.spawn2(154031,10,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading());
+		eq.spawn2(154346,0,1,-191,-703,2,99);
+		eq.spawn2(154346,0,1,-219,-709,2,68);
+		eq.spawn2(154346,0,1,-186,-730,2,231);
+		eq.spawn2(154031,10,1,e.self:GetX(),e.self:GetY(),e.self:GetZ(),e.self:GetHeading());
 		eq.depop_with_timer();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)	
@@ -36,7 +36,7 @@ function Trondol2Trade(e)
 	
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 6711}, 0)) then -- Grimling Soulgem
 		e.self:Say("I ... I don't know what to say. I owe you my life. I will tell the king, and all who will listen, what you have done for me. Take these shackles that they may know it was truly you who have plucked me from an eternity of slavery.");
-		e.other:QuestReward(e.self,0,0,0,0,6513,5000); -- Shackles of a Vah Shir Captive
+		e.other:QuestReward(e.self,0,1,0,0,6513,5000); -- Shackles of a Vah Shir Captive
 		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
@@ -56,31 +56,31 @@ function TronTimer(e)
 	if(e.timer == "march") then
 		march = march + 1;
 		if(march == 1) then
-			soulstealer = eq.spawn2(154036,0,0,-38,-271,-29,128);
+			soulstealer = eq.spawn2(154036,0,1,-38,-271,-29,128);
 		elseif(march == 2) then
 			soulstealer:CastToNPC():MoveTo(-40,-330,-31,128,true);
-			grimling4 = eq.spawn2(154033,0,0,-13,-243,-31,131);
+			grimling4 = eq.spawn2(154033,0,1,-13,-243,-31,131);
 		elseif(march == 3) then
 			grimling4:CastToNPC():MoveTo(-30,-330,-31,128,true);
-			grimling7 = eq.spawn2(154034,0,0,-136,-385,-31,62);
+			grimling7 = eq.spawn2(154034,0,1,-136,-385,-31,62);
 		elseif(march == 4) then
 			grimling7:CastToNPC():MoveTo(-90,-375,-31,64,true);
-			grimling2 = eq.spawn2(154034,0,0,20,-260,-31,133);
+			grimling2 = eq.spawn2(154034,0,1,20,-260,-31,133);
 		elseif(march == 5) then
 			grimling2:CastToNPC():MoveTo(8,-375,-31,194,true);
-			grimling5 = eq.spawn2(154038,0,0,-130,-259,-31,91);
+			grimling5 = eq.spawn2(154038,0,1,-130,-259,-31,91);
 		elseif(march == 6) then
 			grimling5:CastToNPC():MoveTo(-50,-330,-31,128,true);
-			grimling8 = eq.spawn2(154035,0,0,-183,-384,-31,66);
+			grimling8 = eq.spawn2(154035,0,1,-183,-384,-31,66);
 		elseif(march == 7) then
 			grimling8:CastToNPC():MoveTo(-90,-385,-31,64,true);
-			grimling1 = eq.spawn2(154032,0,0,77,-332,-31,175);
+			grimling1 = eq.spawn2(154032,0,1,77,-332,-31,175);
 		elseif(march == 8) then
 			grimling1:CastToNPC():MoveTo(8,-385,-31,194,true);
-			grimling6 = eq.spawn2(154037,0,0,-134,-326,-31,70);
+			grimling6 = eq.spawn2(154037,0,1,-134,-326,-31,70);
 		elseif(march == 9) then
 			grimling6:CastToNPC():MoveTo(-90,-365,-31,64,true);
-			grimling3 = eq.spawn2(154035,0,0,1,-199,-31,127);
+			grimling3 = eq.spawn2(154035,0,1,1,-199,-31,127);
 		elseif(march == 10) then
 			grimling3:CastToNPC():MoveTo(8,-365,-31,194,true);
 			eq.stop_timer("march");
@@ -108,21 +108,21 @@ function TronTimer(e)
 end
 
 function GrimlingAttack(e)
-	eq.spawn2(154024,11,0,-40,-330,-31,128);
+	eq.spawn2(154024,11,1,-40,-330,-31,128);
 	eq.depop(154036);
-	eq.spawn2(154028,11,0,8,-385,-31,194);
+	eq.spawn2(154028,11,1,8,-385,-31,194);
 	eq.depop(154032);
-	eq.spawn2(154026,11,0,8,-375,-31,194);
-	eq.spawn2(154026,11,0,-90,-375,-31,64);
+	eq.spawn2(154026,11,1,8,-375,-31,194);
+	eq.spawn2(154026,11,1,-90,-375,-31,64);
 	eq.depop_all(154034);
-	eq.spawn2(154025,11,0,8,-365,-31,194);
-	eq.spawn2(154025,11,0,-90,-385,-31,64);
+	eq.spawn2(154025,11,1,8,-365,-31,194);
+	eq.spawn2(154025,11,1,-90,-385,-31,64);
 	eq.depop_all(154035);
-	eq.spawn2(154027,11,0,-30,-330,-31,128);
+	eq.spawn2(154027,11,1,-30,-330,-31,128);
 	eq.depop(154033);
-	eq.spawn2(154030,11,0,-50,-330,-31,128);
+	eq.spawn2(154030,11,1,-50,-330,-31,128);
 	eq.depop(154038);
-	eq.spawn2(154029,11,0,-90,-365,-31,64);
+	eq.spawn2(154029,11,1,-90,-365,-31,64);
 	eq.depop(154037);
 end
 

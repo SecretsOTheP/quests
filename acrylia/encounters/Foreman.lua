@@ -27,7 +27,7 @@ function FakeForemanTimerEvent(e)
 		) then
 			
 			local fake = eq.get_entity_list():GetNPCByNPCTypeID(NON_TARGET_FOREMAN_TYPE);
-			eq.spawn2(FOREMAN_TYPE, 0, 0, fake:GetX(), fake:GetY(), fake:GetZ(), fake:GetHeading());
+			eq.spawn2(FOREMAN_TYPE, 0, 1, fake:GetX(), fake:GetY(), fake:GetZ(), fake:GetHeading());
 			eq.depop_with_timer(NON_TARGET_FOREMAN_TYPE);
 			
 			local npcList = eq.get_entity_list():GetNPCList();
@@ -37,7 +37,7 @@ function FakeForemanTimerEvent(e)
 				-- exclude the bones in the Trondol room
 				if ( npc.valid and npc:GetNPCTypeID() == BONES_TYPE and npc:GetX() > 300 and npc:GetY() < -200 ) then
 				
-					eq.spawn2(SKELETAL_DEATHGUARD_TYPE, 0, 0, npc:GetX(), npc:GetY(), npc:GetZ(), npc:GetHeading());
+					eq.spawn2(SKELETAL_DEATHGUARD_TYPE, 0, 1, npc:GetX(), npc:GetY(), npc:GetZ(), npc:GetHeading());
 				end			
 			end
 			eq.signal(BONES_TYPE, 1);

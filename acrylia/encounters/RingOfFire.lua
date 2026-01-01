@@ -43,13 +43,13 @@ function TriggerNPCEnterEvent(e)
 		
 		e.self:Emote("you step into the grimling's ring of fire, a hot breeze blows into the cavern and begins swirling about you. The grimling's constant chanting seems to grow louder...");
 	
-		warder = eq.spawn2(WARDER_TYPE, 0, 0, -98, -20, -25, 0); -- a_grimling_warder
+		warder = eq.spawn2(WARDER_TYPE, 0, 1, -98, -20, -25, 0); -- a_grimling_warder
 		
-		chantingGrimlings[1] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 0, -78, 93, -26, 182);		-- confirmed
-		chantingGrimlings[2] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 0, -82, 56, -29, 210);		-- confirmed
-		chantingGrimlings[3] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 0, -124, 120, -29, 121);	-- guess
-		chantingGrimlings[4] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 0, -149, 80, -27, 61);		-- guess
-		chantingGrimlings[5] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 0, -133, 53, -29, 23);		-- confirmed
+		chantingGrimlings[1] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 1, -78, 93, -26, 182);		-- confirmed
+		chantingGrimlings[2] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 1, -82, 56, -29, 210);		-- confirmed
+		chantingGrimlings[3] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 1, -124, 120, -29, 121);	-- guess
+		chantingGrimlings[4] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 1, -149, 80, -27, 61);		-- guess
+		chantingGrimlings[5] = eq.spawn2(UNTARGETABLE_GRIMLING_TYPE, 0, 1, -133, 53, -29, 23);		-- confirmed
 		
 		eq.set_timer("wave", 70000 + math.random(10000));
 		eq.set_timer("proximity", RING_CLIENT_CHECK_TIMER);
@@ -150,20 +150,20 @@ function SpawnWave()
 			boss = 2;	-- warlord
 		end
 		
-		eq.spawn2(BOSS_TYPES[boss], 12, 0, -89, 5, -25, 250);
+		eq.spawn2(BOSS_TYPES[boss], 12, 1, -89, 5, -25, 250);
 	else
 		if ( roll <= 7 ) then
 			-- battlemaster
-			eq.spawn2(MINIBOSS_TYPES[2], 0, 0, -116, 81, -25, math.random(255));
+			eq.spawn2(MINIBOSS_TYPES[2], 0, 1, -116, 81, -25, math.random(255));
 		elseif ( roll <= 15 ) then
 			-- battlelord
-			eq.spawn2(MINIBOSS_TYPES[1], 0, 0, -116, 81, -25, math.random(255));
+			eq.spawn2(MINIBOSS_TYPES[1], 0, 1, -116, 81, -25, math.random(255));
 		else
-			eq.spawn2(TRASH_TYPES[math.random(3)], 0, 0, math.random(-126, -108), math.random(74, 91), -25, math.random(255));
+			eq.spawn2(TRASH_TYPES[math.random(3)], 0, 1, math.random(-126, -108), math.random(74, 91), -25, math.random(255));
 		end
 		
-		eq.spawn2(TRASH_TYPES[1], 0, 0, math.random(-126, -108), math.random(74, 91), -25, math.random(255));		-- SK possessed
-		eq.spawn2(TRASH_TYPES[math.random(3)], 0, 0, math.random(-126, -108), math.random(74, 91), -25, math.random(255));
+		eq.spawn2(TRASH_TYPES[1], 0, 1, math.random(-126, -108), math.random(74, 91), -25, math.random(255));		-- SK possessed
+		eq.spawn2(TRASH_TYPES[math.random(3)], 0, 1, math.random(-126, -108), math.random(74, 91), -25, math.random(255));
 	end
 end
 

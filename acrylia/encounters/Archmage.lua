@@ -169,7 +169,7 @@ function TriggerNPCTimerEvent(e)
 	elseif ( e.timer == "text" ) then
 
 		if ( text == 0 ) then
-			warder = eq.spawn2(WARDER_TYPE, 0, 0, 207, -69, -5, 0); -- a_grimling_warder
+			warder = eq.spawn2(WARDER_TYPE, 0, 1, 207, -69, -5, 0); -- a_grimling_warder
 		end
 
 		text = text + 1;
@@ -242,10 +242,10 @@ function SpawnWave()
 				mobType = TRASH_TYPES[7];
 			end
 			
-			eq.spawn2(mobType, 0, 0, TRASH_COORDS[spawn].x, TRASH_COORDS[spawn].y, TRASH_COORDS[spawn].z, TRASH_COORDS[spawn].h);
+			eq.spawn2(mobType, 0, 1, TRASH_COORDS[spawn].x, TRASH_COORDS[spawn].y, TRASH_COORDS[spawn].z, TRASH_COORDS[spawn].h);
 		end
 	elseif ( wave == #WAVE_TIMES ) then
-		eq.spawn2(GORRAFERG_TYPE, 0, 0, 239, -7, 0, 192);
+		eq.spawn2(GORRAFERG_TYPE, 0, 1, 239, -7, 0, 192);
 		eq.depop_with_timer(ARCHMAGE_TYPE);
 		eq.set_timer("pit", 5000);
 	else
