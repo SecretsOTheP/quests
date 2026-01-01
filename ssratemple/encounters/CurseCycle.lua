@@ -178,13 +178,13 @@ function EventTimer(e)
 		eq.stop_timer("spawnGlyph");
 		eq.zone_emote(0,"A roar fills the lower temple halls!  The smell of burning ozone and decay fills the air!");
 		if(eq.get_qglobals()[glyphed_deadName] ~= nil) then
-			eq.unique_spawn(162038,0,0,-51,-9,-218,63);
+			eq.unique_spawn(162038,0,1,-51,-9,-218,63);
 		else
-			eq.unique_spawn(162037,0,0,-51,-9,-218,63);
+			eq.unique_spawn(162037,0,1,-51,-9,-218,63);
 		end
 	elseif(e.timer == "SpawnSsrakezh") then
 		eq.stop_timer("SpawnSsrakezh");
-		eq.unique_spawn(162258,0,0,-211,131,-183,134);
+		eq.unique_spawn(162258,0,1,-211,131,-183,134);
 	end
 end
 
@@ -215,9 +215,9 @@ function GlyphDeath(e)
 	exiled_deadName = exiled_deadName .. eq.get_zone_guild_id();
 	eq.set_global(glyphed_deadName,"1",3,"D5");
 	if(eq.get_qglobals()[exiled_deadName] ~= nil) then
-		eq.unique_spawn(162040,0,0,-51,-9,-218,63); -- spawn banished
+		eq.unique_spawn(162040,0,1,-51,-9,-218,63); -- spawn banished
 	else
-		eq.unique_spawn(162039,0,0,-51,-9,-218,63); -- spawn exiled
+		eq.unique_spawn(162039,0,1,-51,-9,-218,63); -- spawn exiled
 	end	
 end
 
@@ -247,9 +247,9 @@ function RuneDeath(e)
 	glyphed_deadName = glyphed_deadName .. eq.get_zone_guild_id();
 	exiled_deadName = exiled_deadName .. eq.get_zone_guild_id();
 	if(eq.get_qglobals()[exiled_deadName] ~= nil) then
-		eq.unique_spawn(162040,0,0,-51,-9,-218,63); -- spawn banished
+		eq.unique_spawn(162040,0,1,-51,-9,-218,63); -- spawn banished
 	else
-		eq.unique_spawn(162039,0,0,-51,-9,-218,63); -- spawn exiled
+		eq.unique_spawn(162039,0,1,-51,-9,-218,63); -- spawn exiled
 	end	
 end
 
@@ -275,7 +275,7 @@ end
 
 function ExileDeath(e)
 	eq.set_global("exiled_dead","1",3,"D5");
-	eq.unique_spawn(162042,0,0,-51,-9,-218,63);
+	eq.unique_spawn(162042,0,1,-51,-9,-218,63);
 end
 
 function BanishSpawn(e)
@@ -299,11 +299,11 @@ function BanishCombat(e)
 end
 
 function BanishDeath(e)
-	eq.unique_spawn(162042,0,0,-51,-9,-218,63);
+	eq.unique_spawn(162042,0,1,-51,-9,-218,63);
 end
 
 function CurseSpawn(e)
-	eq.set_timer("depop",1200000);
+	eq.set_timer("depop",3600000);
 end
 
 function CurseTimer(e)
