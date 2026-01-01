@@ -70,7 +70,7 @@ function GovernorTimer(e)
 end
 
 function ActivateTraps()
-
+	eq.stop_timer("despawntraps");
 	if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(TRAP_TYPE) ) then
 
 		for i = 1, 11 do
