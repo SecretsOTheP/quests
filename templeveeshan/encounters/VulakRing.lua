@@ -92,48 +92,26 @@ local RING_WAVES = {
 		waveTime = 526000,
 		waveFunc = function()
 			-- Two drakes and a wurm destroyer spawn in the ring, and two more drakes come from the bridge.
-			eq.spawn2(eq.ChooseRandom(124297, 124298), 0, 1, -740, 510, 140, 1); -- pit Wurm
-			eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 1, -698, 510, 123, 192); -- pit an_acolyte_of_Veeshan
-			eq.spawn2(eq.ChooseRandom(124311, 124319), 40, 1, -756, 815, 125, 124); -- bridge an_acolyte_of_Veeshan
-			eq.spawn2(eq.ChooseRandom(124294, 124291, 124289, 124296), 0, 1, -779, 510, 123, 65); -- pit warden (400 dmg)
-			eq.spawn2(eq.ChooseRandom(124294, 124291, 124289, 124296), 41, 1, -725, 816, 125, 131); -- bridge warden (400 dmg)
+			eq.spawn2(eq.ChooseRandom(124297, 124298), 0, 0, -740, 510, 140, 1); -- pit Wurm
+			eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 0, -698, 510, 123, 192); -- pit an_acolyte_of_Veeshan
+			eq.spawn2(eq.ChooseRandom(124311, 124319), 40, 0, -756, 815, 125, 124); -- bridge an_acolyte_of_Veeshan
+			eq.spawn2(eq.ChooseRandom(124294, 124291, 124289, 124296), 0, 0, -779, 510, 123, 65); -- pit warden (400 dmg)
+			eq.spawn2(eq.ChooseRandom(124294, 124291, 124289, 124296), 41, 0, -725, 816, 125, 131); -- bridge warden (400 dmg)
 		end
 	},
-	[2] = {
-		waveTime = 150000,
+	[2] = {	-- wave 12
+		waveTime = 527000,
 		waveFunc = function()
-			-- A vortex of mana fires. One flurry drake spawns with a number of hatchlings, some of which spawn on a delay
-			-- I'm not sure how many hatchlings spawned. I don't think more than 6 ever popped at once, so my best guess is that there were 6 to start, and a couple more mini-waves of 3 or 4 each.
-
-			eq.spawn2(124317, 0, 1, -740, 543, 130, 127); -- a vortex of mana
-			eq.spawn2(124318, 0, 1, -740, 510, 130, 1); -- pit a_templar_of_Veeshan
-			
-			eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, math.random(255)); -- pit hatchling
-			eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, math.random(255)); -- pit hatchling
-			eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, math.random(255)); -- pit hatchling
-			eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, math.random(255)); -- pit hatchling
-			if ( math.random(100) > 50 ) then
-				eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, math.random(255)); -- pit hatchling
-			end
-			if ( math.random(100) > 50 ) then
-				eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, math.random(255)); -- pit hatchling
-			end
+			eq.spawn2(124314, 0, 0, -740, 510, 130, 1); -- Vethrol_the_Skycaller
 		end
 	},
-	[3] = {		-- wave 4
-		waveTime = 524000,
-		waveFunc = function()
-			-- A vortex of mana fires. Zruk the Lifestealer (named drake - black, I think) spawns, and another vortex goes off on his death. Zruk is a bellycaster, and will spawn carrion drake adds after any deaths - including swarm pets!
-
-			eq.spawn2(124317, 0, 1, -740, 543, 130, 127); -- a vortex of mana
-			eq.spawn2(124312, 0, 1, -740, 510, 130, 1); -- Zruk
-		end
-	},
-	[4] = {	-- wave 6
+	[3] = {	-- wave 6
 		waveTime = 585000,
 		waveFunc = function(splitters)
+
+			eq.spawn2(124317, 0, 0, -740, 543, 130, 127); -- a vortex of mana
+
 			-- Two drakes (wardens) spawn in the ring, one on each side of the room. When each dies, two more pop at their original spawn points, and so on. Wave includes 22 drakes in total, 10 splitting from each original.
-			
 			-- pit wardens (340 dmg)
 			local parent = eq.spawn2(eq.ChooseRandom(124295, 124290, 124299, 124292, 124293), 0, 0, -698, 510, 123, 192):GetID();
 			table.insert(splitters, {
@@ -146,7 +124,7 @@ local RING_WAVES = {
 				limit = 10,
 				types = 1,
 			});
-			parent = eq.spawn2(eq.ChooseRandom(124295, 124290, 124299, 124292, 124293), 0, 1, -779, 510, 123, 65):GetID();
+			parent = eq.spawn2(eq.ChooseRandom(124295, 124290, 124299, 124292, 124293), 0, 0, -779, 510, 123, 65):GetID();
 			table.insert(splitters, {
 				parent = parent,
 				children = {},
@@ -159,89 +137,57 @@ local RING_WAVES = {
 			});
 		end
 	},
-	[5] = {	-- wave 8
-		waveTime = 526000,
-		waveFunc = function()
-			-- Rarthek the Swiftclaw and a swiftclaw racnar spawn. A vortex fires on Rarthek's death.
-			eq.spawn2(124313, 0, 1, -740, 510, 130, 1); -- Rarthek_the_Swiftclaw 
-			eq.spawn2(124308, 0, 1, -740, 475, 125, 1); -- a_swiftclaw_racnar 
-		end
-	},
-	[6] = {	-- wave 11
+	[4] = {	-- wave 11
 		waveTime = 586000,
-		waveFunc = function(splitters)
+		waveFunc = function()
 			-- spawns random NPCs.  Log 1 spawned with tiger+acolyte+templar+warden; log 2 spawned with 3 tigers+warden
 			-- 2 more wardens seemed to spawn after the warden was killed.  (both splitting wardens was a jade incidentally)
-
-			eq.spawn2(124317, 0, 1, -740, 543, 130, 127); -- a vortex of mana
-			-- pit warden (400 dmg)
-			local parent = eq.spawn2(eq.ChooseRandom(124294, 124291, 124289, 124296), 0, 0, -740, 510, 125, 1):GetID();
-			table.insert(splitters, {
-				parent = parent,
-				children = {},
-				x = -740,
-				y = 510,
-				z = 125,
-				splits = 2,
-				limit = 2,
-				types = 0,
-			});
 			
 			local roll = math.random(100);
 			
-			if ( roll < 33 ) then
-				eq.spawn2(eq.ChooseRandom(124307, 124305, 124304, 124306), 0, 1, -740, 479, 125, 1); -- pit templar
-			elseif ( roll < 33 ) then
-				eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 1, -749, 479, 125, 1); -- pit an_acolyte_of_Veeshan 
+			if ( roll < 35 ) then
+				eq.spawn2(eq.ChooseRandom(124307, 124305, 124304, 124306), 0, 0, -740, 479, 125, 1); -- pit templar
+			elseif ( roll < 75 ) then
+				eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 0, -749, 479, 125, 1); -- pit an_acolyte_of_Veeshan 
 			else
-				eq.spawn2(124309, 0, 1, -740, 479, 125, 1); -- pit a_tiger_stripe_racnar
+				eq.spawn2(124309, 0, 0, -740, 479, 125, 1); -- pit a_tiger_stripe_racnar
 			end
 			
 			roll = math.random(100);
-			if ( roll < 25 ) then
-				eq.spawn2(124309, 0, 1, -774, 510, 125, 64); -- pit a_tiger_stripe_racnar
-			elseif ( roll < 50 ) then
-				eq.spawn2(eq.ChooseRandom(124297, 124298), 0, 1, -774, 510, 125, 64); -- pit wurm
+			if ( roll < 50 ) then
+				eq.spawn2(eq.ChooseRandom(124297, 124298), 0, 0, -774, 510, 125, 64); -- pit wurm
 			elseif ( roll < 75 ) then
-				eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 1, -774, 510, 125, 64); -- pit an_acolyte_of_Veeshan 
+				eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 0, -774, 510, 125, 64); -- pit an_acolyte_of_Veeshan 
 			else
-				eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, 65); -- pit hatchling
-				eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, 127); -- pit hatchling
+				eq.spawn2(124309, 0, 0, math.random(-782, -695), math.random(468, 555), 125, 64); -- pit a_tiger_stripe_racnar
+				eq.spawn2(124309, 0, 0, math.random(-782, -695), math.random(468, 555), 125, 64); -- pit a_tiger_stripe_racnar
 			end
 
 			roll = math.random(100);
 			if ( roll < 25 ) then
-				eq.spawn2(124309, 0, 0, -705, 510, 125, 192); -- pit a_tiger_stripe_racnar 
-			elseif ( roll < 50 ) then
 				eq.spawn2(eq.ChooseRandom(124297, 124298), 0, 0, -705, 510, 125, 192); -- pit wurm
-			elseif ( roll < 75 ) then
+			elseif ( roll < 50 ) then
 				eq.spawn2(eq.ChooseRandom(124311, 124319), 0, 0, -705, 510, 125, 192); -- pit an_acolyte_of_Veeshan 
 			else
-				eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, 65); -- pit hatchling
-				eq.spawn2(eq.ChooseRandom(124287, 124285, 124288, 124286), 0, 1, math.random(-782, -695), math.random(468, 555), 123, 127); -- pit hatchling
+				eq.spawn2(124309, 0, 0, math.random(-782, -695), math.random(468, 555), 125, 64); -- pit a_tiger_stripe_racnar
+				eq.spawn2(124309, 0, 0, math.random(-782, -695), math.random(468, 555), 125, 64); -- pit a_tiger_stripe_racnar
 			end
 		end
 	},
-	[7] = {	-- wave 12
-		waveTime = 527000,
-		waveFunc = function()
-			eq.spawn2(124314, 0, 1, -740, 510, 130, 1); -- Vethrol_the_Skycaller
-		end
-	},
-	[8] = {	-- wave 16
+	[5] = {	-- wave 16
 		waveTime = 588000,
 		waveFunc = function()
-			eq.spawn2(124317, 0, 1, -740, 543, 130, 127); -- a vortex of mana
-			eq.spawn2(124315, 0, 1, -740, 510, 130, 1); -- The_Herald_of_Vulak`Aerr
+			eq.spawn2(124317, 0, 0, -740, 543, 130, 127); -- a vortex of mana
+			eq.spawn2(124315, 0, 0, -740, 510, 130, 1); -- The_Herald_of_Vulak`Aerr
 		end
 	},
-	[9] = {	-- wave 17
+	[6] = {	-- wave 17
 		waveTime = 7200000,	-- unknown if Vulak has some sort of timer.  Makes sense to have one in case a solo player manages to keep the ring going
 		waveFunc = function()
-			eq.spawn2(124128, 0, 1, -740, 510, 130, 1); -- #Vulak`Aerr
+			eq.spawn2(124128, 0, 0, -740, 510, 130, 1); -- #Vulak`Aerr
 		end
 	},
-	[10] = {
+	[7] = {
 		waveTime = 1000,
 		waveFunc = function()
 			--eq.depop(124128); -- #Vulak`Aerr
@@ -259,8 +205,6 @@ local orb;
 local splitters;
 
 function GlowingOrbEnterEvent(event)
-
-	local zoneguildid = 0;
 	if ( RING_DEBUG_MODE ) then eq.zone_emote(7,"<ZONE MESSAGE>: Entered Proximity"); end
 
 	if ( not ringActive ) then
@@ -273,15 +217,12 @@ function GlowingOrbEnterEvent(event)
 			clientsInRing = 1;
 			invisClientTime = 0;
 			splitters = {};
-			zoneguildid = eq.get_zone_guild_id()
 		
 			eq.depop_with_timer(124000);	-- Thylex_of_Veeshan
-			
-			if(zoneguildid ~= 1) then
-				eq.spawn2(124316, 0, 1, -760, 960, 128, 128); -- Essence_of_Veeshan
-				eq.spawn2(124316, 0, 1, -740, 960, 128, 128); -- Essence_of_Veeshan
-				eq.spawn2(124316, 0, 1, -720, 960, 128, 128); -- Essence_of_Veeshan
-			end
+		
+			eq.spawn2(124316, 0, 0, -760, 960, 128, 128); -- Essence_of_Veeshan
+			eq.spawn2(124316, 0, 0, -740, 960, 128, 128); -- Essence_of_Veeshan
+			eq.spawn2(124316, 0, 0, -720, 960, 128, 128); -- Essence_of_Veeshan
 			
 			eq.set_timer("wave", 10000);
 			eq.set_timer("proximity", RING_CLIENT_CHECK_TIMER);
@@ -432,7 +373,7 @@ function VortexOfManaSpawnEvent(event)
 end
 
 function BossDeathEvent(event)
-	eq.spawn2(124317, 0, 1, -740, 543, 130, 127); -- a vortex of mana
+	eq.spawn2(124317, 0, 0, -740, 543, 130, 127); -- a vortex of mana
 end
 
 function SlayEvent(event)
@@ -442,7 +383,7 @@ function SlayEvent(event)
 		if ( event.self:GetID() == 0 or event.self:GetID() == event.other:GetID()) then
 			return;
 		end
-		eq.unique_spawn(124310, 0, 1, event.other:GetX(), event.other:GetY(), event.other:GetZ() + 5, 1); -- a_carrion_drake 
+		eq.unique_spawn(124310, 0, 0, event.other:GetX(), event.other:GetY(), event.other:GetZ() + 5, 1); -- a_carrion_drake 
 	end
 end
 
@@ -495,7 +436,7 @@ function SplitDrakeDeathEvent(event)
 			end
 		
 			table.insert(t.children, {
-				spawnId = eq.spawn2(npcType, grid, 1, t.x or event.self:GetX(), t.y or event.self:GetY(), t.z or event.self:GetZ() + 1, math.random(255)):GetID(),
+				spawnId = eq.spawn2(npcType, grid, 0, t.x or event.self:GetX(), t.y or event.self:GetY(), t.z or event.self:GetZ() + 1, math.random(255)):GetID(),
 				depth = depth + 1,
 				}
 			);
