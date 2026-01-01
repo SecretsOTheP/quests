@@ -47,7 +47,7 @@ function GovernorTimer(e)
 			local fake = eq.get_entity_list():GetMobByNpcTypeID(FAKE_EMP_TYPE);
 		
 			if ( fake and fake.valid ) then
-				eq.spawn2(REAL_EMP_TYPE, 0, 0, fake:GetX(), fake:GetY(), fake:GetZ(), fake:GetHeading());
+				eq.spawn2(REAL_EMP_TYPE, 0, 1, fake:GetX(), fake:GetY(), fake:GetZ(), fake:GetHeading());
 			end
 			
 			fake:Depop(true);
