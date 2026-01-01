@@ -89,7 +89,7 @@ function BloodAggro(e)
 	if ( e.joined ) then
 		ActivateTraps();
 	else
-		eq.set_timer("despawntraps", 2880000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+		eq.set_timer("despawntraps", 300 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	end
 end
 
@@ -99,7 +99,7 @@ function BloodDeath(e)
 		t = 200;
 	end
 	eq.set_timer("twitchesemote", 10 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
-	eq.set_timer("despawntraps", 2880000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+	eq.set_timer("despawntraps", t * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 end
 
 function FakeEmpSpawn(e)
