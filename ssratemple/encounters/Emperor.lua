@@ -53,7 +53,6 @@ function GovernorTimer(e)
 			fake:Depop(true);
 			eq.update_spawn_timer(FAKE_EMP_SPAWNPOINT, 10800000); -- in case zone crashes or sleeps; timer will reset to full on emp death
 		end
-	--[[
 	elseif ( e.timer == "trapscast" ) then
 	
 		local npcList = eq.get_entity_list():GetNPCList();
@@ -67,8 +66,6 @@ function GovernorTimer(e)
 				end
 			end
 		end
-	]]
-	
 	end
 end
 
@@ -83,7 +80,7 @@ function ActivateTraps()
 			eq.spawn2(TRAP_TYPE, 0, 0, 629, -292, 402, 0);
 		end
 		
-		--eq.set_timer("trapscast", 10000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+		eq.set_timer("trapscast", 10000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	end
 end
 
@@ -114,11 +111,11 @@ function FakeEmpSpawn(e)
 end
 
 function EmpDeath(e)
-	eq.spawn2(WRAITH_TYPE, 0, 0, 877, -326, 408, 192);
-	eq.spawn2(WRAITH_TYPE, 0, 0, 953, -293, 404, 176);
-	eq.spawn2(WRAITH_TYPE, 0, 0, 953, -356, 404, 203);
-	eq.spawn2(WRAITH_TYPE, 0, 0, 773, -360, 403, 52);
-	eq.spawn2(WRAITH_TYPE, 0, 0, 770, -289, 403, 72);
+	eq.spawn2(WRAITH_TYPE, 0, 1, 877, -326, 408, 192);
+	eq.spawn2(WRAITH_TYPE, 0, 1, 953, -293, 404, 176);
+	eq.spawn2(WRAITH_TYPE, 0, 1, 953, -356, 404, 203);
+	eq.spawn2(WRAITH_TYPE, 0, 1, 773, -360, 403, 52);
+	eq.spawn2(WRAITH_TYPE, 0, 1, 770, -289, 403, 72);
 
 	if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(FAKE_EMP_TYPE) ) then
 		-- possible if emp fight is super long
