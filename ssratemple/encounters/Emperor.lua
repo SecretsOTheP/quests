@@ -110,6 +110,18 @@ function FakeEmpSpawn(e)
 	end
 end
 
+function EmpAggro(e)
+	if ( e.joined ) then
+		if ( not eq.is_paused_timer("depop") ) then
+			eq.pause_timer("depop");
+		end
+		ActivateTraps();
+	else
+		eq.set_timer("despawntraps", 300 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+		eq.resume_timer("depop");
+	end
+end
+
 function EmpDeath(e)
 	eq.spawn2(WRAITH_TYPE, 0, 1, 877, -326, 408, 192);
 	eq.spawn2(WRAITH_TYPE, 0, 1, 953, -293, 404, 176);
@@ -217,7 +229,7 @@ function event_encounter_load(e)
 		eq.set_timer("depop", 7200000);
 	end);
 	eq.register_npc_event("Emperor", Event.timer, REAL_EMP_TYPE, EmpTimer);
-	eq.register_npc_event("Emperor", Event.combat, REAL_EMP_TYPE, DepopCombat);
+	eq.register_npc_event("Emperor", Event.combat, REAL_EMP_TYPE, EmpAggro);
 
 	eq.register_npc_event("Emperor", Event.combat, WRAITH_TYPE, DepopCombat);
 	eq.register_npc_event("Emperor", Event.spawn, WRAITH_TYPE, function()
