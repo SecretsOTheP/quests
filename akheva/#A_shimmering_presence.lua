@@ -17,6 +17,11 @@ function event_trade(e)
 		eq.spawn2(179019,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
 		e.other:QuestReward(e.self,0,0,0,0,0,10000);
 		eq.depop();
+	elseif(e.other:IsSelfFound() >= 1 and item_lib.check_turn_in(e.self, e.trade, {item1 = 10033})) then
+		e.self:Emote(" begins to quiver and shake. The formless entity appears to grow and shrink in complete disregard to natural laws. The light in the temple around you appears to slowly dim until you are surrounded by an impenetrable cloak of shadows. Fear grips your heart as your vision slowly adapts to accommodate the low light. When you can finally make out the figure before you, you find yourself silently praying for the darkness to return.");
+		eq.spawn2(179019,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
+		e.other:QuestReward(e.self,0,0,0,0,0,10000);
+		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
