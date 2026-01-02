@@ -53,6 +53,7 @@ function GovernorTimer(e)
 			fake:Depop(true);
 			eq.update_spawn_timer(FAKE_EMP_SPAWNPOINT, 10800000); -- in case zone crashes or sleeps; timer will reset to full on emp death
 		end
+	--[[
 	elseif ( e.timer == "trapscast" ) then
 	
 		local npcList = eq.get_entity_list():GetNPCList();
@@ -66,6 +67,7 @@ function GovernorTimer(e)
 				end
 			end
 		end
+	]]
 	end
 end
 
@@ -80,7 +82,7 @@ function ActivateTraps()
 			eq.spawn2(TRAP_TYPE, 0, 0, 629, -292, 402, 0);
 		end
 		
-		eq.set_timer("trapscast", 10000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+		--eq.set_timer("trapscast", 10000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	end
 end
 
