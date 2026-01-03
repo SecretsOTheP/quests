@@ -1,6 +1,6 @@
 function event_spawn(e)
 	eq.zone_emote(7, "You hear squealing voices of Centi echo through the dark hallways.  Something must have them frightened.  You find yourself wondering what could possibly scare the servants of the Akheva.  Do you really want to know?");
-	eq.set_timer("depop",2940000);
+	eq.set_timer("depop",7200000);
 end
 
 function event_timer(e)
