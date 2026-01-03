@@ -336,13 +336,13 @@ end
 function event_encounter_load(e)
 	eq.register_npc_event("CurseCycle", Event.spawn, 162210, SsrakezhSpawn);
 	eq.register_npc_event("CurseCycle", Event.timer, 162210, SsrakezhTimer);
-	eq.register_npc_event("CurseCycle", Event.death, 162012, KavamezhDeath);
-	eq.register_npc_event("CurseCycle", Event.death, 162021, KeuzozhDeath);
-	eq.register_npc_event("CurseCycle", Event.death, 162013, MikazhaDeath);
-	eq.register_npc_event("CurseCycle", Event.death, 162060, RevanDeath);
-	eq.register_npc_event("CurseCycle", Event.death, 162024, VezhkahDeath);
-	eq.register_npc_event("CurseCycle", Event.death, 162011, ZerumazDeath);
-	eq.register_npc_event("CurseCycle", Event.death, 162059, ZheDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162012, KavamezhDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162021, KeuzozhDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162013, MikazhaDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162060, RevanDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162024, VezhkahDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162011, ZerumazDeath);
+	--eq.register_npc_event("CurseCycle", Event.death, 162059, ZheDeath);
 	eq.register_npc_event("CurseCycle", Event.death, 162023, WardenDeath);
 	eq.register_npc_event("CurseCycle", Event.death, 162258, SsrakezhDeath);
 	eq.register_npc_event("CurseCycle", Event.death, 162089, SsravizhDeath);
