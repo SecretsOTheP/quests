@@ -18,18 +18,40 @@ local GOVERNOR_TYPE = 162054;	-- EmpInitSpawn
 local FAKE_EMP_TYPE = 162065;	-- untargetable emp
 local FAKE_EMP_SPAWNPOINT = 352885;
 local REAL_EMP_TYPE = 162491;
+local GOLEM_TYPE = 162493;		-- #Ssraeshzian_Blood_Golem
 local BLOOD_TYPE = 162189;		-- #Blood_of_Ssraeshza
 local BLOOD_SPAWNPOINT = 352792;
+local GOLEM_SPAWNPOINT = 369150;
 local TRAP_TYPE = 162492;		-- 4 corner traps that cast Avatar Power
 local WRAITH_TYPE = 162494;
 local CURSE_TRAP_TYPE = 162478;	-- center room invis man that casts Curse of Ssraeshza after some time
 local ROOM_GUARDS = { [162128] = 1, [162123] = 1, [162130] = 1, [162126] = 1, [162127] = 1, [162129] = 1, [162124] = 1, [162125] = 1 }
 
+local HERIZ_TYPE = 162123;	-- Heriz the Malignant
+local YASIZ_TYPE = 162124;	-- Yasiz the Devourer
+local ZLAKAS_TYPE = 162125;	-- Zlakas the Slayer
+local NILASZ_TYPE = 162126;	-- Nilasz the Devourer
+local SKZIK_TYPE = 162127;	-- Skzik the Tormentor
+local GRZIZ_TYPE = 162128;	-- Grziz the Tormentor
+local SLAKIZ_TYPE = 162129;	-- Slakiz the Malignant
+local KLAZAZ_TYPE = 162130;	-- Klazaz the Slayer
+
+local GUARD_SPAWN_POINTS = {
+	{x = 837, y = -365, z = 405.7, h = 42, },
+	{x = 877, y = -379, z = 404.5, h = 5, },
+	{x = 918, y = -364, z = 404.5, h = 227, },
+	{x = 931, y = -323, z = 405.7, h = 200, },
+	{x = 918, y = -282, z = 404.5, h = 172, },
+	{x = 877, y = -270, z = 404.5, h = 136, },
+	{x = 837, y = -283, z = 405.1, h = 88, },
+	{x = 822, y = -323, z = 405.1, h = 65, },
+};
+
 local cursed = false;
 local empDepopped = false;
+local empIsDead = false;
 
 function GovernorTimer(e)
-
 	if ( e.timer == "despawntraps" ) then
 		eq.stop_timer("traps");
 		eq.depop_all(TRAP_TYPE);
@@ -53,6 +75,39 @@ function GovernorTimer(e)
 			fake:Depop(true);
 			eq.update_spawn_timer(FAKE_EMP_SPAWNPOINT, 10800000); -- in case zone crashes or sleeps; timer will reset to full on emp death
 		end
+	elseif (not empIsDead and e.timer == "heriz_death") then
+		eq.stop_timer("heriz_death");
+		local roll = math.random(8);
+		eq.spawn2(HERIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "yasiz_death") then
+		eq.stop_timer("yasiz_death");
+		local roll = math.random(8);
+		eq.spawn2(YASIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "zlakas_death") then
+		eq.stop_timer("zlakas_death");
+		local roll = math.random(8);
+		eq.spawn2(ZLAKAS_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "nilasz_death") then
+		eq.stop_timer("nilasz_death");
+		local roll = math.random(8);
+		eq.spawn2(NILASZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "skzik_death") then
+		eq.stop_timer("skzik_death");
+		local roll = math.random(8);
+		eq.spawn2(SKZIK_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "grziz_death") then
+		eq.stop_timer("grziz_death");
+		local roll = math.random(8);
+		eq.spawn2(GRZIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "slakiz_death") then
+		eq.stop_timer("slakiz_death");
+		local roll = math.random(8);
+		eq.spawn2(SLAKIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	elseif(not empIsDead and e.timer == "klazaz_death") then
+		eq.stop_timer("klazaz_death");
+		local roll = math.random(8);
+		eq.spawn2(KLAZAZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+	
 	--[[
 	elseif ( e.timer == "trapscast" ) then
 	
@@ -68,11 +123,14 @@ function GovernorTimer(e)
 			end
 		end
 	]]
+	
 	end
 end
 
 function ActivateTraps()
+
 	eq.stop_timer("despawntraps");
+
 	if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(TRAP_TYPE) ) then
 
 		for i = 1, 11 do
@@ -87,6 +145,7 @@ function ActivateTraps()
 end
 
 function BloodAggro(e)
+	empIsDead = false;
 
 	if ( e.joined ) then
 		ActivateTraps();
@@ -112,24 +171,14 @@ function FakeEmpSpawn(e)
 	end
 end
 
-function EmpAggro(e)
-	if ( e.joined ) then
-		if ( not eq.is_paused_timer("depop") ) then
-			eq.pause_timer("depop");
-		end
-		ActivateTraps();
-	else
-		eq.set_timer("despawntraps", 300 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
-		eq.resume_timer("depop");
-	end
-end
-
 function EmpDeath(e)
 	eq.spawn2(WRAITH_TYPE, 0, 1, 877, -326, 408, 192);
 	eq.spawn2(WRAITH_TYPE, 0, 1, 953, -293, 404, 176);
 	eq.spawn2(WRAITH_TYPE, 0, 1, 953, -356, 404, 203);
 	eq.spawn2(WRAITH_TYPE, 0, 1, 773, -360, 403, 52);
 	eq.spawn2(WRAITH_TYPE, 0, 1, 770, -289, 403, 72);
+	
+	empIsDead = true;
 
 	if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(FAKE_EMP_TYPE) ) then
 		-- possible if emp fight is super long
@@ -164,11 +213,8 @@ function EmpTimer(e)
 		local emp = eq.get_entity_list():GetMobByNpcTypeID(REAL_EMP_TYPE);
 		
 		if ( emp and emp.valid and emp:IsEngaged() and npcList ) then
-		
 			for npc in npcList.entries do
-
 				if ( npc.valid and ROOM_GUARDS[npc:GetNPCTypeID()] ) then
-
 					if ( not npc:IsEngaged() ) then
 						npc:AddToHateList(emp:GetHateTop());
 					end
@@ -220,6 +266,7 @@ end
 function event_encounter_load(e)
 
 	eq.register_npc_event("Emperor", Event.timer, GOVERNOR_TYPE, GovernorTimer);
+
 	eq.register_npc_event("Emperor", Event.combat, BLOOD_TYPE, BloodAggro);
 	eq.register_npc_event("Emperor", Event.death, BLOOD_TYPE, BloodDeath);
 
@@ -246,4 +293,48 @@ function event_encounter_load(e)
 	eq.register_npc_event("Emperor", Event.spawn, CURSE_TRAP_TYPE, function()
 		cursed = false;
 	end);
+
+	eq.register_npc_event("Emperor", Event.timer, GOVERNOR_TYPE, GovernorTimer);
+
+	eq.register_npc_event("Emperor", Event.death, HERIZ_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("heriz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, YASIZ_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("yasiz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, ZLAKAS_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("zlakas_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, NILASZ_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("nilasz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, SKZIK_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("skzik_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, GRZIZ_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("grziz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, SLAKIZ_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("slakiz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+	eq.register_npc_event("Emperor", Event.death, KLAZAZ_TYPE, function() 
+		local roll = math.random(30);
+		roll = (roll + 120) * 1000; 
+		eq.set_timer("klazaz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
+	end);
+
 end
