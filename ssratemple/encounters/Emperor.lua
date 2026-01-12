@@ -18,7 +18,6 @@ local GOVERNOR_TYPE = 162054;	-- EmpInitSpawn
 local FAKE_EMP_TYPE = 162065;	-- untargetable emp
 local FAKE_EMP_SPAWNPOINT = 352885;
 local REAL_EMP_TYPE = 162491;
-local GOLEM_TYPE = 162493;		-- #Ssraeshzian_Blood_Golem
 local BLOOD_TYPE = 162189;		-- #Blood_of_Ssraeshza
 local BLOOD_SPAWNPOINT = 352792;
 local GOLEM_SPAWNPOINT = 369150;
@@ -77,37 +76,49 @@ function GovernorTimer(e)
 		end
 	elseif (not empIsDead and e.timer == "heriz_death") then
 		eq.stop_timer("heriz_death");
-		local roll = math.random(8);
-		eq.spawn2(HERIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(HERIZ_TYPE);
 	elseif(not empIsDead and e.timer == "yasiz_death") then
 		eq.stop_timer("yasiz_death");
-		local roll = math.random(8);
-		eq.spawn2(YASIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(YASIZ_TYPE);
 	elseif(not empIsDead and e.timer == "zlakas_death") then
 		eq.stop_timer("zlakas_death");
-		local roll = math.random(8);
-		eq.spawn2(ZLAKAS_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(ZLAKAS_TYPE);
 	elseif(not empIsDead and e.timer == "nilasz_death") then
 		eq.stop_timer("nilasz_death");
-		local roll = math.random(8);
-		eq.spawn2(NILASZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(NILASZ_TYPE);
 	elseif(not empIsDead and e.timer == "skzik_death") then
 		eq.stop_timer("skzik_death");
-		local roll = math.random(8);
-		eq.spawn2(SKZIK_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(SKZIK_TYPE);
 	elseif(not empIsDead and e.timer == "grziz_death") then
 		eq.stop_timer("grziz_death");
-		local roll = math.random(8);
-		eq.spawn2(GRZIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(GRZIZ_TYPE);
 	elseif(not empIsDead and e.timer == "slakiz_death") then
 		eq.stop_timer("slakiz_death");
-		local roll = math.random(8);
-		eq.spawn2(SLAKIZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+		SpawnGuardRandom(SLAKIZ_TYPE);
 	elseif(not empIsDead and e.timer == "klazaz_death") then
 		eq.stop_timer("klazaz_death");
-		local roll = math.random(8);
-		eq.spawn2(KLAZAZ_TYPE, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
-	
+		SpawnGuardRandom(KLAZAZ_TYPE);
+
+	elseif ( e.timer == "guard_sploitcheck" ) then
+		local npcList = eq.get_entity_list():GetNPCList();
+		if( npcList ) then
+			for npc in npcList.entries do
+				if ( npc.valid ) then
+					if ( npc:GetZ() < 400 or npc:GetY() > -180 or npc:GetY() < -468 or npc:GetX() < 695 ) then
+						if ( ROOM_GUARDS[npc:GetNPCTypeID()] ) then
+							eq.zone_emote(7, "SploitChecking - Out of range: " .. npc:GetNPCTypeID());
+							SpawnGuardRandom(npc:GetNPCTypeID());
+							npc:Depop();
+						elseif ( npc:GetNPCTypeID() == BLOOD_TYPE ) then
+							eq.spawn2(BLOOD_TYPE, 0, 0, 877, -326, 410.7, 196);
+							npc:Depop();
+						end
+					end
+				end
+			end
+		end
+	end
+
 	--[[
 	elseif ( e.timer == "trapscast" ) then
 	
@@ -123,8 +134,20 @@ function GovernorTimer(e)
 			end
 		end
 	]]
-	
+end
+
+function SpawnGuardRandom(guard_type)
+	local roll = math.random(8);
+	eq.spawn2(guard_type, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
+end
+
+function SpawnGuard(input)
+	local guard_type = input + 162122;
+	local guard = eq.get_entity_list():GetMobByNpcTypeID(guard_type);
+	if ( not guard or not guard.valid ) then
+		eq.spawn2(guard_type, 0, 0, GUARD_SPAWN_POINTS[input].x, GUARD_SPAWN_POINTS[input].y, GUARD_SPAWN_POINTS[input].z, GUARD_SPAWN_POINTS[input].h);
 	end
+		
 end
 
 function ActivateTraps()
@@ -149,8 +172,13 @@ function BloodAggro(e)
 
 	if ( e.joined ) then
 		ActivateTraps();
+		eq.set_timer("guard_sploitcheck", 5000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	else
 		eq.set_timer("despawntraps", 300 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
+	end
+
+	for spawn = 1, 8 do
+		SpawnGuard(spawn);
 	end
 end
 
@@ -202,7 +230,7 @@ function EmpTimer(e)
 
 	if ( e.timer == "sploitcheck" ) then
 
-		if ( e.self:GetZ() < 400 or e.self:GetY() > -180 or e.self:GetY() < -468 ) then
+		if ( e.self:GetZ() < 400 or e.self:GetY() > -180 or e.self:GetY() < -468 or e.self:GetX() < 695 ) then
 			empDepopped = true;
 			eq.spawn_from_spawn2(FAKE_EMP_SPAWNPOINT);
 			eq.depop();		-- depop Emp if somebody pulls him outside of room somehow
@@ -230,7 +258,6 @@ function EmpTimer(e)
 end
 
 function TrapCombat(e)
-
 	if ( e.joined and not cursed ) then
 		eq.set_timer("blood", 240000);
 		eq.set_timer("curse", 1113000);
@@ -293,8 +320,6 @@ function event_encounter_load(e)
 	eq.register_npc_event("Emperor", Event.spawn, CURSE_TRAP_TYPE, function()
 		cursed = false;
 	end);
-
-	eq.register_npc_event("Emperor", Event.timer, GOVERNOR_TYPE, GovernorTimer);
 
 	eq.register_npc_event("Emperor", Event.death, HERIZ_TYPE, function() 
 		local roll = math.random(30);
