@@ -2,9 +2,11 @@ local WARDER_TYPES = { 158418, 158409, 158405, 158399, 158393 };
 
 local checks = 0;
 
-local MIN_Z_LEVEL = 229; -- if boss is below this Z, reset boss to spawn point
-if (eq.get_guild_zone_id != 1) then
+-- if boss is below this Z, reset boss to spawn point
+if (eq.get_zone_guild_id() == 1) then
     MIN_Z_LEVEL = -43;
+else
+	MIN_Z_LEVEL = 229;
 end
 
 function IsWarderUp()
