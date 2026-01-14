@@ -2,6 +2,10 @@
 
 local Z_LEVEL = 110; -- if boss is below this Z, cazic touch players
 
+if (eq.get_guild_zone_id != 1) then
+    Z_LEVEL = -43;
+end
+
 function event_combat(e)
 	if ( e.joined ) then
 		eq.set_timer("cheat_check", 12000);

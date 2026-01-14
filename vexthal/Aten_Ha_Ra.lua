@@ -2,6 +2,11 @@ local WARDER_TYPES = { 158418, 158409, 158405, 158399, 158393 };
 
 local checks = 0;
 
+local MIN_Z_LEVEL = 229; -- if boss is below this Z, reset boss to spawn point
+if (eq.get_guild_zone_id != 1) then
+    MIN_Z_LEVEL = -43;
+end
+
 function IsWarderUp()
 	for _, id in ipairs(WARDER_TYPES) do
 		if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(id) ) then
@@ -20,7 +25,7 @@ end
 
 function event_timer(e)
 
-	if ( e.self:GetZ() < 229 or e.self:GetZ() > 260 ) then
+	if ( e.self:GetZ() < MIN_Z_LEVEL or e.self:GetZ() > 260 ) then
 		Warp(e.self);
 		return;
 	end
