@@ -2,9 +2,16 @@
 
 local Z_LEVEL = 110; -- if boss is below this Z, cazic touch players
 
+-- Logic for determining PvP zone to change lower Z_Level
+function event_spawn(e)
+	if (eq.get_zone_guild_id() == 1) then
+    	Z_LEVEL = -43;
+	end
+end
+
 function event_combat(e)
 	if ( e.joined ) then
-		eq.set_timer("cheat_check", 12000);
+		eq.set_timer("cheat_check", 120000);
 	else
 		eq.stop_timer("cheat_check");
 		eq.stop_timer("kill_player");
