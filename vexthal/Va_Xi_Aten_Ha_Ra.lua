@@ -1,11 +1,12 @@
 -- This will punish raids that pull the boss under the floor
 
--- if boss is below this Z, cazic touch players
+local Z_LEVEL = 100; -- if boss is below this Z, cazic touch players
 
-if (eq.get_zone_guild_id() == 1) then
-    Z_LEVEL = -43;
-else
-	Z_LEVEL = 100;
+-- Logic for determining PvP zone to change lower Z_Level
+function event_spawn(e)
+	if (eq.get_zone_guild_id() == 1) then
+    	Z_LEVEL = -43;
+	end
 end
 
 function event_combat(e)
