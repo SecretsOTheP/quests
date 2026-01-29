@@ -2,6 +2,8 @@ local WARDER_TYPES = { 158418, 158409, 158405, 158399, 158393 };
 
 local checks = 0;
 
+local Z_LEVEL = 229;
+
 function IsWarderUp()
 	for _, id in ipairs(WARDER_TYPES) do
 		if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(id) ) then
@@ -20,7 +22,7 @@ end
 
 function event_timer(e)
 
-	if ( e.self:GetZ() < 229 or e.self:GetZ() > 260 ) then
+	if ( e.self:GetZ() < Z_LEVEL or e.self:GetZ() > 260 ) then
 		Warp(e.self);
 		return;
 	end
@@ -46,6 +48,10 @@ function event_timer(e)
 	end
 end
 
+-- Logic for determining PvP zone to change lower Z_Level
 function event_spawn(e)
 	eq.set_timer("sploitcheck", 5000);
+	if (eq.get_zone_guild_id() == 1) then
+			Z_LEVEL = -43;
+	end
 end
