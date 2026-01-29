@@ -53,7 +53,7 @@ function TimerEvent(e)
 end
 
 function FakeDeathEvent(e)
-	eq.unique_spawn(REAL_SHEI_TYPE, 0, 0, -1736, 1082, 22.6, 63);
+	eq.unique_spawn(REAL_SHEI_TYPE, 0, 1, -1736, 1082, 22.6, 63);
 end
 
 function RealCombatEvent(e)
