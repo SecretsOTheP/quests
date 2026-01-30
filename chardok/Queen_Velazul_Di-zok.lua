@@ -3,6 +3,9 @@ function event_say(e)
 	if(e.other:GetFaction(e.self) <= 1) then -- Only if you are ally with Sarnaks
 		if(e.message:findi("hail")) then
 			e.self:Say("Hail, minion! It is good to see a member of a lesser race striving to improve themself through service to the Dizok. We are feeling especially generous as of late, and if you would do us a [service], we shall reward you handsomely.");
+			if e.other:GetLevel() >= 55 and (e.other:IsSelfFound() == 1 or e.other:IsSoloOnly() == 1) then
+				e.self:Emote("looks you over momentarily, and says 'You look more capable than most of your broodlings, minion. Grand Herbalist Mak`ha may have a special use for you in the herb gardens. Go speak to him.'");
+			end
 		elseif(e.message:findi("service")) then
 			e.self:Say("We are not sure you are worthy, but shall assign you this task in hopes you prove mighty enough to resolve it. Gather your broodlings about you, and journey to Charasis. There you shall find a Urn of spirits. We require this, as well as [additional components].");
 		elseif(e.message:findi("additional components")) then
