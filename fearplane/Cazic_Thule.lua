@@ -28,7 +28,7 @@ function event_combat(e)
 		e.self:Shout("Denizens of Fear, your master commands you to come forth to his aid!!");
 		call_zone_to_assist(e.self,e.other);
 		eq.stop_timer("Shout");
-		eq.set_timer("come",300000);
+		eq.set_timer("come",15000);
 	else
 		eq.stop_timer("come");
 		eq.set_timer("Shout",600000);
