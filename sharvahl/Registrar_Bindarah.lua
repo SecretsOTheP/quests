@@ -24,6 +24,8 @@ function event_say(e)
 	elseif(e.message:findi("acrylia slate") and tonumber(qglobals.Shar_Vahl_Cit) > 5) then
 		---- No idea what she says here, so won't bother.
 		e.other:SummonCursorItem(2877); -- Item: Acrylia Slate of Shar Vahl
+		if(tonumber(qglobals.Shar_Vahl_Cit) == 8) then
+			eq.set_global("Shar_Vahl_Cit","7",5,"F"); -- Reset citizenship to 7, if it was previously set to 8 by Spiritist Fehril.
 	elseif(e.message:findi("reborn") and e.other:GetRace() == 130 and qglobals.Shar_Vahl_Cit == nil) then -- Added to allow reborn characters to start their cloak quests.
 		e.self:Say("Ah, we've been seeing a few of your kind, welcome to Shar Vahl! Please, take this application, read over it, and hand it back to me when you're ready to begin the registration process.");
 		e.other:SummonCursorItem(2873); -- Item: Application for Citizenship

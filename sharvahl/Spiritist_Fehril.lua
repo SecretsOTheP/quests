@@ -29,7 +29,7 @@ function event_trade(e)
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 3489, item2 = 3494, item3 = 3499, item4 = 2878})) then
 		e.self:Say("Well done you " .. e.other:GetCleanName() .. ", your deeds will not go unnoticed. You will now be known throughout the land as an official recruit of the revered Dar Khura. As your status improves so will the rewards for your service. Here is your treated buckler, your new cloak, and a spell I trust you will find a use for. Show your buckler to Fharra Cawfeet and she will continue your training.");
 		e.self:Emote("shouts, 'My fellow Vah Shir, I present to you the newest recruit to the sacred Dar Khura. " .. e.other:GetCleanName() .. " has shown great potential in the service of our sect. Please join me in thanking this citizen for service to our people!'");
-		eq.set_global("Shar_Vahl_Cit","8",5,"F");
+		-- Removed setting of Shar_Vahl_Cit to 8 here, as it is not used in any other scripts. -- eq.set_global("Shar_Vahl_Cit","8",5,"F");
 		e.other:QuestReward(e.self,{items = {3495,3496,15275},exp = 500}); --Treated Hopperhide Buckler, Cloak of the Dar Khura Recruit, Spell: Frost Rift.
 	elseif(item_lib.check_turn_in(e.self, e.trade, {item1 = 5542, item2 = 3496, item3 = 5543})) then
 		e.self:Say("Your progress fills me with pride. Please take these things as a sign of our appreciation. I hope that they help you as much as you have helped us. When you are ready to continue your training, please contact Jaima Seyel. You'll most likely find her in the Dar Khura Guildhall. She will train you from this point.");
