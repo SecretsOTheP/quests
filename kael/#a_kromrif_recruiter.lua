@@ -18,7 +18,7 @@ function event_trade(e)
 	local item_lib = require("items");
 	local head = 0;
 	
-	if(e.other:GetFaction(e.self) < 6 then
+	if(e.other:GetFaction(e.self) < 6) then
 		head = item_lib.count_handed_item(e.self, e.trade, {30081}, 1);
 	end
 
