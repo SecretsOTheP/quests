@@ -137,8 +137,8 @@ function SpawnWave()
 
 	local roll = math.random(100);
 	
-	-- big boss every 15 waves starting at wave 30
-	if ( wave > 29 and wave % 15 == 0 ) then
+	-- big boss every 10 waves starting at wave 10
+	if ( wave > 9 and wave % 10 == 0 ) then
 	
 		local boss = 1;	-- warmonger
 		
