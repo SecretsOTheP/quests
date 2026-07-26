@@ -23,7 +23,6 @@ function event_trade(e)
 		e.self:Say("Life is indeed sweet! Thank you, " .. e.other:GetCleanName() .. ", you have done me a great service this day. Take this, Stanos was kind enough to return it to me, and I have no use for it now. Know that you have the blessing of Innoruuk for this deed! But of course, I leave it to you to leave here alive. A leader has to feed his minions, you know.");
 		e.other:Faction(e.self,420,500); -- Faction: Fallen of Bloody Kithicor
 		e.other:QuestReward(e.self,0,0,0,0,2475,50000);
-		eq.depop();
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
