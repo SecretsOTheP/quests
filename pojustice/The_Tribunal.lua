@@ -95,6 +95,36 @@ function MoveCorpses(trialNum)
 	end
 end
 
+function ReturnTrialPlayers(trialNum, message)
+	local mobList = eq.get_entity_list():GetMobList();
+
+	if ( mobList ) then
+		for mob in mobList.entries do
+			if ( mob.valid
+				and mob:IsClient()
+				and mob:GetY() < TRIAL_BOUNDARIES[trialNum][1]
+				and mob:GetY() > TRIAL_BOUNDARIES[trialNum][2]
+				and mob:GetX() < TRIAL_BOUNDARIES[trialNum][3]
+				and mob:GetX() > TRIAL_BOUNDARIES[trialNum][4]
+			) then
+				local client = mob:CastToClient();
+
+				if ( message ) then
+					client:Message(15, message);
+				else
+					client:MovePC(201, 473, 685, 10, 0);
+
+					if ( client:GetPet().valid and not client:GetPet():Charmed() ) then
+						client:GetPet():GMMove(473, 685, 10, 0);
+					end
+
+					eq.get_entity_list():RemoveFromHateLists(client);
+				end
+			end
+		end
+	end
+end
+
 function MoveGroup(zone, client, dist, x, y, z, h)
 	local group = client:GetGroup();
 	local raid = client:GetRaid();
@@ -157,25 +187,45 @@ function event_signal(e)
 	local trialNum = SPAWNPOINT_IDS[e.self:GetSpawnPointID()];
 	
 	if ( e.signal == trialNum ) then
+		ReturnTrialPlayers(
+			trialNum,
+			TRIAL_TEXT[trialNum].." has failed.  The Tribunal's judgment has been rendered.  You will be returned from the trial shortly."
+		);
+		eq.set_timer("failboot"..trialNum, 10000);
 		eq.set_timer("delay"..trialNum, 60000);
 		trialsUnderway[trialNum] = true;
 		eq.debug(TRIAL_TEXT[trialNum].." failed.  Accessible again in 60 seconds", 1);
 	elseif ( e.signal == (trialNum + 6) ) then
-		eq.set_timer("delay"..trialNum, 1800000);
+		eq.set_timer("warn"..trialNum, 540000);
+		eq.set_timer("boot"..trialNum, 599000);
+		eq.set_timer("delay"..trialNum, 600000);
 		trialsUnderway[trialNum] = true;
-		eq.debug(TRIAL_TEXT[trialNum].." success.  Accessible again in 30 minutes", 1);
+		eq.debug(TRIAL_TEXT[trialNum].." success.  Accessible again in 10 minutes", 1);
 	end
 end
 
 function event_timer(e)
-	if ( #e.timer == 6 ) then
-		eq.stop_timer(e.timer);
-		local num = tonumber(e.timer:sub(6, 6));
-		if ( num ) then
-			MoveCorpses(num);
-			trialsUnderway[num] = nil;
-			eq.debug(TRIAL_TEXT[num].." is now available", 1);
-		end
+	local num = tonumber(e.timer:sub(-1));
+
+	if ( not num ) then
+		return;
+	end
+
+	eq.stop_timer(e.timer);
+
+	if ( e.timer:sub(1, 4) == "warn" ) then
+		ReturnTrialPlayers(num, "The Tribunal will summon you from the trial in one minute.");
+
+	elseif ( e.timer:sub(1, 4) == "boot" ) then
+		ReturnTrialPlayers(num, nil);
+
+	elseif ( e.timer:sub(1, 8) == "failboot" ) then
+		ReturnTrialPlayers(num, nil);
+
+	elseif ( e.timer:sub(1, 5) == "delay" ) then
+		MoveCorpses(num);
+		trialsUnderway[num] = nil;
+		eq.debug(TRIAL_TEXT[num].." is now available", 1);
 	end
 end
 

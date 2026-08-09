@@ -154,6 +154,22 @@ function PrisonerDeath(e)
 	eq.get_entity_list():MessageClose(e.self, true, 200, 0, "The prisoners cry is cut off as his body crumples to the ground.  You have failed.");
 end
 
+function BossDeathComplete(e)
+	local corpseList = eq.get_entity_list():GetCorpseList();
+
+	if ( corpseList ) then
+		for corpse in corpseList.entries do
+			if ( corpse.valid
+				and corpse:IsNPCCorpse()
+				and corpse:GetNPCTypeID() == BOSS_TYPE
+			) then
+				corpse:SetDecayTimer(480000);
+				return;
+			end
+		end
+	end
+end
+
 function TrialFail()
 	eq.signal(TRIBUNAL_TYPE, 2);
 	eq.depop_all(PRISONER_TYPE);
@@ -191,6 +207,7 @@ function event_encounter_load(e)
 	eq.register_npc_event("ExecutionTrial", Event.waypoint_arrive, EXECUTIONER_TYPE, WaypointArrive);
 	
 	eq.register_npc_event("ExecutionTrial", Event.death, BOSS_TYPE, BossDeath);
+	eq.register_npc_event("ExecutionTrial", Event.death_complete, BOSS_TYPE, BossDeathComplete);
 	
 	eq.register_npc_event("ExecutionTrial", Event.death_complete, PRISONER_TYPE, PrisonerDeath);
 

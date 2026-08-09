@@ -223,6 +223,22 @@ function BossDeath(e)
 	wave = 0;
 end
 
+function BossDeathComplete(e)
+	local corpseList = eq.get_entity_list():GetCorpseList();
+
+	if ( corpseList ) then
+		for corpse in corpseList.entries do
+			if ( corpse.valid
+				and corpse:IsNPCCorpse()
+				and corpse:GetNPCTypeID() == BOSS_TYPE
+			) then
+				corpse:SetDecayTimer(480000);
+				return;
+			end
+		end
+	end
+end
+
 function TrialFail()
 	eq.signal(TRIBUNAL_TYPE, 5);
 	
@@ -242,6 +258,7 @@ function event_encounter_load(e)
 	eq.register_npc_event("HangingTrial", Event.timer, PRISONER3_TYPE, PrisonerTimer);
 
 	eq.register_npc_event("HangingTrial", Event.death, BOSS_TYPE, BossDeath);
+	eq.register_npc_event("HangingTrial", Event.death_complete, BOSS_TYPE, BossDeathComplete);
 
 	for _, id in ipairs(MOBS) do
 		eq.register_npc_event("HangingTrial", Event.spawn, id, MobSpawn);
