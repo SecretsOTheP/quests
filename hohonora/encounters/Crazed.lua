@@ -318,7 +318,7 @@ function FailEvent()
 		end
 	end
 	
-	eq.update_spawn_timer(ALEKSON_SPAWNID, 10800000);
+	eq.update_spawn_timer(ALEKSON_SPAWNID, 600000);
 	eq.zone_emote(0, "A woman screams in anguish as she's forcibly taken away by a band of crazed norrathians.");
 	eq.debug("Crazed Norathians trial failed");
 end
