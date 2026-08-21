@@ -31,6 +31,7 @@ local BOSS_TABLE = {
 	[88] = { WAVADOZZIK_TYPE, -200, 0, -277, 64, "Chittering is heard" },
 	[92] = { ZANDAL_TYPE, 0, -280, -247, 128, "Chittering is heard" },
 	[96] = { AKKAPAN_TYPE, 200, 0, -269, 192, "A maddened whispering is heard" },
+
 	[10000] = { MEEDO_TYPE, 0, 280, -247, 0 },
 	[10001] = { QEZZIN_TYPE, -200, 0, -277, 64 },
 	[10002] = { PZO_TYPE, 0, -280, -247, 128 },
@@ -77,7 +78,7 @@ function ControllerTimer(e)
 		
 	elseif ( e.timer == "expire" ) then
 		eq.zone_emote(0, "Harsh laughter echoes around the crypt and a voice then speaks saying, 'Perhaps you would care to try when you are more powerful fools.'  The harsh laughter continues softly as all of  the summoned minions of Bertoxxulous vanish.");
-		eq.update_spawn_timer(SPECTRE_SPAWNID, 21600000);
+		eq.update_spawn_timer(SPECTRE_SPAWNID, 300000);
 		StopSpawns();
 	end
 	eq.stop_timer(e.timer);
@@ -89,7 +90,7 @@ function ControllerSignal(e)
 	
 		eq.set_timer("expire", 7380000);
 		eq.set_timer("expire_warning", 7080000);
-		eq.set_timer("start", 350000);
+		eq.set_timer("start", 230000);
 		
 	elseif ( e.signal == 2 ) then
 		eq.stop_timer("expire");
