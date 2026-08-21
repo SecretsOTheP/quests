@@ -93,5 +93,6 @@ function event_death_complete(e)
 	local tylis = eq.get_entity_list():GetMobByNpcTypeID(207014); -- Tylis_Newleaf
 	if ( tylis and tylis.valid ) then
 		tylis:SetBodyType(1, false);	-- make targetable
+		eq.zone_emote(0, "Maareq's hold over Tylis fades, and the tormented prisoner begins to stir within his cage.");
 	end
 end
