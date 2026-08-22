@@ -1,6 +1,10 @@
 local KEY_ITEM_ID = 22954; -- Screaming Sphere
 
 function RaidHasKey(client)
+	if ( client:KeyRingCheck(KEY_ITEM_ID) or client:HasItem(KEY_ITEM_ID) ) then
+		return true;
+	end
+
 	local group = client:GetGroup();
 	local raid = client:GetRaid();
 
@@ -54,7 +58,7 @@ function event_say(e)
 				noflag = true;
 			end
 		
-		elseif ( e.message:findi("we are ready") ) then
+		elseif ( e.message:findi("we are ready") or e.message:findi("i am ready") ) then
 		
 			if ( qglobals.tylis and RaidHasKey(e.other) ) then
 				e.self:CastSpell(1134, e.other:GetID()); -- Insanity of Tylis
@@ -64,7 +68,11 @@ function event_say(e)
 		end
 			
 		if ( noflag ) then
-			e.other:Message(0, "Tylis Newleaf tells you, 'I sense the desire in you to help, but I don't know if you possess the kind of power needed to release me from my anguish.  Please seek out my companion Fahlia and see if she can offer you a way to better yourself before undertaking this task.'");
+			if ( qglobals.tylis ) then
+				e.other:Message(0, "Tylis Newleaf tells you, 'The Screaming Sphere carries an echo of this place.  Bring one near, and perhaps I can channel you into the shadows of my pain.'");
+			else
+				e.other:Message(0, "Tylis Newleaf tells you, 'I sense the desire in you to help, but I don't know if you possess the kind of power needed to release me from my anguish.  Please seek out my companion Fahlia and see if she can offer you a way to better yourself before undertaking this task.'");
+			end
 		end
 	end
 end
