@@ -204,7 +204,14 @@ function MobDeath(e)
 		end
 	end
 	
-	if ( roomNum and room[roomNum].wave == 8 and room[roomNum].kills > (TOTAL_SPAWNS_NUM - 15) and e.self:GetCleanName() == "a manaetic device" ) then
+	local is_final_device =
+	e.self:GetNPCTypeID() == DEVICE1_TYPE or
+	e.self:GetNPCTypeID() == DEVICE2_TYPE or
+	e.self:GetNPCTypeID() == DEVICE3_TYPE or
+	e.self:GetNPCTypeID() == DEVICE4_TYPE;
+
+	if ( roomNum and room[roomNum].wave == 8 and
+		room[roomNum].kills > (TOTAL_SPAWNS_NUM - 15) and is_final_device ) then
 		local z = ROOM1Z + 9.376;
 		if ( roomNum == 2 ) then
 			z = ROOM2Z + 9.376;
