@@ -99,6 +99,7 @@ function event_trade(e)
 	if ( not walking and item_lib.check_turn_in(e.self, e.trade, {item1 = 9295, item2 = 9426, item3 = 9434}) ) then
 		e.self:Say("Excellent!  This is wonderful, please follow me!  I will show you the power of my greatest invention.");
 		walking = true;
+		e.self:CastSpell(278, e.self:GetID()); -- Spirit of Wolf (speed up the scripted walk)
 		e.self:CastToNPC():SetNoQuestPause(true); -- do not pause on say events
 		e.self:AssignWaypoints(22);
 		e.self:SetNPCFactionID(1006);
