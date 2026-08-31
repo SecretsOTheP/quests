@@ -18,6 +18,7 @@ local CORPSE_TYPES = { 214007, 214008, 214009, 214010, 214011 };
 local UNTARGETABLE_SPAWNID = 361379;
 local BERIK_SPAWNID = 361190;
 local GRUNHORK_SPAWNID = 361200;
+local WRAITH_CORPSE_SPAWNIDS = { 361133, 361135, 361137, 361138, 361140 };
 local ARENA_SPAWNIDS = { 
 	361141, 361347,		-- two arena corpses; this will make the remaining five spawn wraiths
 	361191, 361192, 361195, 361198, 361199, 361203, 361219,		-- initiates
@@ -33,9 +34,15 @@ local FLOOR_SPAWNS = {
 
 local phase = 0;
 local arenaEmpty = false;
-local raidID = 0;
 local roomSpawns = {};
 local killerName, killerGName = "", "";
+
+function FailureTimeout(pvpTimeout)
+	if ( eq.get_zone_guild_id() > 1 ) then
+		return 9000000; -- 2.5 hours for normal guild instances
+	end
+	return pvpTimeout;
+end
 
 function CheckFloorSpawns()
 
@@ -191,6 +198,8 @@ end
 
 function VallonWaypointArrive(e)
 	if ( e.wp == 3 ) then
+		e.self:SetSpecialAbility(24, 0); -- Will Not Aggro off
+		e.self:SetSpecialAbility(35, 0); -- No Harm from Players off
 		local mob;
 		local t = FLAYER_TYPE;
 		local y = 108;
@@ -205,6 +214,8 @@ end
 
 function TallonWaypointArrive(e)
 	if ( e.wp == 3 ) then
+		e.self:SetSpecialAbility(24, 0); -- Will Not Aggro off
+		e.self:SetSpecialAbility(35, 0); -- No Harm from Players off
 		local t = SHADOW_TYPE;
 		local y = -91;
 		local h = 0;
@@ -216,7 +227,11 @@ function TallonWaypointArrive(e)
 end
 
 function BrotherSpawnEvent(e)
-	eq.set_timer("depop", 1200000);
+	if ( eq.get_zone_guild_id() == 1 ) then
+		e.self:SetSpecialAbility(24, 1); -- Will Not Aggro while traveling to the room
+		e.self:SetSpecialAbility(35, 1); -- No Harm from Players while traveling to the room
+	end
+	eq.set_timer("depop", FailureTimeout(1200000));
 	eq.set_timer("bounds", 5000);
 	eq.set_next_hp_event(50); -- for Vallon
 	e.self:CastToNPC():SetCastRateDetrimental(75); -- for Tallon
@@ -266,15 +281,19 @@ end
 
 function RespawnDoorGuards()
 	phase = 0;
-	raidID = 0;
 	killerName, killerGName = "", "";
-	eq.get_entity_list():GetSpawnByID(GRUNHORK_SPAWNID):Enable();
-	eq.get_entity_list():GetSpawnByID(BERIK_SPAWNID):Enable();	
+	local elist = eq.get_entity_list();
+	local grunhork = elist:GetSpawnByID(GRUNHORK_SPAWNID);
+	local berik = elist:GetSpawnByID(BERIK_SPAWNID);
+	grunhork:Enable();
+	grunhork:SetTimer(1);
+	berik:Enable();
+	berik:SetTimer(1);
 	eq.debug("Rallos Zek event reset");
 end
 
 function RallosSpawnEvent(e)
-	eq.set_timer("depop", 1170000);
+	eq.set_timer("depop", FailureTimeout(1170000));
 	eq.set_timer("bounds", 6000);
 	eq.set_next_hp_event(98);
 end
@@ -367,10 +386,20 @@ function RespawnArena()
 	arenaEmpty = false;
 end
 
+function RespawnWraithCorpses()
+	local elist = eq.get_entity_list();
+	for _, id in ipairs(WRAITH_CORPSE_SPAWNIDS) do
+		local spawn = elist:GetSpawnByID(id);
+		spawn:Enable();
+		spawn:SetTimer(1);
+	end
+	eq.debug("Rallos Warlord corpses respawned");
+end
+
 function WarlordSpawnEvent(e)
-	eq.set_timer("depop", 1200000);
+	RespawnWraithCorpses();
+	eq.set_timer("depop", FailureTimeout(1200000));
 	eq.set_timer("bounds", 6000);
-	raidID = 0;
 end
 
 function WarlordCombatEvent(e)
@@ -379,7 +408,6 @@ function WarlordCombatEvent(e)
 		eq.pause_timer("depop");
 		eq.stop_timer("checkhp");
 	else
-		raidID = 0;
 		eq.stop_timer("twitch");
 		eq.resume_timer("depop");
 		if ( e.self:GetHPRatio() < 99 ) then
@@ -431,34 +459,6 @@ function WarlordDeathEvent(e)
 	RespawnDoorGuards();
 	eq.signal(CONTROLLER_TYPE, 3);
 	eq.debug(string.format("PoTactics Rallos Zek the Warlord slain by %s's raid <%s>", e.killer:GetName(), e.killer:CastToClient():GetGuildName()));
-end
-
-function WarlordHateListEvent(e)
-
-	if ( e.joined and e.other:IsClient() ) then
-	
-		local client = e.other:CastToClient();
-		if ( client:GetGM() ) then
-			return;
-		end
-		
-		local raid = client:GetRaid();
-		local id = raid:GetID();
-		
-		-- banish players who are either not in a raid of 20 or more, or not in the raid that pulled RZ
-		if ( not raid.valid or raid:RaidCount() < 20 ) then
-			eq.debug("Rallos Zek the Warlord is banishing player "..e.other:GetName().." for not being in a raid of 20 or more");
-			client:MovePC(202, 1008, -44, 390, 0);	-- PoK Library
-			
-		elseif ( raidID ~= 0 and raidID ~= id ) then
-			eq.debug("Rallos Zek the Warlord is banishing player "..e.other:GetName().." for not being in the raid that pulled him");
-			client:MovePC(202, 1008, -44, 390, 0);	-- PoK Library
-			
-		elseif ( id ~= 0 and raidID == 0 ) then
-			raidID = id;
-			eq.debug("Rallos Zek pulled by raid ID "..id);
-		end		
-	end
 end
 
 function EliteSpawnEvent(e)
@@ -612,7 +612,6 @@ function event_encounter_load(e)
 	eq.register_npc_event("Rallos", Event.spawn, WARLORD_TYPE, WarlordSpawnEvent);
 	eq.register_npc_event("Rallos", Event.timer, WARLORD_TYPE, WarlordTimerEvent);
 	eq.register_npc_event("Rallos", Event.combat, WARLORD_TYPE, WarlordCombatEvent);
-	eq.register_npc_event("Rallos", Event.hate_list, WARLORD_TYPE, WarlordHateListEvent);
 	eq.register_npc_event("Rallos", Event.death_complete, WARLORD_TYPE, WarlordDeathEvent);
 
 	eq.register_npc_event("Rallos", Event.spawn, WRAITH_TYPE, PitAddSpawnEvent);
