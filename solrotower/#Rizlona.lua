@@ -1,3 +1,5 @@
+local RIZLONA_SPAWNID = 367546;
+
 function event_death_complete(e)
 	eq.spawn2(212413, 0, 0, -980, 2717, -908, 0);	-- a_flaming_cauldron
 	eq.spawn2(212418, 0, 0, -1087, 2022, -902, 128);	-- a_warder_of_Rizonla
@@ -6,7 +8,7 @@ function event_death_complete(e)
 end
 
 function event_spawn(e)
-	eq.set_timer("depop", 3600000);
+	eq.set_timer("depop", 9000000);
 end
 
 function event_timer(e)
@@ -22,6 +24,7 @@ function event_timer(e)
 		end
 		
 	elseif ( e.timer == "depop" ) then
+		eq.get_entity_list():GetSpawnByID(RIZLONA_SPAWNID):SetTimer(600000);
 		eq.depop();
 	end
 end

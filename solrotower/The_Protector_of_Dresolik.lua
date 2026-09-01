@@ -1,3 +1,5 @@
+local GUARDIAN_SPAWNIDS = { 367793, 367794, 367795, 367796 };
+
 function event_death_complete(e)
 	eq.spawn2(212414, 0, 0, 166, 1449, -68, 0);	-- a_flaming_cauldron
 	eq.spawn2(212419, 0, 0, 976, 1918, -158, 64);	-- a_warder_of_Dresolik
@@ -6,7 +8,7 @@ function event_death_complete(e)
 end
 
 function event_spawn(e)
-	eq.set_timer("depop", 3600000);
+	eq.set_timer("depop", 9000000);
 end
 
 function event_timer(e)
@@ -21,6 +23,10 @@ function event_timer(e)
 		end
 		
 	elseif ( e.timer == "depop" ) then
+		local elist = eq.get_entity_list();
+		for _, id in ipairs(GUARDIAN_SPAWNIDS) do
+			elist:GetSpawnByID(id):SetTimer(600000);
+		end
 		eq.depop();
 	end
 end
