@@ -210,10 +210,7 @@ function MonstrousSignal(e)
 		eq.depop_all(NRINDA_TYPE);
 		eq.depop_all(VAMUIL_TYPE);
 		eq.depop_with_timer(COIRNAV_TYPE);
-		
-		if ( phase == 1 ) then
-			eq.update_spawn_timer(COIRNAV_SPAWNID, 10800000);
-		end
+		eq.update_spawn_timer(COIRNAV_SPAWNID, 600000); -- 10-minute failure recovery
 	end
 end
 
