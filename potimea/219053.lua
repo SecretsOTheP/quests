@@ -19,7 +19,7 @@ local RUN_SPEED_BUFFS = { 220,1922,3185, 424,1554,2002, 874,1340, 169, 278,1776,
 
 local activeRaidID, activeInstanceID, numRaiders, activePhase, quarmState = 0, 0, 0, 0, 0;
 local trialRaiders = {};
-local block, playerZoned;
+local block, playerZoned, pendingStartData, startSignalTries;
 
 function Unpacket(s, numberize, returnTable)
 	local t = {};
@@ -36,6 +36,10 @@ function Unpacket(s, numberize, returnTable)
 	end
 end
 
+function SignalTimeB(signal, data)
+	eq.cross_zone_signal_npc_by_npc_type_id(POTIMEB_CONTROLLER_TYPE, eq.get_zone_guild_id(), signal, data or "");
+end
+
 function event_signal(e)
 
 	if ( e.signal == 1 ) then		-- new instance started
@@ -47,10 +51,12 @@ function event_signal(e)
 			activeRaidID = raidID;
 			activeInstanceID = instanceID;
 			numRaiders, activePhase, quarmState = 0, 1, 0;
+			pendingStartData, startSignalTries = nil, 0;
+			eq.stop_timer("start_retry");
 			for i = 1, 9 do
 				trialRaiders[i] = 0;
 			end
-			eq.signal(POTIMEB_CONTROLLER_TYPE, 2);	-- send confirm
+			SignalTimeB(2);	-- send confirm
 			block = false;
 			eq.stop_timer("unblock");
 			--eq.zone_emote(0, "The portal flashes briefly, then glows steadily.");
@@ -65,7 +71,7 @@ function event_signal(e)
 		
 		activePhase = -1;
 		eq.set_timer("cooldown", 120000);
-		eq.signal(POTIMEB_CONTROLLER_TYPE, 2);	-- send confirm
+		SignalTimeB(2);	-- send confirm
 		eq.debug("Plane of Time instance expired.");
 	
 	elseif ( e.signal == 3 ) then			-- player clicked dial; sent from dial
@@ -87,7 +93,10 @@ function event_signal(e)
 
 		if ( activeRaidID == 0 and activeInstanceID == 0 and activePhase == 0 ) then
 			-- TimeB is inactive and not cooling down, relay signal
-			eq.signal(POTIMEB_CONTROLLER_TYPE, 1, 0, e.data..";"..charName);
+			pendingStartData = e.data..";"..charName;
+			startSignalTries = 12;
+			SignalTimeB(1, pendingStartData);
+			eq.set_timer("start_retry", 5000);
 			block = true;	-- block signals until the instance is started
 			eq.set_timer("unblock", 60000); -- in case signals are lost somehow
 			
@@ -150,7 +159,7 @@ function event_signal(e)
 				end				
 			end
 			
-			if ( numRaiders >= 60 or (activePhase == 1 and trialRaiders[dialNum] >= 18) or p2reject ) then
+			if ( numRaiders >= 72 or (activePhase == 1 and trialRaiders[dialNum] >= 18) or p2reject ) then
 				client:Message(0, "The energy has been drained from this portal.  You must wait before you can use it.");
 			else
 				client:Message(0, "The portal glows and the mists of time swirl around you.");
@@ -175,14 +184,14 @@ function event_signal(e)
 					end
 				end
 
-				eq.signal(POTIMEB_CONTROLLER_TYPE, 3, 0, client:CharacterID()..";"..dialNum);
+				SignalTimeB(3, client:CharacterID()..";"..dialNum);
 				
 				local loc = TRIAL_TELEPORTS[dialNum];
 				if ( PHASE_LOCS[activePhase] ) then
 					loc = PHASE_LOCS[activePhase];
 				end
 				playerZoned = true;
-				client:MovePC(TIMEB_ZONEID, loc[1], loc[2], loc[3], loc[4]);
+				client:MovePCGuildID(TIMEB_ZONEID, eq.get_zone_guild_id(), loc[1], loc[2], loc[3], loc[4]);
 			end
 		end
 		
@@ -193,9 +202,11 @@ function event_signal(e)
 		end
 
 		activeRaidID, activeInstanceID, activePhase = Unpacket(e.data, true);
+		pendingStartData, startSignalTries = nil, 0;
+		eq.stop_timer("start_retry");
 		
 		eq.debug("PoTimeB (instance ID "..activeInstanceID.."; raid ID "..activeRaidID..") active phase is now "..activePhase);
-		eq.signal(POTIMEB_CONTROLLER_TYPE, 2);	-- send confirm
+		SignalTimeB(2);	-- send confirm
 		block = false;
 	
 	elseif ( e.signal == 5 ) then		-- periodic player counts
@@ -255,6 +266,14 @@ function event_timer(e)
 		--eq.debug("unblocked", 3);
 	elseif ( e.timer == "cooldown" ) then
 		ResetZone();
+	elseif ( e.timer == "start_retry" ) then
+		if ( pendingStartData and startSignalTries > 0 ) then
+			SignalTimeB(1, pendingStartData);
+			startSignalTries = startSignalTries - 1;
+			return;
+		end
+		pendingStartData = nil;
+		block = false;
 	end
 	eq.stop_timer(e.timer);
 end

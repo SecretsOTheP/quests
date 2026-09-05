@@ -16,6 +16,11 @@ function event_click_door(e)
 			return;
 		end
 
+		if ( eq.get_zone_guild_id() == 1 and not eq.guild_one_raid_window_open() ) then
+			e.self:Message(13, "The flow of time is too stable for this portal to open.");
+			return;
+		end
+
 		local raid = e.self:GetRaid();
 		
 		if ( not e.self:GetGM() and e.self:GetLevel() < 65 ) then
