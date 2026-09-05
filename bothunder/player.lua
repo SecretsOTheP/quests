@@ -1,9 +1,10 @@
 -- this works because all players share these globals
 -- logic is: player holding Symbol of Torden clicks on penis; player's raid or group ID is recorded in table
--- all players in his/her raid may then click up for the next 60 seconds.  Symbol and ring not added to keyring in our era
+-- all players in his/her raid may then click up for the next 5 minutes.  Symbol and ring not added to keyring in our era
 
 local raids = {};
 local gargs = 0;	-- remember how many clicks before gargs wake
+local SYMBOL_AUTHORIZATION_SECONDS = 300;
 
 function FindRaid(e)
 	local myRaid = e.self:GetRaid();
@@ -44,15 +45,15 @@ function AddRaid(e)
 	end
 
 	if ( idx ) then
-		raids[idx].expire = now + 60;
+		raids[idx].expire = now + SYMBOL_AUTHORIZATION_SECONDS;
 	else
 		if ( rid > 0 ) then
-			eq.debug("Raid ID "..rid.." may now enter Agnarr's tower for the next 60 seconds");
-			table.insert(raids, { ["rid"] = rid, ["gid"] = 0, ["expire"] = now+60 });
+			eq.debug("Raid ID "..rid.." may now enter Agnarr's tower for the next 5 minutes");
+			table.insert(raids, { ["rid"] = rid, ["gid"] = 0, ["expire"] = now + SYMBOL_AUTHORIZATION_SECONDS });
 			idx = #raids;
 		elseif ( gid > 0 ) then
-			eq.debug("Group ID "..gid.." may now enter Agnarr's tower for the next 60 seconds");
-			table.insert(raids, { ["rid"] = 0, ["gid"] = gid, ["expire"] = now+60 });
+			eq.debug("Group ID "..gid.." may now enter Agnarr's tower for the next 5 minutes");
+			table.insert(raids, { ["rid"] = 0, ["gid"] = gid, ["expire"] = now + SYMBOL_AUTHORIZATION_SECONDS });
 			idx = #raids;
 		end
 	end
