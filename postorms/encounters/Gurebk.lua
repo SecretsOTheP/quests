@@ -1,4 +1,7 @@
 local GUREBK_TYPE = 210332; -- Gurebk,_Lord_of_Krendic
+local KRENDIC_MEDALLION = 28780;
+local IS_PVP_INSTANCE = eq.get_zone_guild_id() == 1;
+local TRASH_MEDALLION_CHANCE = IS_PVP_INSTANCE and 2 or 20;
 local ADDS_TYPES = { -- these are level 56 versions; not the same as zone wanderers
 	210482, -- a_roving_scorpioco
 	210483, -- a_noxious_scorponnis
@@ -10,7 +13,6 @@ local TRASH_GIANT_TYPES = {
 	210407, -- a_jotna_fannsk (warrior)
 	210022, -- a_jotna_her_megir
 };
-local killed = 0;
 local adds = 0;
 local gurebkActive = false;
 
@@ -19,11 +21,6 @@ function TrashDeathCompleteEvent(e)
 	local elist = eq.get_entity_list();
 	
 	if ( not elist:IsMobSpawnedByNpcTypeID(GUREBK_TYPE) ) then
-		return;
-	end
-	
-	killed = killed + 1;
-	if ( killed < 34 ) then
 		return;
 	end
 	
@@ -50,6 +47,8 @@ end
 function TrashSpawnEvent(e)
 	if ( gurebkActive ) then
 		eq.depop_with_timer();
+	elseif ( math.random(100) <= TRASH_MEDALLION_CHANCE ) then
+		e.self:AddItem(KRENDIC_MEDALLION, 1);
 	end
 end
 
@@ -60,11 +59,31 @@ end
 
 function GurebkSpawnEvent(e)
 	gurebkActive = false;
-	killed = 0;
+	local guaranteed = IS_PVP_INSTANCE and 3 or 5;
+	for i = 1, guaranteed do
+		e.self:AddItem(KRENDIC_MEDALLION, 1);
+	end
+	if ( IS_PVP_INSTANCE ) then
+		if ( math.random(100) <= 50 ) then
+			e.self:AddItem(KRENDIC_MEDALLION, 1);
+			e.self:AddItem(KRENDIC_MEDALLION, 1);
+		end
+	else
+		for i = 1, 3 do
+			if ( math.random(100) <= 50 ) then
+				e.self:AddItem(KRENDIC_MEDALLION, 1);
+			end
+		end
+	end
+	eq.set_timer("check_trash", 5000);
 end
 
 function GurebkTimerEvent(e)
-	if ( e.timer == "adds" ) then
+	if ( e.timer == "check_trash" ) then
+		eq.stop_timer(e.timer);
+		TrashDeathCompleteEvent(e);
+
+	elseif ( e.timer == "adds" ) then
 	
 		if ( adds < 6 ) then
 		
@@ -89,7 +108,6 @@ function GurebkTimerEvent(e)
 		e.self:SetBodyType(11, false);   -- make untargetable
 		e.self:SetSpecialAbility(24, 1); -- Will Not Aggro on
 		e.self:SetSpecialAbility(35, 1); -- No Harm from Players on
-		killed = 0;
 		gurebkActive = false;
 		eq.debug("Gurebk inactive");
 	end

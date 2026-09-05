@@ -1,5 +1,8 @@
 local FAKE_JEPLAK_TYPE = 210403; -- Jeplak,_Lord_of_Srerendi
 local REAL_JEPLAK_TYPE = 210472; -- Jeplak,_Lord_of_Srerendi
+local SRERENDI_MEDALLION = 28765;
+local IS_PVP_INSTANCE = eq.get_zone_guild_id() == 1;
+local TRASH_MEDALLION_CHANCE = IS_PVP_INSTANCE and 2 or 20;
 local ADDS_TYPES = {
 	210478, -- a_mangled_traveler
 	210477, -- a_lost_soul
@@ -22,7 +25,6 @@ local SPAWNPOINT_IDS2 = { -- spawns that must die for real Jeplak to become acti
 	346730
 };
 
-local killed = 0;
 local fakeActive = false;
 local realActive = false;
 
@@ -40,22 +42,6 @@ function CountDead(spawns)
 	end
 	
 	return n, allDead;
-end
-
-function IsCompoundNPC(id)
-	local elist = eq.get_entity_list();
-	
-	for _, i in ipairs(SPAWNPOINT_IDS1) do
-		if ( id == i ) then
-			return 1;
-		end
-	end
-	for _, i in ipairs(SPAWNPOINT_IDS2) do
-		if ( id == i ) then
-			return 2;
-		end
-	end
-	return false;
 end
 
 function ActivateJeplak(typeId)
@@ -79,11 +65,6 @@ end
 
 function TrashDeathCompleteEvent(e)
 
-	if ( IsCompoundNPC(e.self:GetSpawnPointID()) ) then
-		killed = killed + 1;
-		--eq.debug("jeplak guards killed == "..killed, 3);
-	end
-	
 	local elist = eq.get_entity_list();
 	local isFakeUp = elist:IsMobSpawnedByNpcTypeID(FAKE_JEPLAK_TYPE);
 	local isRealUp = elist:IsMobSpawnedByNpcTypeID(REAL_JEPLAK_TYPE);
@@ -92,8 +73,8 @@ function TrashDeathCompleteEvent(e)
 		return;
 	end
 	
-	if ( isFakeUp and not fakeActive and killed >= 23 ) then
-		local n, allDead = CountDead(SPAWNPOINT_IDS1);
+	if ( isFakeUp and not fakeActive ) then
+		local _, allDead = CountDead(SPAWNPOINT_IDS1);
 		
 		if ( allDead ) then
 		
@@ -121,9 +102,9 @@ function TrashDeathCompleteEvent(e)
 			ActivateJeplak(FAKE_JEPLAK_TYPE);
 		end
 		
-	elseif ( isRealUp and not realActive and killed >= 34 ) then
+	elseif ( isRealUp and not realActive ) then
 	
-		local n, allDead = CountDead(SPAWNPOINT_IDS2);
+		local _, allDead = CountDead(SPAWNPOINT_IDS2);
 		if ( allDead ) then		
 			ActivateJeplak(REAL_JEPLAK_TYPE);
 		end	
@@ -149,6 +130,10 @@ function TrashSpawnEvent(e)
 			end
 		end
 	end
+
+	if ( math.random(100) <= TRASH_MEDALLION_CHANCE ) then
+		e.self:AddItem(SRERENDI_MEDALLION, 1);
+	end
 end
 
 function FakeDeathEvent(e)
@@ -157,30 +142,50 @@ function FakeDeathEvent(e)
 	eq.unique_spawn(CASTAWAY_TYPE, 0, 0, 346, -2513, -455.56, 0);
 	fakeActive = false;
 	
-	if ( killed >= 34 ) then
-		local n, allDead = CountDead(SPAWNPOINT_IDS2);
-		if ( allDead ) then
-			ActivateJeplak(REAL_JEPLAK_TYPE);
-		end
+	local _, allDead = CountDead(SPAWNPOINT_IDS2);
+	if ( allDead ) then
+		ActivateJeplak(REAL_JEPLAK_TYPE);
 	end
 end
 function RealDeathEvent(e)
 	realActive = false;
 end
 
+function RealSpawnEvent(e)
+	local guaranteed = IS_PVP_INSTANCE and 3 or 5;
+	for i = 1, guaranteed do
+		e.self:AddItem(SRERENDI_MEDALLION, 1);
+	end
+	if ( IS_PVP_INSTANCE ) then
+		if ( math.random(100) <= 50 ) then
+			e.self:AddItem(SRERENDI_MEDALLION, 1);
+			e.self:AddItem(SRERENDI_MEDALLION, 1);
+		end
+	else
+		for i = 1, 3 do
+			if ( math.random(100) <= 50 ) then
+				e.self:AddItem(SRERENDI_MEDALLION, 1);
+			end
+		end
+	end
+end
+
 function FakeSpawnEvent(e)
-	killed = 0;
 	fakeActive = false;
 	eq.depop_all(CASTAWAY_TYPE);
+	eq.set_timer("check_trash", 5000);
 end
 
 function FakeTimerEvent(e)
-	if ( e.timer == "untarget" ) then
+	if ( e.timer == "check_trash" ) then
+		eq.stop_timer(e.timer);
+		TrashDeathCompleteEvent(e);
+
+	elseif ( e.timer == "untarget" ) then
 		eq.stop_timer(e.timer);
 		e.self:SetBodyType(11, false);   -- make untargetable
 		e.self:SetSpecialAbility(24, 1); -- Will Not Aggro on
 		e.self:SetSpecialAbility(35, 1); -- No Harm from Players on
-		killed = 0;
 		fakeActive = false;
 		eq.debug("Fake Jeplak inactive");
 	end
@@ -198,7 +203,6 @@ function RealTimerEvent(e)
 	elseif ( e.timer == "untarget" ) then
 		eq.stop_timer(e.timer);
 		eq.spawn_from_spawn2(FAKE_SPAWN_ID);
-		killed = 0;
 		realActive = false;
 		eq.debug("Real Jeplak despawn");
 		eq.depop();
@@ -251,6 +255,7 @@ function event_encounter_load(e)
 	eq.register_npc_event("Jeplak", Event.combat, FAKE_JEPLAK_TYPE, FakeCombatEvent);
 
 	eq.register_npc_event("Jeplak", Event.death, REAL_JEPLAK_TYPE, RealDeathEvent);
+	eq.register_npc_event("Jeplak", Event.spawn, REAL_JEPLAK_TYPE, RealSpawnEvent);
 	eq.register_npc_event("Jeplak", Event.timer, REAL_JEPLAK_TYPE, RealTimerEvent);
 	eq.register_npc_event("Jeplak", Event.combat, REAL_JEPLAK_TYPE, RealCombatEvent);
 	

@@ -1,4 +1,7 @@
 local NEFFIKEN_TYPE = 210251; -- Neffiken,_Lord_of_Kelek`Vor
+local KELEKVOR_MEDALLION = 28783;
+local IS_PVP_INSTANCE = eq.get_zone_guild_id() == 1;
+local TRASH_MEDALLION_CHANCE = IS_PVP_INSTANCE and 2 or 20;
 local TREE_TYPES = {
 	210479, -- a_maligned_ent
 	210480, -- a_manipulated_ent
@@ -12,7 +15,6 @@ local TRASH_GIANT_TYPES = {
 local DOLSHAK_TYPE = 210468;
 local DOLSHAK_SPAWNID = 369224;
 
-local killed = 0;
 local trees = 0;
 local neffikenActive = false;
 
@@ -21,11 +23,6 @@ function TrashDeathCompleteEvent(e)
 	local elist = eq.get_entity_list();
 	
 	if ( not elist:IsMobSpawnedByNpcTypeID(NEFFIKEN_TYPE) ) then
-		return;
-	end
-	
-	killed = killed + 1;
-	if ( killed < 34 ) then
 		return;
 	end
 	
@@ -52,6 +49,8 @@ end
 function TrashSpawnEvent(e)
 	if ( neffikenActive ) then
 		eq.depop_with_timer();
+	elseif ( math.random(100) <= TRASH_MEDALLION_CHANCE ) then
+		e.self:AddItem(KELEKVOR_MEDALLION, 1);
 	end
 end
 
@@ -64,12 +63,32 @@ end
 function NeffikenSpawnEvent(e)
 	neffikenActive = false;
 	eq.depop_with_timer(DOLSHAK_TYPE);
-	killed = 0;
+	local guaranteed = IS_PVP_INSTANCE and 3 or 5;
+	for i = 1, guaranteed do
+		e.self:AddItem(KELEKVOR_MEDALLION, 1);
+	end
+	if ( IS_PVP_INSTANCE ) then
+		if ( math.random(100) <= 50 ) then
+			e.self:AddItem(KELEKVOR_MEDALLION, 1);
+			e.self:AddItem(KELEKVOR_MEDALLION, 1);
+		end
+	else
+		for i = 1, 3 do
+			if ( math.random(100) <= 50 ) then
+				e.self:AddItem(KELEKVOR_MEDALLION, 1);
+			end
+		end
+	end
+	eq.set_timer("check_trash", 5000);
 end
 
 function NeffikenTimerEvent(e)
 
-	if ( e.timer == "trees" ) then
+	if ( e.timer == "check_trash" ) then
+		eq.stop_timer(e.timer);
+		TrashDeathCompleteEvent(e);
+
+	elseif ( e.timer == "trees" ) then
 		if ( trees < 8 ) then
 		
 			local t, dist;
@@ -104,7 +123,6 @@ function NeffikenTimerEvent(e)
 		e.self:SetBodyType(11, false);   -- make untargetable
 		e.self:SetSpecialAbility(24, 1); -- Will Not Aggro on
 		e.self:SetSpecialAbility(35, 1); -- No Harm from Players on
-		killed = 0;
 		neffikenActive = false;
 		eq.debug("Neffiken inactive");
 	end
