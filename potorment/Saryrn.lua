@@ -54,7 +54,7 @@ end
 
 function event_combat(e)
 	if ( e.joined ) then
-		eq.stop_timer("checkup");
+		eq.stop_timer("checkhp");
 		eq.set_timer("bounds", 5000);
 	else
 		--eq.get_entity_list():GetSpawnByID(SORROWSONG_SPAWNID):SetTimer(1); -- force spawn Sorrowsong
@@ -71,6 +71,7 @@ function event_timer(e)
 		if ( e.self:GetZ() < 575 ) then
 			e.self:GMMove(e.self:GetSpawnPointX(), e.self:GetSpawnPointY(), e.self:GetSpawnPointZ(), e.self:GetSpawnPointH());
 			e.self:CastSpell(3230, e.self:GetID()); -- Balance of the Nameless
+			e.self:WipeHateList();
 		end
 	
 	elseif ( e.timer == "checkhp" ) then
