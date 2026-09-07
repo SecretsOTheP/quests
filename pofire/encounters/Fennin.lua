@@ -121,7 +121,7 @@ local SPAWNS = {	-- these locs are copied from showeq so they are Y, X, Z, 360 d
 local ELITE_SPAWNIDS = { 369529, 369530, 369531, 369532, 369533, 369534, 369535, 369536, 369537, 369538 };
 
 local PHASE_TEXT = {
-	"The ground rumbles as the Guardian of Doomfire collapses to the ground dead.  Then a loud booming voice is heard saying, 'Come little mortals! Feel the chaos of the fires that flame the dark rage. Test yourselves against the might of my armies!'",
+	"The ground rumbles as the Guardian of Doomfire collapses to the ground dead.  Then a loud booming voice is heard saying, 'Come little mortals! Feel the Chaos of the Fires that flame the Dark Rage! Test yourselves against the might of my armies!'",
 	"Four enraged roars of fury echo from further down the bridge over the cacophany of an army waiting to hand out death. The powerful voice is then heard saying, 'Rexanous, Azobian, Hebabbilys, and Javonn! Come destroy these intruders.'",
 	"As the last of the army is defeated visions of endless burning flames intrude into your mind.  Suddenly the visions ends as a call comes from just ahead saying, 'Prepare to meet your end at the hands of the Council of Fire!'",
 	"A maddened call of endless fury erupts as a burning creature of pure destructions stands tall before you.  The creature then speaks in the loud booming voice of immense power saying, 'You are fools to have come this far. Prepare to tremble at the might of Doomfire!'",
@@ -129,6 +129,50 @@ local PHASE_TEXT = {
 
 
 local phase = 0;
+local eventActive = false;
+local fenninExtended = false;
+local FAILURE_TIME = 17500000;
+local FENNIN_EXTRA_TIME = 7200000; -- two additional hours, once per encounter
+local COMBAT_TYPES = { [FENNIN_TYPE] = true, [ELITE_TYPE] = true };
+for _, typ in ipairs(TRASH_TYPES) do
+	COMBAT_TYPES[typ] = true;
+end
+
+function EventInCombat()
+	local npcList = eq.get_entity_list():GetNPCList();
+	for npc in npcList.entries do
+		if ( npc.valid and COMBAT_TYPES[npc:GetNPCTypeID()] and npc:IsEngaged() ) then
+			return true;
+		end
+	end
+	return false;
+end
+
+-- Run only in the controller's context: the failure timer belongs to it.
+function UpdateFailureTimer()
+	if ( not eventActive ) then
+		return;
+	end
+	if ( EventInCombat() ) then
+		if ( not eq.is_paused_timer("fail") ) then
+			-- A timer expiring as combat begins must remain resumable.
+			if ( eq.get_timer("fail") <= 0 ) then
+				eq.set_timer("fail", 1);
+			end
+			eq.pause_timer("fail");
+		end
+	elseif ( eq.is_paused_timer("fail") ) then
+		eq.resume_timer("fail");
+	end
+end
+
+function EventCombat(e)
+	eq.signal(CONTROLLER_TYPE, 4);
+end
+
+function FenninSpawn(e)
+	eq.signal(CONTROLLER_TYPE, 3);
+end
 
 function ToggleElites(state)
 	local elist = eq.get_entity_list();
@@ -177,19 +221,49 @@ end
 
 function ControllerSignal(e)
 	if ( e.signal == 1 ) then
-		eq.set_timer("fail", 17500000);		-- note: the fail timer is not well understood and may not be accurate for all circumstances
+		eq.stop_timer("fail");
+		eventActive = true;
+		fenninExtended = false;
+		eq.set_timer("fail", FAILURE_TIME);
+		-- Catch deaths/depops that do not send a combat-exit event.
+		eq.set_timer("combat_check", 1000);
+		UpdateFailureTimer();
 		
 	elseif ( e.signal == 2 ) then
+		eventActive = false;
 		eq.stop_timer("fail");
+		eq.stop_timer("combat_check");
 		phase = 0;
 		ToggleElites(false);
+	elseif ( e.signal == 3 and eventActive and not fenninExtended ) then
+		fenninExtended = true;
+		-- get_timer cannot read a paused timer; resume before extending.
+		if ( eq.is_paused_timer("fail") ) then
+			eq.resume_timer("fail");
+		end
+		eq.set_timer("fail", math.max(0, eq.get_timer("fail")) + FENNIN_EXTRA_TIME);
+		UpdateFailureTimer();
+	elseif ( e.signal == 4 ) then
+		UpdateFailureTimer();
 	end
 end
 
 function ControllerTimer(e)
 
-	if ( e.timer == "fail" ) then
+	if ( e.timer == "combat_check" ) then
+		UpdateFailureTimer();
+	elseif ( e.timer == "fail" ) then
+		if ( eventActive and EventInCombat() ) then
+			UpdateFailureTimer();
+			return;
+		end
 		eq.stop_timer(e.timer);
+		eq.stop_timer("combat_check");
+		if ( not eventActive ) then
+			return;
+		end
+		eventActive = false;
+		phase = 0;
 	
 		eq.zone_emote(0, "A booming voice shouts out, 'You do not have the might to match the creatures of Doomfire, come back when you do.'");
 		
@@ -222,6 +296,10 @@ function FenninDeathComplete(e)
 end
 
 function event_encounter_load(e)
+	for typ in pairs(COMBAT_TYPES) do
+		eq.register_npc_event("Fennin", Event.combat, typ, EventCombat);
+	end
+	eq.register_npc_event("Fennin", Event.spawn, FENNIN_TYPE, FenninSpawn);
 	eq.register_npc_event("Fennin", Event.combat, GUARDIAN_TYPE, GuardianCombat);
 	eq.register_npc_event("Fennin", Event.death_complete, GUARDIAN_TYPE, GuardianDeathComplete);
 	
