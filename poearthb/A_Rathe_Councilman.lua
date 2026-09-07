@@ -200,12 +200,16 @@ function event_death_complete(e)
 
 	local elist = eq.get_entity_list();
 	if ( not elist:IsMobSpawnedByNpcTypeID(MEZABLE_TYPE) and not elist:IsMobSpawnedByNpcTypeID(UNMEZABLE_TYPE) ) then
+		-- Defense in depth: never allow the completed Council event to produce
+		-- its raid boss outside an instance.
+		if ( eq.get_zone_guild_id() == -1 ) then
+			return;
+		end
 	
 		eq.zone_emote(0, "The last of the council falls to the ground all signs of life gone.  Suddenly twelve voices are heard chanting a mystical spell saying, 'Time comes and time passes for the stone is forever.  Now we call upon our collective power to defend our stronghold!'  The chanting then stops and a deep throated primal scream is heard as the power of twelve comes together as one.  The Avatar of Earth has been summoned to defend Ragrax.");
 		eq.unique_spawn(222040, 0, 0, 2050, 410, -210, 0); -- #Avatar_of_Earth
 
-		local variance = math.random(1, 1440);
-		local t = (60 * 60 + variance) * 60; -- (60 hours/2.5 days * 60 minutes + variance) * 60 seconds
+		local t = 237600; -- 2 days, 18 hours
 		for i, id in ipairs(SPAWNIDS) do
 			eq.update_spawn_timer(id, t*1000);
 		end
