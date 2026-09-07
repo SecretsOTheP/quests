@@ -252,7 +252,7 @@ function FailEvent()
 		end
 	end
 	
-	eq.update_spawn_timer(RHALIQ_SPAWNID, 10800000);
+	eq.update_spawn_timer(RHALIQ_SPAWNID, 600000);
 	eq.debug("Villagers trial failed");
 end
 

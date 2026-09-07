@@ -166,7 +166,7 @@ function RyddaTimer(e)
 		end
 	
 	elseif ( e.timer == "depop" ) then
-		eq.update_spawn_timer(TRYDAN_SPAWNID, 10800000);
+		eq.update_spawn_timer(TRYDAN_SPAWNID, 600000);
 		eq.debug("Rydda`Dar trial failed");
 		EnableSpawns();
 		eq.depop();
