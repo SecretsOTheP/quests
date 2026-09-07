@@ -31,12 +31,12 @@ local PORT_COORDS = {
 			2 = Thelin is wandering
 			3 = Boss spawned; Thelin accepting dagger blade shard from boss
 			4 = Thelin and Terris dialog complete; hailing Thelin ports you out
-			5 = Thelin despawned; waiting for cleanup to allow reuse
+			5 = Waiting for cleanup to allow reuse
 ]]
 local instance = {
-	{ rid = 0, ports = 0, state = 0, ids = {}, terris = nil },
-	{ rid = 0, ports = 0, state = 0, ids = {}, terris = nil },
-	{ rid = 0, ports = 0, state = 0, ids = {}, terris = nil }
+	{ rid = 0, ports = 0, state = 0, wait_checks = 0, ids = {}, terris = nil },
+	{ rid = 0, ports = 0, state = 0, wait_checks = 0, ids = {}, terris = nil },
+	{ rid = 0, ports = 0, state = 0, wait_checks = 0, ids = {}, terris = nil }
 };
 
 function GetInstanceFromSpawnID(spawnId)
@@ -50,6 +50,19 @@ function GetInstanceFromSpawnID(spawnId)
 		i = 3;
 	end
 	return i;
+end
+
+function GetThelinInTrial(i)
+        local npcList = eq.get_entity_list():GetNPCList();
+
+        if ( npcList ) then
+                for npc in npcList.entries do
+                        if ( npc.valid and npc:GetSpawnPointID() == THELIN_SPAWNIDS[i] ) then
+                                return npc;
+                        end
+                end
+        end
+        return nil;
 end
 
 function ClientInTrial(trialNum)
@@ -100,15 +113,20 @@ function CheckRemoveFromTrial(trialNum, limit, zone, x, y, z, h)
 	end
 end
 
-function RemoveNearbyFromTrial(i, zone, dist, ox, oy, x, y, z, h)
+function RemoveFromTrial(i, zone, x, y, z, h, message)
 	local clientList = eq.get_entity_list():GetClientList();
 
 	if ( clientList ) then
 		for client in clientList.entries do
 			if ( client.valid and not client:GetGM()
-				and client:GetY() < (oy+dist) and client:GetY() > (oy-dist)
-				and client:GetX() < (ox+dist) and client:GetX() > (ox-dist)
+				and client:GetY() < BOUNDARIES[i].t
+				and client:GetY() > BOUNDARIES[i].b
+				and client:GetX() < BOUNDARIES[i].l
+				and client:GetX() > BOUNDARIES[i].r
 			) then
+				if ( message ) then
+					client:Message(0, message);
+				end
 				client:MovePC(zone, x, y, z, h*2);
 				if ( client:GetPet().valid and not client:GetPet():Charmed() ) then
 					client:GetPet():GMMove(x, y, z, 0);
@@ -187,12 +205,22 @@ function GovernorTimerEvent(e)
 					instance[i].state = 0;
 					instance[i].rid = 0;
 					instance[i].ports = 0;
+					instance[i].wait_checks = 0;
 					instance[i].ids = {};
 					if ( instance[i].terris ) then
 						instance[i].terris:Depop();
 					end
 					instance[i].terris = nil;
 					eq.debug("Hedge maze "..i.." now available");
+				elseif ( instance[i].state == 1 ) then
+					instance[i].wait_checks = instance[i].wait_checks + 1;
+
+					if ( instance[i].wait_checks >= 30 ) then
+						RemoveFromTrial(i, 204, 1668, 282, 213, 255,
+							"Terris Thule invades your thoughts. 'Fools! Did Thelin think to cheat our contract by bringing you here? This nightmare is his alone! Begone!'");
+						instance[i].state = 5;
+						eq.debug("Hedge Maze "..i.." timed out before starting", 1);
+					end
 				end
 			end
 		end
@@ -200,7 +228,7 @@ function GovernorTimerEvent(e)
 		-- check for too many players in rooms
 		for i = 1, 3 do
 			if ( instance[i].state > 0 ) then
-				CheckRemoveFromTrial(i, 18, 204, 1668, 282, 215, 0);
+				CheckRemoveFromTrial(i, 24, 204, 1668, 282, 215, 0);
 			end
 		end		
 		
@@ -327,17 +355,16 @@ function ThelinOutsideSayEvent(e)
 		e.other:Message(0, "Thelin Poxbourne tells you, 'She has taken the only thing that has brought me any joy in my life.  She took it and broke it into seven pieces.  She placed them deep within the labyrinth of my nightmare.  I must retrieve it, will you [help] me.  Please I beg of your mercy.'");
 		
 	elseif ( e.message:findi("help") ) then
-		e.other:Message(0, "Thelin Poxbourne tells you, 'I do not know who you are, but I am thankful that you have stumbled upon me.  I can bring you into my dream state, but my powers are limited so I can only handle eighteen at once.  Please when you are prepared have the leader of each of your band of adventurers tell me they are ready.'");
+		e.other:Message(0, "Thelin Poxbourne tells you, 'I do not know who you are, but I am thankful that you have stumbled upon me.  I can bring you into my dream state, but my powers are limited. I can maintain three separate dreams, each holding no more than twenty-four adventurers.  Please when you are prepared have the leader of each of your band of adventurers tell me they are ready.'");
 		
 	elseif ( e.message:findi("ready") ) then
 
-		-- Port-in logic is: If first group is in a raid, save that raid ID and only allow groups from that raid inside
-		--                   If first group is NOT in a raid, allow other non-raid groups inside but not raided groups
-		--                   No groups allowed in once waves start or the port limit is reached
+		-- Port-in logic is: Fill an available room already assigned to the raid, then assign another available room.
+		--                   Non-raid groups may share rooms that are not assigned to a raid.
+		--                   No groups are allowed into a room once its waves start or its port limit is reached.
 		local trial = 0;
 		local rid = 0;
 		local raid = e.other:GetRaid();
-		local raidInTrial = false;
 		
 		--local group = client:GetGroup();
 		--if ( not group.valid ) then
@@ -351,17 +378,13 @@ function ThelinOutsideSayEvent(e)
 		if ( rid > 0 ) then
 			for i = 1, 3 do
 			
-				if ( instance[i].rid == rid ) then
-					raidInTrial = true;
-					
-					if ( instance[i].state == 1 and instance[i].ports < 3 ) then
-						trial = i; -- raid is doing this trial
-						break;
-					end
+				if ( instance[i].rid == rid and instance[i].state == 1 and instance[i].ports < 4 ) then
+					trial = i; -- fill an available room already assigned to this raid
+					break;
 				end
 			end
 			
-			if ( not raidInTrial and trial == 0 ) then
+			if ( trial == 0 ) then
 				for i = 1, 3 do
 					if ( instance[i].state == 0 and not ClientInTrial(i) ) then
 						trial = i;
@@ -374,7 +397,7 @@ function ThelinOutsideSayEvent(e)
 			
 			-- try to fill a trial first
 			for i = 1, 3 do
-				if ( instance[i].rid == 0 and instance[i].state == 1 and instance[i].ports < 3 ) then
+				if ( instance[i].rid == 0 and instance[i].state == 1 and instance[i].ports < 4 ) then
 					trial = i;
 					break;
 				end
@@ -406,6 +429,13 @@ function ThelinOutsideSayEvent(e)
 			instance[trial].ports = instance[trial].ports + 1;
 			eq.debug("Porting group into hedge maze "..trial.."; raid ID == "..rid, 2);
 			MoveGroup(204, e.other, 150, PORT_COORDS[trial].x, PORT_COORDS[trial].y, PORT_COORDS[trial].z, 64);
+                        if ( instance[trial].ports == 1 ) then
+                                local thelin = GetThelinInTrial(trial);
+
+                                if ( thelin ) then
+                                        eq.set_timer("start_warning", 5000, thelin);
+                                end
+                        end
 		else
 			e.self:Emote("groans in agony. 'I suddenly feel the grasp of Terris upon my heart.  I must.. rest.  Can you please come back after I have rested.'");
 		end		
@@ -426,7 +456,9 @@ function ThelinInsideSayEvent(e)
 			e.self:SetSpecialAbility(35, 0); -- No Harm from Players off
 			e.self:CastToNPC():SetCastRateDetrimental(35); -- this should really be implemented as an NPC database field
 			                                               -- this NPC is a shadowknight but casts necro spells; needs to cast aggressively as well
+			e.self:SpellFinished(278, e.self); -- Spirit of Wolf
 			e.self:AssignWaypoints(8+i);
+			instance[i].wait_checks = 0;
 			instance[i].state = 2;
 		end
 		
@@ -462,7 +494,12 @@ end
 function ThelinTimerEvent(e)
 	local i = GetInstanceFromSpawnID(e.self:GetSpawnPointID());
 
-	if ( e.timer == "talk1" ) then
+	if ( e.timer == "start_warning" ) then
+		if ( instance[i].state == 1 ) then
+		        e.self:Say("Time is short. We have only five minutes to begin, before Terris Thule takes notice that you are here.");
+		end
+
+	elseif ( e.timer == "talk1" ) then
 		e.self:Say("Terris hear me now!  I have done as you have called for.  My beloved dagger is whole once again!  Come now keep up your part of the bargain.");
 		instance[i].terris:Say("You fool!  You did not earn this prize on your own!  The contract that has been drawn is now invalid.  You will never leave my grasp, prepare your soul for eternal torment!");
 		eq.set_timer("talk2", 8000);
@@ -485,6 +522,7 @@ function ThelinTimerEvent(e)
 		eq.debug("Hedge Maze "..i.." success");
 		
 	elseif ( e.timer == "depop" ) then
+		RemoveFromTrial(i, 204, 1668, 282, 213, 255, "The nightmare fades from around you.");
 		instance[i].state = 5;
 		eq.depop_with_timer();
 	end
@@ -502,7 +540,7 @@ function ThelinDeathEvent(e)
 		end
 	end
 	-- have to remove players this way because Banishment doesn't work since it's flagged a beneficial spell
-	RemoveNearbyFromTrial(i, 204, 100, e.self:GetX(), e.self:GetY(), 1668, 282, 213, 255);
+	RemoveFromTrial(i, 204, 1668, 282, 213, 255);
 	instance[i].state = 5;
 	eq.debug("Hedge Maze "..i.." failed");
 end
