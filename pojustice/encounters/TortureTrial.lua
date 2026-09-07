@@ -187,6 +187,22 @@ function BossDeath(e)
 	wave = 0;
 end
 
+function BossDeathComplete(e)
+	local corpseList = eq.get_entity_list():GetCorpseList();
+
+	if ( corpseList ) then
+		for corpse in corpseList.entries do
+			if ( corpse.valid
+				and corpse:IsNPCCorpse()
+				and corpse:GetNPCTypeID() == BOSS_TYPE
+			) then
+				corpse:SetDecayTimer(480000);
+				return;
+			end
+		end
+	end
+end
+
 function TrialFail()
 	eq.signal(TRIBUNAL_TYPE, 4);
 	
@@ -204,6 +220,7 @@ function event_encounter_load(e)
 	
 	eq.register_npc_event("TortureTrial", Event.death, PRISONER_TYPE, TrialFail);
 	eq.register_npc_event("TortureTrial", Event.death, BOSS_TYPE, BossDeath);
+	eq.register_npc_event("TortureTrial", Event.death_complete, BOSS_TYPE, BossDeathComplete);
 	eq.register_npc_event("TortureTrial", Event.death, WRAITH_TYPE, WraithDeath);
 
 	for _, id in ipairs(MOBS) do
