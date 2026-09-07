@@ -55,7 +55,7 @@ function event_say(e)
 		elseif ( e.message:findi("things") ) then
 		
 			e.self:Say("You must find the Master Sergeant and tell him that you are here to aid the cause.");
-			eq.set_global("pov_orb_quest", "3", 1, "H6");
+			eq.set_global("pov_orb_quest", "3", 1, "F");
 		end
 	else
 		if ( e.message:findi("hail") ) then
@@ -76,7 +76,7 @@ function event_trade(e)
 			-- Confirmed Live Experience
 			e.other:QuestReward(e.self, {exp = 1});
 			if ( questState == 4 ) then
-				eq.set_global("pov_orb_quest", "5", 1, "H24");
+				eq.set_global("pov_orb_quest", "5", 1, "F");
 			end
 		else
 			e.self:Emote("looks at you in disgust and wonders why you did that.");

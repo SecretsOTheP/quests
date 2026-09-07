@@ -13,7 +13,7 @@ function event_say(e)
 		elseif ( e.message:findi("aerin") ) then
 			e.self:Say("I don't have time to explain the glass dragon to you. Leave before I get angry.");
 			if ( questState == 3 ) then
-				eq.set_global("pov_orb_quest", "4", 1, "H6");
+				eq.set_global("pov_orb_quest", "4", 1, "F");
 			end
 		end
 	
@@ -34,7 +34,7 @@ function event_say(e)
 		elseif ( e.message:findi("mission") ) then
 			e.self:Say("Not so fast, "..e.other:GetName()..". You'll have to speak to the Captain about that. I'm not at liberty to divulge that information at this time. That information is classified. I can tell you, but then I'd have to kill you.' Aaramis laughs. 'Go to Captain Ryglot and he'll be able to fill you in with all the details.");
 			if ( questState == 5 ) then
-				eq.set_global("pov_orb_quest", "6", 1, "H24");
+				eq.set_global("pov_orb_quest", "6", 1, "F");
 			end
 		end
 	else

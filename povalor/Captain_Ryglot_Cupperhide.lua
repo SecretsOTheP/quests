@@ -2,7 +2,7 @@ function event_say(e)
 
 	local questState = tonumber(eq.get_qglobals(e.other).pov_orb_quest or 0);
 	
-	if ( questState == 6 ) then
+	if ( questState >= 5 ) then
 
 		if ( e.message:findi("hail") ) then
 			e.self:Say("I am very [busy] at the moment. Perhaps you should come back at another time "..e.other:GetName());
@@ -35,7 +35,7 @@ function event_trade(e)
 	
 	if ( item_lib.check_turn_in(e.self, e.trade, { item1 = 25796, item2 = 25797, item3 = 25798 }) ) then -- globe pieces
 	
-		if ( questState == 6 ) then
+		if ( questState >= 5 ) then
 			e.self:Emote("looks up at you in surprise. 'I can't believe you brought the missing pieces back to me so quickly. I have a team of men who have been looking for these pieces for weeks now. That's quite a feat. Unfortunately, I will be unable to make use of the Crystalline Globe at this time. A message has been dispatched to my platoon asking us to return to the Halls of Honor. It looks as if we'll be joining up with the rest of our company fairly soon. Keep the globe. If you're able to rally enough people together to take on Aerin`Dar then perhaps you'll be able accomplish an objective that our platoon was unable to do. I must go now. Good luck to you "..e.other:GetName()..".'");
 			-- Confirmed Live Experience
 			e.other:QuestReward(e.self, { itemid = 25596, exp = 1 }); -- A Crystalline Globe
