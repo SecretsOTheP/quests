@@ -6,7 +6,23 @@ local MINI_TYPES = {
 	210026, -- Laruken_the_Rigid
 	210029, -- Faruek_the_Bold
 }
+local MINI_MEDALLIONS = {
+	[210026] = 28783, -- Laruken: Kelek`Vor
+	[210027] = 28783, -- Zertuken: Kelek`Vor
+	[210028] = 28765, -- Paruek: Srerendi
+	[210029] = 28765, -- Faruek: Srerendi
+	[210032] = 28780, -- Pendubk: Krendic
+	[210033] = 28780, -- Solnebk: Krendic
+}
 local STORM_TYPE = 210467; -- a_tumultuous_storm
+
+function MiniSpawnEvent(e)
+	local medallion = MINI_MEDALLIONS[e.self:GetNPCTypeID()];
+	local maximum = (eq.get_zone_guild_id() == 1) and 2 or 3;
+	for i = 1, math.random(1, maximum) do
+		e.self:AddItem(medallion, 1);
+	end
+end
 
 function MiniTimerEvent(e)
 	if ( e.timer == "storms" ) then
@@ -40,6 +56,7 @@ end
 function event_encounter_load(e)
 
 	for _, id in ipairs(MINI_TYPES) do
+		eq.register_npc_event("MiniBosses", Event.spawn, id, MiniSpawnEvent);
 		eq.register_npc_event("MiniBosses", Event.timer, id, MiniTimerEvent);
 		eq.register_npc_event("MiniBosses", Event.combat, id, MiniCombatEvent);
 	end
