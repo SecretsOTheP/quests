@@ -1,6 +1,6 @@
 -- Plane of Time B instance controller
 
-local MAX_CLIENTS = 60;
+local MAX_CLIENTS = 72;
 local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
 local EVENTS_CONTROLLER_TYPE = 223078;
@@ -548,9 +548,13 @@ function DoAdditionalHoursEmote(hours)
 	eq.zone_emote(0, string.format(EMOTE_STRINGS[4], msg));
 end
 
+function SignalTimeA(signal, data)
+	eq.cross_zone_signal_npc_by_npc_type_id(POTIMEA_CONTROLLER_TYPE, eq.get_zone_guild_id(), signal, data or "");
+end
+
 -- repeat signal until we get a reply but give up after some tries.  make sure important signals get received
 function SendSignalRequestConfirm(signal, data)
-	eq.signal(POTIMEA_CONTROLLER_TYPE, signal, 0, data);
+	SignalTimeA(signal, data);
 	eq.set_timer("confirm", 5000);
 	signalTries = 10;
 	confirmData = data;
@@ -777,7 +781,7 @@ function event_timer(e)
 				data = data..tostring(regionCounts[i])..";";
 			end
 			data = data..tostring(activeClients);
-			eq.signal(POTIMEA_CONTROLLER_TYPE, 5, 0, data);
+			SignalTimeA(5, data);
 			
 			pulses = pulses + 1;
 			if ( pulses == 3 ) then
@@ -809,7 +813,7 @@ function event_timer(e)
 			eq.debug("Critical error: no response from PoTimeA sending signal "..confirmSignal.."!");
 		else
 			eq.debug("PoTimeA failed to send signal confirmation");
-			eq.signal(POTIMEA_CONTROLLER_TYPE, confirmSignal, 0, confirmData);
+			SignalTimeA(confirmSignal, confirmData);
 			return;
 		end
 		
@@ -921,7 +925,7 @@ function PhaseDialog()
 		eq.set_timer("fail", (failTime - now)*1000);
 		eq.stop_timer("fail_warning");
 		eq.stop_timer("fail2");
-		eq.signal(POTIMEA_CONTROLLER_TYPE, 6, 0, "5");
+		SignalTimeA(6, "5");
 		eq.debug("Quarm defeated.  Remaining instance time set to 1 hour.");
 		return;
 	end
