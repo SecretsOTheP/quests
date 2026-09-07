@@ -1,4 +1,5 @@
 function event_spawn(e)
+	e.self:SetNPCFactionID(0); -- keep Argan out of NPC faction combat while available for the player event
 
 	if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(207047) ) then -- A_Horrifying_Vision
 		eq.depop_with_timer();
