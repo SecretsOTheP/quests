@@ -329,7 +329,7 @@ function DespawnTimer(e)
 end
 
 function ResetSpawn(e)
-	eq.set_timer("depop", 18000000);
+	eq.set_timer("depop", 237600000); -- 66 hours after successful completion
 end
 
 function ResetTimer(e)
