@@ -17,6 +17,10 @@ local LOCS = {
 local signals = {};
 local kills = 0;
 local spawns = { ALRANDERISAN_TYPE, BELECOHEN_TYPE, FERABALEN_TYPE };
+local function RaidContentEnabled()
+	local guild_id = eq.get_zone_guild_id();
+	return guild_id > 1 or (guild_id == 1 and eq.guild_one_raid_window_open());
+end
 
 function RepopIsland()
 	local elist = eq.get_entity_list();
@@ -49,10 +53,16 @@ function RepopIsland()
 end
 
 function event_spawn(e)
-	eq.set_timer("castellan_repop", 1080000);
+	if ( RaidContentEnabled() ) then
+		eq.set_timer("castellan_repop", 1080000);
+	end
 end
 
 function event_timer(e)
+	if ( not RaidContentEnabled() ) then
+		eq.stop_timer(e.timer);
+		return;
+	end
 
 	if ( e.timer == "castellan_repop" ) then
 		RepopIsland();
@@ -60,6 +70,9 @@ function event_timer(e)
 end
 
 function event_signal(e)
+	if ( not RaidContentEnabled() ) then
+		return;
+	end
 
 	if ( e.signal == 1 ) then
 	
