@@ -2,6 +2,7 @@ local FLAG_LIMIT = 72;
 local ALEKSON1_TYPE = 211060; -- Alekson_Garn
 local ALEKSON2_TYPE = 211108; -- #Alekson_Garn
 local CUSTODIAN_TYPE = 211078; -- A_Custodian_of_Marr 
+local SUCCESS_RESPAWN_TIME = 64800 * 1000; -- 18 hours
 
 local MIRANDA_TYPE = 211082; -- Miranda_Climmes
 local YDIRA_TYPE = 211083; -- Ydira_Merok
@@ -208,11 +209,11 @@ function AttackerDeath(e)
 end
 
 function BossDeath(e)
-	bossKills = bossKills + 1;
-	
-	if ( bossKills == 3 ) then
-		EventSuccess();
-	end
+    bossKills = bossKills + 1;
+
+    if ( bossKills == 3 ) then
+        EventSuccess();
+    end
 end
 
 function AttackerSpawn(e)
@@ -267,7 +268,9 @@ function StartEvent(x, y)
 	eq.debug("Crazed Norathians trial started");
 end
 
-function EnableSpawns()
+function EnableSpawns(delay)
+    delay = delay or 600000; -- 10-minute failure retry
+
 	eq.depop_all(MIRANDA_TYPE);
 	eq.depop_all(YDIRA_TYPE);
 	
@@ -275,7 +278,7 @@ function EnableSpawns()
 	local spawn;
 	for _, id in ipairs(ROOM_SPAWNIDS) do
 		spawn = elist:GetSpawnByID(id)
-		eq.update_spawn_timer(id, 600000);
+		eq.update_spawn_timer(id, delay);
 		spawn:Enable();
 	end
 end
@@ -324,7 +327,7 @@ function FailEvent()
 end
 
 function EventSuccess()
-	EnableSpawns();
+    EnableSpawns(SUCCESS_RESPAWN_TIME);
 
 	local mob = eq.spawn2(ALEKSON2_TYPE, 0, 0, -2330, -1724, -110.4, 192);
 	mob:Say("Congratulations my friends. You've passed the trial I laid before you.");
