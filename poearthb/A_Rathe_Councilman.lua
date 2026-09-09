@@ -206,10 +206,10 @@ function event_death_complete(e)
 			return;
 		end
 	
-		eq.zone_emote(0, "The last of the council falls to the ground all signs of life gone.  Suddenly twelve voices are heard chanting a mystical spell saying, 'Time comes and time passes for the stone is forever.  Now we call upon our collective power to defend our stronghold!'  The chanting then stops and a deep throated primal scream is heard as the power of twelve comes together as one.  The Avatar of Earth has been summoned to defend Ragrax.");
+		eq.zone_emote(0, "The last of the council falls to the ground all signs of life gone.  Suddenly twelve voices are heard chanting a mystical spell saying, 'Time comes and time passes for the Stone is forever.  Now we call upon our collective power to defend our Stronghold!'  The chanting then stops and a deep throated primal scream is heard as the Power of Twelve comes together as One.  The Avatar of Earth has been summoned to defend Ragrax.");
 		eq.unique_spawn(222040, 0, 0, 2050, 410, -210, 0); -- #Avatar_of_Earth
 
-		local t = 237600; -- 2 days, 18 hours
+		local t = 496800; -- 5 days, 18 hours
 		for i, id in ipairs(SPAWNIDS) do
 			eq.update_spawn_timer(id, t*1000);
 		end
