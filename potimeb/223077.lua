@@ -5,6 +5,8 @@ local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
 local EVENTS_CONTROLLER_TYPE = 223078;
 local QUARM_TYPE = 223008;
+local TIMELINE_LIFETIME = 691200; -- 8 days
+local TIMELINE_GRACE = 108000; -- 30 hours after the latest boss lockout
 
 local EMOTE_STRINGS = {
 	[1] = "An hourglass appears in the distance, the few remaining sands trickling down.  As the last grain falls, multicolored lights erupt from it, surrounding you in a brilliant flash.",
@@ -81,6 +83,7 @@ local zoneRaidID = 0;
 local zoneInstanceID = 0
 local zoneInstanceData = "";
 local zoneTimers = {};
+local zoneHardExpire = 0;
 local zoneBossTable = {};
 local failTime = 0;
 local failWarningMsg;
@@ -152,7 +155,7 @@ end
 
 function KickPlayer(client)
 	if ( client:Connected() ) then
-		client:MovePC(219, math.random(-57, -17), math.random(-130, -90), 10, 0);	-- Plane of Time A evac loc with some randomness
+		client:MovePCGuildID(219, eq.get_zone_guild_id(), math.random(-57, -17), math.random(-130, -90), 10, 0);	-- Plane of Time A evac loc with some randomness
 	end
 end
 
@@ -162,12 +165,7 @@ function SetBossKilled(phase, bossNum)
 	end
 	zoneBossTable[phase][bossNum] = 1;
 	
-	local t = 561600; -- 6.5 days
-	if ( phase == 1 ) then
-		t = 43200; -- 12 hours
-	elseif ( phase == 2 or phase == 3 ) then
-		t = 302400; -- 3.5 days
-	end
+	local t = 583200; -- 6 days, 18 hours
 	
 	local timerNum = phase;
 	if ( phase == 4 ) then
@@ -180,6 +178,9 @@ function SetBossKilled(phase, bossNum)
 	if ( phase > 3 or zoneTimers[timerNum] == 0 ) then  -- phase 1-3 start the timer from the frist boss kill
 		zoneTimers[timerNum] = os.time() + t;
 	end
+	-- Preserve the full boss lockout plus the timeline's recovery window. Ordinary
+	-- saves must never extend this deadline.
+	zoneHardExpire = math.max(zoneHardExpire, zoneTimers[timerNum] + TIMELINE_GRACE);
 	
 	SetInstanceGlobals();
 	return true;
@@ -268,6 +269,7 @@ function SetupNewInstance(controller)
 	end
 	
 	validPlayers = {};
+	zoneHardExpire = os.time() + TIMELINE_LIFETIME;
 	
 	-- look for an open instance slot.  this will break if there are 999 instance qglobals in use
 	local qglobals = eq.get_qglobals(controller);
@@ -280,6 +282,33 @@ function SetupNewInstance(controller)
 		end	
 	end
 	return 0;
+end
+
+function FindGuildInstance(controller, guildID)
+	local qglobals = eq.get_qglobals(controller);
+	local now = os.time();
+	local instanceID = 0;
+
+	for name, value in pairs(qglobals) do
+		local candidateID = tonumber(name:match("^time_guild_(%d+)$"));
+
+		if ( candidateID and tonumber(value) == guildID ) then
+			local hardExpire = tonumber(qglobals["time_expires_"..candidateID]) or 0;
+			local hasState =
+				qglobals["time_kills_"..candidateID] and
+				qglobals["time_timers_"..candidateID];
+
+			if (
+				hasState and
+				(hardExpire == 0 or now < hardExpire) and
+				(instanceID == 0 or candidateID < instanceID)
+			) then
+				instanceID = candidateID;
+			end
+		end
+	end
+
+	return instanceID;
 end
 
 function SetInstanceGlobals()
@@ -302,12 +331,18 @@ function SetInstanceGlobals()
 		end
 	end
 	
-	eq.set_global("time_kills_"..zoneInstanceID, killsStr, 2, "D7");
-	eq.set_global("time_timers_"..zoneInstanceID, timersStr, 2, "D7");
+	eq.set_global("time_kills_"..zoneInstanceID, killsStr, 2, "D8");
+	eq.set_global("time_timers_"..zoneInstanceID, timersStr, 2, "D8");
+	eq.set_global("time_guild_"..zoneInstanceID, tostring(eq.get_zone_guild_id()), 2, "D8");
+	eq.set_global("time_expires_"..zoneInstanceID, tostring(zoneHardExpire), 2, "D8");
 end
 
 function SavePlayerInstance(client)
-	eq.target_global("time_instance", tostring(zoneInstanceID), "D7", 0, client:CharacterID(), 0);
+	-- Keep the character's pointer longer than the timeline itself. The absolute
+	-- timeline deadline decides whether it can be restored, so an early-phase
+	-- participant cannot lose the pointer before a later boss lockout expires.
+	eq.target_global("time_instance", tostring(zoneInstanceID), "D30", 0, client:CharacterID(), 0);
+	eq.target_global("time_instance_guild", tostring(eq.get_zone_guild_id()), "D30", 0, client:CharacterID(), 0);
 
 	-- set zoned-in-from-dial flag to false.  doing this at same time we save player
 	local charID = client:CharacterID();
@@ -573,27 +608,54 @@ function event_signal(e)
 		end
 		eq.debug("Instance start requested; charID "..charID.." ("..(charName or "?")..") clicked dial number "..dialNum.." in raid ID "..raidID.." with instance ID "..instanceID);
 		
-		if ( zonePhase == 0 ) then
-		
-			if ( instanceID == 0 ) then
-				eq.debug("zone inactive and player has no instance; creating new instance and notifying PoTimeA");
-				instanceID = SetupNewInstance(e.self);				
+if ( zonePhase == 0 ) then
+	local currentGuildID = eq.get_zone_guild_id();
+	local guildInstanceID = FindGuildInstance(e.self, currentGuildID);
+
+	if ( guildInstanceID > 0 and guildInstanceID ~= instanceID ) then
+		eq.debug(
+			"Using guild "..currentGuildID..
+			"'s active Time instance "..guildInstanceID..
+			" instead of character instance "..instanceID
+		);
+		instanceID = guildInstanceID;
+	end
+
+	if ( instanceID == 0 ) then
+
+eq.debug("zone inactive and player has no instance; creating new instance and notifying PoTimeA");
+				instanceID = SetupNewInstance(e.self);
 			else
 				eq.debug("zone inactive and player has previous instance; using previous instance");
 				local qglobals = eq.get_qglobals(e.self);
-				local killData = qglobals["time_kills_"..instanceID];
-				local timerData = qglobals["time_timers_"..instanceID];
-				if ( not killData or not timerData ) then
-					instanceID = SetupNewInstance(e.self);					
+				local instanceGuildID = tonumber(qglobals["time_guild_"..instanceID]) or 0;
+				if ( instanceGuildID > 0 and instanceGuildID ~= currentGuildID ) then
+					eq.debug("Rejected Time instance "..instanceID.." owned by guild zone "..instanceGuildID.." from guild zone "..currentGuildID);
+					SendSignalRequestConfirm(8, tostring(charID));
+					return;
+				end
+				local hardExpire = tonumber(qglobals["time_expires_"..instanceID]) or 0;
+				if ( hardExpire > 0 and os.time() >= hardExpire ) then
+					eq.debug("Time instance "..instanceID.." reached its retirement deadline; creating a fresh timeline");
+					instanceID = SetupNewInstance(e.self);
+					SendSignalRequestConfirm(9, tostring(charID));
 				else
-					eq.debug("Instance kill data: "..killData);
-					eq.debug("Instance timer data: "..timerData);
-					eq.debug("current os.time() is "..os.time());
-					if ( not SetInstanceVars(killData, timerData) ) then
-						eq.debug("Error: Time instance qglobals are corrupted!  Instance ID: "..instanceID);
-						return;
-					end					
-					
+					local killData = qglobals["time_kills_"..instanceID];
+					local timerData = qglobals["time_timers_"..instanceID];
+					if ( not killData or not timerData ) then
+						instanceID = SetupNewInstance(e.self);
+					else
+						-- Existing timelines created before this safeguard receive one full
+						-- migration window. Thereafter only boss kills can extend it.
+						zoneHardExpire = hardExpire > 0 and hardExpire or (os.time() + TIMELINE_LIFETIME);
+						eq.debug("Instance kill data: "..killData);
+						eq.debug("Instance timer data: "..timerData);
+						eq.debug("current os.time() is "..os.time());
+						if ( not SetInstanceVars(killData, timerData) ) then
+							eq.debug("Error: Time instance qglobals are corrupted!  Instance ID: "..instanceID);
+							return;
+						end
+					end
 				end
 			end
 			zoneInstanceID = instanceID;
@@ -601,16 +663,42 @@ function event_signal(e)
 				eq.debug("Critical Error: All instance qglobals are in use.");
 				return;
 			end
-			zonePhase = 1;
-			zoneRaidID = raidID;
-			CheckPhaseStatus(1);
-			SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID); -- Tell PoTimeA that we started an instance
-			SetInstanceGlobals();
-			eq.set_timer("phase1", 45000);
-			eq.set_timer("check_trial_start", 2000);
-			for i = 1, #trialStates do
-				trialStates[i] = 0;
-			end
+zoneRaidID = raidID;
+
+local nextPhase = 0;
+for phase = 1, 6 do
+    if ( CheckPhaseStatus(phase) ) then
+        nextPhase = phase;
+        break;
+    end
+end
+
+SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
+SetInstanceGlobals();
+
+for i = 1, #trialStates do
+    trialStates[i] = 0;
+end
+
+if ( nextPhase == 1 ) then
+    zonePhase = 1;
+    eq.set_timer("phase1", 45000);
+    eq.set_timer("check_trial_start", 2000);
+elseif ( nextPhase > 1 ) then
+    SetupPhaseOne();
+    zonePhase = nextPhase - 1;
+    PhaseDialog();
+else
+    zonePhase = 6;
+    PhaseDialog();
+end
+
+
+
+
+
+
+
 		
 		elseif ( zonePhase > 0 ) then
 			eq.debug("Error: Zone already active and PoTimeA requesting new instance.  This shouldn't happen. (zone crash?)  Sending zone state update");
