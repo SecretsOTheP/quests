@@ -100,16 +100,20 @@ function event_signal(e)
 			block = true;	-- block signals until the instance is started
 			eq.set_timer("unblock", 60000); -- in case signals are lost somehow
 			
-		elseif ( activeRaidID ~= raidID ) then
-			-- player is in the wrong raid
-			-- note: this text is not what Sony used.  I don't have a log of what they used so made this up
-			client:Message(0, "The portal glows momentarily before fading.  You see a brief vision of unfamiliar warriors in a great battle against the gods.");
-		
-		
 		elseif ( instanceID > 0 and activeInstanceID ~= instanceID ) then
 			-- player is saved to an instance that is not the same as the active instance
 			
 			local qglobals = eq.get_qglobals(POTIMEB_CONTROLLER_TYPE, 223);
+			local instanceGuildID = tonumber(qglobals["time_guild_"..instanceID]) or 0;
+			local currentGuildID = eq.get_zone_guild_id();
+
+			if ( instanceGuildID == currentGuildID ) then
+			-- Converge an obsolete same-guild pointer on the loaded guild timeline.
+			e.data = charID..";"..dialNum..";"..raidID..";"..activeInstanceID;
+			event_signal(e);
+			return;
+			end
+
 			local instanceTimers = qglobals["time_timers_"..instanceID];
 			local instanceExpired = true;
 			if ( instanceTimers ) then
@@ -131,14 +135,23 @@ function event_signal(e)
 
 			if ( not instanceExpired ) then
 				-- player is saved to an instance with timers not expired.  deny entry
-				-- note: this text is not what Sony used.  I don't have a log of what they used so made this up
-				client:Message(0, "The portal glows momentarily before fading.  You sense that you are not attuned with whoever first activated it.");
+				client:Message(13, "The portal recoils from your touch. Your fate is already bound to another thread of time.");
 			else
 				-- send player into active instance even though IDs don't match
 				e.data = charID..";"..dialNum..";"..raidID..";"..activeInstanceID;
 				event_signal(e);
 				return;
 			end
+
+		elseif ( activeRaidID ~= raidID ) then
+			-- Raid IDs are temporary. The guild instance owns the timeline.
+				eq.debug("Rebinding active Time instance "..activeInstanceID.." from raid "..activeRaidID.." to raid "..raidID);
+				activeRaidID = raidID;
+				SignalTimeB(9, "3;"..raidID);
+				e.data = charID..";"..dialNum..";"..raidID..";"..activeInstanceID;
+				event_signal(e);
+		return;
+
 
 		elseif ( (instanceID == activeInstanceID or instanceID == 0) and raidID == activeRaidID ) then
 			
@@ -254,6 +267,34 @@ function event_signal(e)
 			eq.debug("Quarm state is now "..quarmState);
 		end
 		
+	elseif ( e.signal == 8 ) then			-- saved instance belongs to another guild zone
+
+		local charID = tonumber(e.data);
+		if ( charID ) then
+			local client = eq.get_entity_list():GetClientByCharID(charID);
+			if ( client and client.valid ) then
+				client:Message(13, "The portal recoils from your touch. Your fate is bound to another guild's thread of time.");
+			end
+		end
+		pendingStartData, startSignalTries = nil, 0;
+		eq.stop_timer("start_retry");
+		SignalTimeB(2);
+		block = false;
+
+	elseif ( e.signal == 9 ) then			-- saved timeline retired; a fresh one was created
+
+		local charID = tonumber(e.data);
+		if ( charID ) then
+			local client = eq.get_entity_list():GetClientByCharID(charID);
+			if ( client and client.valid ) then
+				client:Message(13, "The last sands of your former timeline have fallen. A new path through the Plane of Time now lies before you.");
+			end
+		end
+		pendingStartData, startSignalTries = nil, 0;
+		eq.stop_timer("start_retry");
+		SignalTimeB(2);
+		block = false;
+
 	elseif ( e.signal == 7 ) then			-- PoTimeB zone reset
 		ResetZone();
 		eq.debug("PoTimeB script reset");

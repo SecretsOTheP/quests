@@ -22,13 +22,14 @@ function event_click_door(e)
 		end
 
 		local raid = e.self:GetRaid();
+			e.self:Message(15, "DEBUG raid valid: "..tostring(raid.valid)..", members: "..tostring(raid.valid and raid:RaidCount() or 0));
 		
 		if ( not e.self:GetGM() and e.self:GetLevel() < 65 ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 			return;
 		end
 		if ( not e.self:GetGM() and (not raid.valid or raid:RaidCount() < 7) ) then
-			e.self:Message(0, "You don't have sufficient power to affect things in the Plane of Time. Gather your forces to increase your strength.");
+			e.self:Message(13, "You don't have sufficient power to affect things in the Plane of Time. Gather your forces to increase your strength.");
 			return;
 		end
 
@@ -37,6 +38,13 @@ function event_click_door(e)
 		if ( qglobals.time_instance ) then
 			instanceID = tonumber(qglobals.time_instance) or 0;
 		end
+		local savedGuildID = tonumber(qglobals.time_instance_guild) or 0;
+		local currentGuildID = eq.get_zone_guild_id();
+		if ( instanceID > 0 and savedGuildID > 0 and savedGuildID ~= currentGuildID ) then
+			e.self:Message(13, "The portal recoils from your touch. Your fate is bound to another guild's thread of time.");
+			return;
+		end
+
 		
 		door_id = door_id - 7;
 		
