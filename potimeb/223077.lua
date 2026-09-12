@@ -1,6 +1,6 @@
 -- Plane of Time B instance controller
 
-local MAX_CLIENTS = 72;
+local MAX_CLIENTS = 90;
 local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
 local EVENTS_CONTROLLER_TYPE = 223078;
