@@ -172,7 +172,7 @@ function event_signal(e)
 				end				
 			end
 			
-			if ( numRaiders >= 72 or (activePhase == 1 and trialRaiders[dialNum] >= 18) or p2reject ) then
+			if ( numRaiders >= 90 or (activePhase == 1 and trialRaiders[dialNum] >= 18) or p2reject ) then
 				client:Message(0, "The energy has been drained from this portal.  You must wait before you can use it.");
 			else
 				client:Message(0, "The portal glows and the mists of time swirl around you.");
