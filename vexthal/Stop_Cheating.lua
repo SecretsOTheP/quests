@@ -21,6 +21,10 @@ local BAD_COORDS = {
 	},
 };
 
+-- Keep the original anti-cheat checks available, but do not enforce them.
+-- Set to true to restore the existing Vex Thal Cazic Touch behavior.
+local ENFORCEMENT_ENABLED = false;
+
 local cheaters = {};
 local cheatersToSlay = false;
 
@@ -29,6 +33,10 @@ function event_spawn(e)
 end
 
 function event_signal(e)
+	if ( not ENFORCEMENT_ENABLED ) then
+		return;
+	end
+
 	table.insert(cheaters, e.signal);
 	if ( not cheatersToSlay ) then
 		eq.set_timer("kill_list", 500);
@@ -38,6 +46,10 @@ eq.debug(tostring(e.signal));
 end
 
 function event_timer(e)
+	if ( not ENFORCEMENT_ENABLED ) then
+		return;
+	end
+
 	if ( e.timer == "kill_list" ) then
 		local i = #cheaters;
 		local client;
