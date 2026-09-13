@@ -628,18 +628,18 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 			else
 				eq.debug("zone inactive and player has previous instance; using previous instance");
 				local qglobals = eq.get_qglobals(e.self);
-				local instanceGuildID = tonumber(qglobals["time_guild_"..instanceID]) or 0;
-				if ( instanceGuildID > 0 and instanceGuildID ~= currentGuildID ) then
-					eq.debug("Rejected Time instance "..instanceID.." owned by guild zone "..instanceGuildID.." from guild zone "..currentGuildID);
-					SendSignalRequestConfirm(8, tostring(charID));
-					return;
-				end
 				local hardExpire = tonumber(qglobals["time_expires_"..instanceID]) or 0;
 				if ( hardExpire > 0 and os.time() >= hardExpire ) then
 					eq.debug("Time instance "..instanceID.." reached its retirement deadline; creating a fresh timeline");
 					instanceID = SetupNewInstance(e.self);
 					SendSignalRequestConfirm(9, tostring(charID));
 				else
+					local instanceGuildID = tonumber(qglobals["time_guild_"..instanceID]) or 0;
+					if ( instanceGuildID > 0 and instanceGuildID ~= currentGuildID ) then
+						eq.debug("Rejected Time instance "..instanceID.." owned by guild zone "..instanceGuildID.." from guild zone "..currentGuildID);
+						SendSignalRequestConfirm(8, tostring(charID));
+						return;
+					end
 					local killData = qglobals["time_kills_"..instanceID];
 					local timerData = qglobals["time_timers_"..instanceID];
 					if ( not killData or not timerData ) then

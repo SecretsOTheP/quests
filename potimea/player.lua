@@ -40,7 +40,15 @@ function event_click_door(e)
 		end
 		local savedGuildID = tonumber(qglobals.time_instance_guild) or 0;
 		local currentGuildID = eq.get_zone_guild_id();
-		if ( instanceID > 0 and savedGuildID > 0 and savedGuildID ~= currentGuildID ) then
+		local timelineGlobals = eq.get_qglobals(POTIMEB_CONTROLLER_TYPE, 223);
+		local timelineExpiration = tonumber(timelineGlobals["time_expires_"..instanceID]) or 0;
+		local foreignTimelineActive = timelineExpiration == 0 or now < timelineExpiration;
+		if (
+			instanceID > 0 and
+			savedGuildID > 0 and
+			savedGuildID ~= currentGuildID and
+			foreignTimelineActive
+		) then
 			e.self:Message(13, "The portal recoils from your touch. Your fate is bound to another guild's thread of time.");
 			return;
 		end
