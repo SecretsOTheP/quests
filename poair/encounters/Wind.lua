@@ -236,9 +236,13 @@ function AvatarTimer(e)
 		if ( math.random() < 0.016666 ) then -- averages to once per 60 seconds
 			local target = e.self:GetTarget();
 			if ( target and target.valid ) then
-				e.self:RemoveFromHateList(target);
+				local hate = e.self:GetHateAmount(target);
+
+				if ( hate > 0 ) then
+					e.self:SetHate(target, math.max(1, math.floor(hate * 0.05)));
+					eq.debug(e.self:GetName().." reduced hate on "..target:GetName().." to 5%", 2);
+				end
 			end
-			eq.debug(e.self:GetName().." dropped target from hate list ("..target:GetName()..")", 2);
 		end
 		
 	elseif ( e.timer == "depop") then
