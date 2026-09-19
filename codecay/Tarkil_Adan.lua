@@ -1,4 +1,4 @@
-local MAX_KEYS = 36;
+local MAX_KEYS = 72;
 
 local keys;
 local rid, gid, cid;
