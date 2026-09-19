@@ -17,6 +17,7 @@ local BHALY_TYPE = 200227; -- Bhaly_Adan
 
 local SPECTRE_TYPE = 200016; -- #Spectre_of_Corruption
 local SPECTRE_SPAWNID = 360643;
+local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
 
 local SUMMONER_TYPE = 200260; -- Summoner_of_Bertoxxulous
 local CONTROLLER_TYPE = 200195; -- PusEventController
@@ -182,7 +183,8 @@ end
 
 function BertoxDeathComplete(e)
 	eq.signal(CONTROLLER_TYPE, 2);
-	eq.zone_emote(0, "A nimbus of light floods throughs the crypt in one magnificent wave as an earth shattering howl is heard.  The bringer of plagues, lord of all disease and decay, Bertoxxulous has been defeated. Suddenly an urgent whisper fills your head simply saying, 'The Torch of Lxanvom shall burn bright again.  Freedom is now ours, for that we thank you.'");
+	eq.update_spawn_timer(SPECTRE_SPAWNID, SUCCESS_RESPAWN_TIME);
+	eq.zone_emote(0, "A nimbus of light floods throughs the crypt in one magnificent wave as an earth shattering howl is heard.  The Bringer of Plagues, Lord of All Disease and Decay, Bertoxxulous has been defeated. Suddenly an urgent whisper fills your head simply saying, 'The Torch of Lxanvom shall burn bright again.  Freedom is now ours, for that we thank you.'");
 	eq.spawn2(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
 	eq.signal(PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 end

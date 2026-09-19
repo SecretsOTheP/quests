@@ -18,6 +18,7 @@ local CORPSE_TYPES = { 214007, 214008, 214009, 214010, 214011 };
 local UNTARGETABLE_SPAWNID = 361379;
 local BERIK_SPAWNID = 361190;
 local GRUNHORK_SPAWNID = 361200;
+local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
 local WRAITH_CORPSE_SPAWNIDS = { 361133, 361135, 361137, 361138, 361140 };
 local ARENA_SPAWNIDS = { 
 	361141, 361347,		-- two arena corpses; this will make the remaining five spawn wraiths
@@ -279,16 +280,18 @@ function VallonHPEvent(e)
 	end
 end
 
-function RespawnDoorGuards()
+function RespawnDoorGuards(delay)
+	delay = delay or 600000; -- 10-minute failure retry
+
 	phase = 0;
 	killerName, killerGName = "", "";
 	local elist = eq.get_entity_list();
 	local grunhork = elist:GetSpawnByID(GRUNHORK_SPAWNID);
 	local berik = elist:GetSpawnByID(BERIK_SPAWNID);
 	grunhork:Enable();
-	grunhork:SetTimer(1);
+	grunhork:SetTimer(delay);
 	berik:Enable();
-	berik:SetTimer(1);
+	berik:SetTimer(delay);
 	eq.debug("Rallos Zek event reset");
 end
 
@@ -456,7 +459,7 @@ end
 function WarlordDeathEvent(e)
 	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
 	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
-	RespawnDoorGuards();
+	RespawnDoorGuards(SUCCESS_RESPAWN_TIME);
 	eq.signal(CONTROLLER_TYPE, 3);
 	eq.debug(string.format("PoTactics Rallos Zek the Warlord slain by %s's raid <%s>", e.killer:GetName(), e.killer:CastToClient():GetGuildName()));
 end
