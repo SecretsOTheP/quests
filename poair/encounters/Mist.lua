@@ -44,7 +44,7 @@ function CheckIsland()
 		end
 	end
 	
-	eq.set_timer(TIMER, 10800000); -- 3 hours
+	eq.set_timer(TIMER, 237600000); -- 66 hours
 	return true;
 end
 
@@ -69,6 +69,10 @@ function ControllerTimer(e)
 end
 
 function ControllerSignal(e)
+	if ( eq.get_zone_guild_id() == 1 ) then
+		return;
+	end
+
 	if ( e.signal == 1 ) then
 		if ( eventActive ) then
 			return;
@@ -133,7 +137,7 @@ end
 
 function AvatarSpawn(e)
 	e.self:Shout("Leave now foolish mortal you have begun to send events in motion that you cannot possibly understand!");
-	eq.set_timer("depop", 2700000);
+	eq.set_timer("depop", 9000000); -- 2.5 hours out of combat
 end
 
 function AvatarCombat(e)
