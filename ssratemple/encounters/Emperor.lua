@@ -26,15 +26,6 @@ local WRAITH_TYPE = 162494;
 local CURSE_TRAP_TYPE = 162478;	-- center room invis man that casts Curse of Ssraeshza after some time
 local ROOM_GUARDS = { [162128] = 1, [162123] = 1, [162130] = 1, [162126] = 1, [162127] = 1, [162129] = 1, [162124] = 1, [162125] = 1 }
 
-local HERIZ_TYPE = 162123;	-- Heriz the Malignant
-local YASIZ_TYPE = 162124;	-- Yasiz the Devourer
-local ZLAKAS_TYPE = 162125;	-- Zlakas the Slayer
-local NILASZ_TYPE = 162126;	-- Nilasz the Devourer
-local SKZIK_TYPE = 162127;	-- Skzik the Tormentor
-local GRZIZ_TYPE = 162128;	-- Grziz the Tormentor
-local SLAKIZ_TYPE = 162129;	-- Slakiz the Malignant
-local KLAZAZ_TYPE = 162130;	-- Klazaz the Slayer
-
 local GUARD_SPAWN_POINTS = {
 	{x = 837, y = -365, z = 405.7, h = 42, },
 	{x = 877, y = -379, z = 404.5, h = 5, },
@@ -74,31 +65,6 @@ function GovernorTimer(e)
 			fake:Depop(true);
 			eq.update_spawn_timer(FAKE_EMP_SPAWNPOINT, 10800000); -- in case zone crashes or sleeps; timer will reset to full on emp death
 		end
-	elseif (not empIsDead and e.timer == "heriz_death") then
-		eq.stop_timer("heriz_death");
-		SpawnGuardRandom(HERIZ_TYPE);
-	elseif(not empIsDead and e.timer == "yasiz_death") then
-		eq.stop_timer("yasiz_death");
-		SpawnGuardRandom(YASIZ_TYPE);
-	elseif(not empIsDead and e.timer == "zlakas_death") then
-		eq.stop_timer("zlakas_death");
-		SpawnGuardRandom(ZLAKAS_TYPE);
-	elseif(not empIsDead and e.timer == "nilasz_death") then
-		eq.stop_timer("nilasz_death");
-		SpawnGuardRandom(NILASZ_TYPE);
-	elseif(not empIsDead and e.timer == "skzik_death") then
-		eq.stop_timer("skzik_death");
-		SpawnGuardRandom(SKZIK_TYPE);
-	elseif(not empIsDead and e.timer == "grziz_death") then
-		eq.stop_timer("grziz_death");
-		SpawnGuardRandom(GRZIZ_TYPE);
-	elseif(not empIsDead and e.timer == "slakiz_death") then
-		eq.stop_timer("slakiz_death");
-		SpawnGuardRandom(SLAKIZ_TYPE);
-	elseif(not empIsDead and e.timer == "klazaz_death") then
-		eq.stop_timer("klazaz_death");
-		SpawnGuardRandom(KLAZAZ_TYPE);
-
 	elseif ( e.timer == "guard_sploitcheck" ) then
 		local npcList = eq.get_entity_list():GetNPCList();
 		if( npcList ) then
@@ -319,47 +285,6 @@ function event_encounter_load(e)
 	eq.register_npc_event("Emperor", Event.timer, CURSE_TRAP_TYPE, TrapTimer);
 	eq.register_npc_event("Emperor", Event.spawn, CURSE_TRAP_TYPE, function()
 		cursed = false;
-	end);
-
-	eq.register_npc_event("Emperor", Event.death, HERIZ_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("heriz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, YASIZ_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("yasiz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, ZLAKAS_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("zlakas_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, NILASZ_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("nilasz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, SKZIK_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("skzik_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, GRZIZ_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("grziz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, SLAKIZ_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("slakiz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
-	end);
-	eq.register_npc_event("Emperor", Event.death, KLAZAZ_TYPE, function() 
-		local roll = math.random(30);
-		roll = (roll + 120) * 1000; 
-		eq.set_timer("klazaz_death", roll, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE)); 
 	end);
 
 end
