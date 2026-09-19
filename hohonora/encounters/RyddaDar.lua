@@ -3,6 +3,7 @@ local TRYDAN1_TYPE = 211051; -- Trydan_Faye
 local TRYDAN2_TYPE = 211117; -- #Trydan_Faye
 local RYDDA_TYPE = 211107; -- Rydda`Dar
 local CUSTODIAN_TYPE = 211078; -- A_Custodian_of_Marr
+local SUCCESS_RESPAWN_TIME = 64800 * 1000; -- 18 hours
 
 local TRYDAN_SPAWNID = 360859;
 local ROOM_SPAWNIDS = { 360860, 361050, 361051, 361052 };
@@ -113,18 +114,19 @@ function CustodianTimer(e)
 	end
 end
 
-function EnableSpawns()
+function EnableSpawns(delay)
+    delay = delay or 600000; -- 10-minute failure retry
 	local elist = eq.get_entity_list();
 	local spawn;
 	for _, id in ipairs(ROOM_SPAWNIDS) do
 		spawn = elist:GetSpawnByID(id)
-		eq.update_spawn_timer(id, 600000);
+		eq.update_spawn_timer(id, delay);
 		spawn:Enable();
 	end
 end
 
 function RyddaDeathComplete(e)
-	EnableSpawns();
+	EnableSpawns(SUCCESS_RESPAWN_TIME);
 	
 	local client = e.killer:CastToClient();
 	if ( not client.valid ) then

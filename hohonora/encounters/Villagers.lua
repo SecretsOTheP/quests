@@ -2,6 +2,7 @@ local FLAG_LIMIT = 72;
 local RHALIQ1_TYPE = 211050; -- Rhaliq_Trell
 local RHALIQ2_TYPE = 211106; -- #Rhaliq_Trell
 local CUSTODIAN_TYPE = 211078; -- A_Custodian_of_Marr 
+local SUCCESS_RESPAWN_TIME = 64800 * 1000; -- 18 hours
 
 local VILLAGERS = {
 	{ 211093, 638, 1400 }, -- a_barbarian_villager
@@ -220,7 +221,8 @@ function StartEvent()
 	eq.debug("Villagers trial started");
 end
 
-function EnableSpawns()
+function EnableSpawns(delay)
+    delay = delay or 600000; -- 10-minute failure retry
 	for _, t in ipairs(VILLAGERS) do
 		eq.depop_all(t[1]);
 	end
@@ -229,7 +231,7 @@ function EnableSpawns()
 	local spawn;
 	for _, id in ipairs(ROOM_SPAWNIDS) do
 		spawn = elist:GetSpawnByID(id)
-		eq.update_spawn_timer(id, 600000);
+		eq.update_spawn_timer(id, delay);
 		spawn:Enable();
 	end
 end
@@ -257,8 +259,7 @@ function FailEvent()
 end
 
 function EventSuccess()
-	EnableSpawns();
-
+    EnableSpawns(SUCCESS_RESPAWN_TIME);
 	eq.spawn2(RHALIQ2_TYPE, 0, 0, 456, 1374, -110.4, 65);
 	eq.debug("Villagers trial success");
 end
