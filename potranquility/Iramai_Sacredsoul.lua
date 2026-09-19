@@ -2,6 +2,11 @@
 -- Alternate Access: Plane of Torment
 
 function event_say(e)
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		return;
+	end
+
 	if(e.message:findi("hail")) then
 		e.self:Say("Oh, hello. I am sorry, I did not see you approach. I have been giving all of my attention to poor [Phanti] here.");
 	elseif(e.message:findi("phanti")) then
@@ -15,6 +20,12 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+
 	local text = "Hmm, it looks like I will need both the cure and the purified bile in order to heal Phanti.";
 	
 	-- Confirmed Live Experience
@@ -28,4 +39,3 @@ function event_trade(e)
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
- 

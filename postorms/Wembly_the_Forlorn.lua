@@ -1,6 +1,11 @@
 -- Alternate Access: Plane of Tactics
 
 function event_say(e)
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		return;
+	end
+
 	if ( e.other:GetFaction(e.self) <= 4 ) then
 		if(e.message:findi("hail")) then
 			e.self:Emote("grumbles under his breath, 'Yes, yes, I see you there. No need for you to shout I can see you just fine! Now, what was I saying? Yes that's right... let me know when you are [done].");
@@ -24,6 +29,12 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+
 
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 29216,item2 = 29217,item3 = 29218,item4 = 29219})) then
 	

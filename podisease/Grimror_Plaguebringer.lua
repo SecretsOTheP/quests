@@ -12,6 +12,11 @@ function event_death(e)
 end
 
 function event_say(e)
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		return;
+	end
+
 	if(e.message:findi("hail")) then
 		e.self:Say("Grimror no have time ta talk. Gots stuffs ta do.");
 	elseif(e.message:findi("stuff")) then
@@ -28,6 +33,12 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+
 	local text = "Grimror not thupeed! Dis not four!";
 	
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 9290,item2 = 9291,item3 = 9292,item4 = 9293},1,text)) then

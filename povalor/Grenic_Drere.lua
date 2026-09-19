@@ -1,4 +1,9 @@
 function event_say(e)
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		return;
+	end
+
 	if ( e.message:findi("hail") ) then
 		if ( e.other:KeyRingCheck(29214) or e.other:HasItem(29214) ) then -- Ring of Marr
 			e.self:Say("I have been waiting for this day for a long time.  I knew they would see that I did nothing wrong.  I am forever in your debt.  Please run ahead to the Halls of Honor and let them know I will be there soon enough.");
@@ -22,6 +27,12 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+
 	if ( item_lib.check_turn_in(e.self, e.trade, { item1 = 29281, item2 = 29292, item3 = 29293, item4 = 29294 }) ) then -- Box of Souls, Soul Sphrere (Angry), Soul Sphere (Calm), Soul Sphere (Resisting)
 		e.self:Say("Hmm, this is minor vindication, but vindication nonetheless.  I will never again fight with my old compatriots, but now I know the punishment of those responsible for my exile is fitting for their crime.  We did have an agreement, and while stripped of my rank I still have my honor.  This ring is what all Soldiers of Marr wear to enter the Halls of Honor, it serves no use for me any longer, it is yours now.");
 		e.other:QuestReward(e.self, 0, 0, 0, 0, 29214, 50000); -- Ring of Marr

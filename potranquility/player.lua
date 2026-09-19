@@ -7,6 +7,7 @@
 function event_click_door(e)
 	local qglobals = eq.get_qglobals(e.self);
 	local door_id = e.door:GetDoorID();
+	local alternate_access_enabled = eq.get_data("pop_alt_access_enabled") == "1";
 
 	-- valor / storms
 	if(door_id == 16 or door_id == 21) then
@@ -26,13 +27,13 @@ function event_click_door(e)
 	
 		if ( not e.self:HasZoneFlag(200) ) then
 		
-			if ( e.self:GetItemIDAt(0) == 9294 and not e.self:KeyRingCheck(9294) ) then
+			if (alternate_access_enabled and e.self:GetItemIDAt(0) == 9294 and not e.self:KeyRingCheck(9294)) then
 				e.self:KeyRingAdd(9294);
 			end
 			
 			-- zone flag is set by dropping down the Plane of Disease zone-in 'toilet' near Grummus
 			-- if ( e.self:GetLevel() >= level_for_tier_two or e.self:KeyRingCheck(9294) ) then
-			if ( e.self:KeyRingCheck(9294) ) then
+			if (alternate_access_enabled and e.self:KeyRingCheck(9294)) then
 				e.self:SetZoneFlag(200);
 			else
 				e.self:Message(13, "You lack the will to pass through this portal safely.");
@@ -42,11 +43,11 @@ function event_click_door(e)
   
 	-- torment
 	if(door_id == 93) then
-		if ( e.self:GetItemIDAt(0) == 29213 and not e.self:KeyRingCheck(29213) ) then
+		if (alternate_access_enabled and e.self:GetItemIDAt(0) == 29213 and not e.self:KeyRingCheck(29213)) then
 			e.self:KeyRingAdd(29213);
 		end
 		-- if(e.self:GetLevel() >= level_for_tier_two or (qglobals.fuirstel and qglobals.fuirstel == "5" and qglobals.thelin and qglobals.thelin == "4") or e.self:KeyRingCheck(29213)) then
-		if((qglobals.fuirstel and qglobals.fuirstel == "5" and qglobals.thelin and qglobals.thelin == "4") or e.self:KeyRingCheck(29213)) then
+		if((qglobals.fuirstel and qglobals.fuirstel == "5" and qglobals.thelin and qglobals.thelin == "4") or (alternate_access_enabled and e.self:KeyRingCheck(29213))) then
 			if(e.self:HasZoneFlag(207) == false) then
 				e.self:SetZoneFlag(207);
 			end
@@ -73,13 +74,13 @@ function event_click_door(e)
 
 		if ( not e.self:HasZoneFlag(211) ) then
 		
-			if ( e.self:GetItemIDAt(0) == 29214 and not e.self:KeyRingCheck(29214) ) then
+			if (alternate_access_enabled and e.self:GetItemIDAt(0) == 29214 and not e.self:KeyRingCheck(29214)) then
 				e.self:KeyRingAdd(29214);
 			end
 		
 			-- zone flag is set by zoning in from PoValor
 			-- if ( e.self:GetLevel() >= level_for_tier_three or e.self:KeyRingCheck(29214) ) then
-			if ( e.self:KeyRingCheck(29214) ) then
+			if (alternate_access_enabled and e.self:KeyRingCheck(29214)) then
 				e.self:SetZoneFlag(211);
 			else
 				e.self:Message(13, "You lack the will to pass through this portal safely.");
@@ -90,11 +91,11 @@ function event_click_door(e)
 	-- potactics
 	if(door_id == 24) then
 		local zeks = tonumber(qglobals.zeks or 0);
-		if ( (e.self:GetItemIDAt(0) == 29215 and not e.self:KeyRingCheck(29215) ) ) then
+		if (alternate_access_enabled and e.self:GetItemIDAt(0) == 29215 and not e.self:KeyRingCheck(29215)) then
 			e.self:KeyRingAdd(29215);
 		end
 		-- if(e.self:GetLevel() >= 60 or zeks >= 2 or e.self:KeyRingCheck(29215)) then
-		if(zeks >= 2 or e.self:KeyRingCheck(29215)) then
+		if(zeks >= 2 or (alternate_access_enabled and e.self:KeyRingCheck(29215))) then
 			if(e.self:HasZoneFlag(214) == false) then
 				e.self:SetZoneFlag(214);
 			end
