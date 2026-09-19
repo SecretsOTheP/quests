@@ -17,6 +17,9 @@ local PROLLAZ_TYPE = 217428; -- Warlord_Prollaz
 local ELITE_TYPE = 217430; -- elite_guardian_of_ro
 local FENNIN_TYPE = 217440; -- Fennin_Ro_the_Tyrant_of_Fire
 local PROJECTION_TYPE = 217454; -- Essence_of_Fire
+local GUARDIAN_SPAWN_ID = 367088;
+local FAILURE_RETRY_TIME = 64800 * 1000; -- 18 hours
+local SUCCESS_RESPAWN_TIME = 496800 * 1000; -- 5 days, 18 hours
 
 local TRASH_TYPES = {
 	REAVER_TYPE, HEALER_TYPE, MAGUS_TYPE, DARKFIEND_TYPE, CHAOSFIEND_TYPE, RAGEFIEND_TYPE, AZOBIAN_TYPE, 
@@ -272,6 +275,8 @@ function ControllerTimer(e)
 		end
 		eq.depop_all(FENNIN_TYPE);
 		ToggleElites(false);
+
+		eq.update_spawn_timer(GUARDIAN_SPAWN_ID, FAILURE_RETRY_TIME);
 	end
 end
 
@@ -290,9 +295,10 @@ end
 
 function FenninDeathComplete(e)
 	eq.signal(CONTROLLER_TYPE, 2);
+	eq.update_spawn_timer(GUARDIAN_SPAWN_ID, SUCCESS_RESPAWN_TIME);
 	eq.spawn2(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
 	eq.signal(PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
-	eq.zone_emote(0, "Loud cries of hopelessness echo throughout the burning lands. The creatures of Doomfire call out to their master, Fennin Ro the Tyrant of Fire, for his dead body now lies at the feet of the mighty adventurers.");
+	eq.zone_emote(0, "Loud cries of hopelessness echo throughout the Burning Lands. The creatures of Doomfire call out to their Master, Fennin Ro the Tyrant of Fire, for his dead body now lies at the feet of the mighty adventurers.");
 end
 
 function event_encounter_load(e)
