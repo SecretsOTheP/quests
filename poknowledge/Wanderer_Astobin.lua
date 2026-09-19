@@ -7,6 +7,12 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
+
+	local spell_turnins = require([[pop_spell_turnins]]);
+	if ( spell_turnins.RejectMultipleTurnIns(e) ) then
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
 	local ethereal = item_lib.count_handed_item(e.self, e.trade, {29112}); --Ethereal Parchment
 	local spectral = item_lib.count_handed_item(e.self, e.trade, {29131}); --Spectral Parchment
 	local glyphed = item_lib.count_handed_item(e.self, e.trade, {29132}); --Glyphed Rune Word
