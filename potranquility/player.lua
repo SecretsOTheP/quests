@@ -1,7 +1,8 @@
-local level_for_tier_two = 55;			-- level thresholds at which a player gains free access to otherwise flag restricted zones
-local level_for_tier_three = 62;
-local level_for_tier_four = 255;
-local level_for_elemental = 255;
+-- Disabled level-bypass thresholds. Keep these documented in case access policy changes.
+-- local level_for_tier_two = 55;
+-- local level_for_tier_three = 62;
+-- local level_for_tier_four = 255;
+-- local level_for_elemental = 255;
 
 function event_click_door(e)
 	local qglobals = eq.get_qglobals(e.self);
@@ -9,7 +10,8 @@ function event_click_door(e)
 
 	-- valor / storms
 	if(door_id == 16 or door_id == 21) then
-		if(e.self:GetLevel() >= level_for_tier_two or (qglobals.mavuin and qglobals.mavuin == "3")) then
+		-- if(e.self:GetLevel() >= level_for_tier_two or (qglobals.mavuin and qglobals.mavuin == "3")) then
+		if(qglobals.mavuin and qglobals.mavuin == "3") then
 			if(e.self:HasZoneFlag(210) == false or e.self:HasZoneFlag(208) == false) then
 				e.self:SetZoneFlag(210);
 				e.self:SetZoneFlag(208);
@@ -29,7 +31,8 @@ function event_click_door(e)
 			end
 			
 			-- zone flag is set by dropping down the Plane of Disease zone-in 'toilet' near Grummus
-			if ( e.self:GetLevel() >= level_for_tier_two or e.self:KeyRingCheck(9294) ) then
+			-- if ( e.self:GetLevel() >= level_for_tier_two or e.self:KeyRingCheck(9294) ) then
+			if ( e.self:KeyRingCheck(9294) ) then
 				e.self:SetZoneFlag(200);
 			else
 				e.self:Message(13, "You lack the will to pass through this portal safely.");
@@ -42,7 +45,8 @@ function event_click_door(e)
 		if ( e.self:GetItemIDAt(0) == 29213 and not e.self:KeyRingCheck(29213) ) then
 			e.self:KeyRingAdd(29213);
 		end
-		if(e.self:GetLevel() >= level_for_tier_two or (qglobals.fuirstel and qglobals.fuirstel == "5" and qglobals.thelin and qglobals.thelin == "4") or e.self:KeyRingCheck(29213)) then
+		-- if(e.self:GetLevel() >= level_for_tier_two or (qglobals.fuirstel and qglobals.fuirstel == "5" and qglobals.thelin and qglobals.thelin == "4") or e.self:KeyRingCheck(29213)) then
+		if((qglobals.fuirstel and qglobals.fuirstel == "5" and qglobals.thelin and qglobals.thelin == "4") or e.self:KeyRingCheck(29213)) then
 			if(e.self:HasZoneFlag(207) == false) then
 				e.self:SetZoneFlag(207);
 			end
@@ -54,7 +58,8 @@ function event_click_door(e)
 	-- bothunder
 	if(door_id == 48) then
 		local karana = tonumber(qglobals.karana or 0);
-		if(e.self:GetLevel() >= level_for_tier_three or karana >= 3 or qglobals.zebuxoruk) then
+		-- if(e.self:GetLevel() >= level_for_tier_three or karana >= 3 or qglobals.zebuxoruk) then
+		if(karana >= 3 or qglobals.zebuxoruk) then
 			if(e.self:HasZoneFlag(209) == false) then
 				e.self:SetZoneFlag(209);
 			end
@@ -73,7 +78,8 @@ function event_click_door(e)
 			end
 		
 			-- zone flag is set by zoning in from PoValor
-			if ( e.self:GetLevel() >= level_for_tier_three or e.self:KeyRingCheck(29214) ) then
+			-- if ( e.self:GetLevel() >= level_for_tier_three or e.self:KeyRingCheck(29214) ) then
+			if ( e.self:KeyRingCheck(29214) ) then
 				e.self:SetZoneFlag(211);
 			else
 				e.self:Message(13, "You lack the will to pass through this portal safely.");
@@ -87,7 +93,8 @@ function event_click_door(e)
 		if ( (e.self:GetItemIDAt(0) == 29215 and not e.self:KeyRingCheck(29215) ) ) then
 			e.self:KeyRingAdd(29215);
 		end
-		if(e.self:GetLevel() >= 60 or zeks >= 2 or e.self:KeyRingCheck(29215)) then
+		-- if(e.self:GetLevel() >= 60 or zeks >= 2 or e.self:KeyRingCheck(29215)) then
+		if(zeks >= 2 or e.self:KeyRingCheck(29215)) then
 			if(e.self:HasZoneFlag(214) == false) then
 				e.self:SetZoneFlag(214);
 			end
@@ -99,7 +106,8 @@ function event_click_door(e)
 	-- solrotower
 	if(door_id == 22) then
 		local zeks = tonumber(qglobals.zeks or 0);
-		if(e.self:GetLevel() >= level_for_tier_four or (qglobals.cipher and zeks >= 6)) then
+		-- if(e.self:GetLevel() >= level_for_tier_four or (qglobals.cipher and zeks >= 6)) then
+		if(qglobals.cipher and zeks >= 6) then
 			if(e.self:HasZoneFlag(212) == false) then
 				e.self:SetZoneFlag(212);
 			end
@@ -112,19 +120,18 @@ function event_click_door(e)
 	if(door_id == 82) then
 
 		if ( not e.self:HasZoneFlag(217) ) then
-		
-			-- zone flag is set by falling into Solusek's chamber fire pit under the door
-			if ( e.self:GetLevel() >= level_for_elemental ) then
-				e.self:SetZoneFlag(217);
-			else			
-				e.self:Message(13, "You lack the will to pass through this portal safely.");
-			end
+			-- if ( e.self:GetLevel() >= level_for_elemental ) then
+			-- 	e.self:SetZoneFlag(217);
+			-- else
+			e.self:Message(13, "You lack the will to pass through this portal safely.");
+			-- end
 		end
 	end
 
 	-- powater / poearth / poair
 	if(door_id == 81 or door_id == 83 or door_id == 84) then
-		if(e.self:GetLevel() >= level_for_elemental or (qglobals.zebuxoruk and qglobals.zebuxoruk == "2")) then
+		-- if(e.self:GetLevel() >= level_for_elemental or (qglobals.zebuxoruk and qglobals.zebuxoruk == "2")) then
+		if(qglobals.zebuxoruk and qglobals.zebuxoruk == "2") then
 			if(e.self:HasZoneFlag(216) == false or e.self:HasZoneFlag(215) == false or e.self:HasZoneFlag(218) == false) then
 				e.self:SetZoneFlag(216);
 				e.self:SetZoneFlag(215);
