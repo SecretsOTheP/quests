@@ -4,7 +4,6 @@ local BOSS_TYPE = 218363; -- Derugoak_Bloodwalker
 local FAKE_BOSS_TYPE = 218364; -- A_Bloodsoaked_Vegerog
 local MANGLED_TYPE = 218420;
 local VEGDESPAWN_TYPE = 218396;
-local VEGRESET_TYPE = 218389;
 local STONE_GUY_TYPE = 218391;
 local ARBITOR_GUY_TYPE = 218393;
 local MUDDITE_GUY_TYPE = 218390;
@@ -30,6 +29,8 @@ local BLOODTHIRSTY_LOCS = {
 };
 
 
+local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
+local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
 local taintedKills = 0;
 local addWave = 0;
 
@@ -168,7 +169,13 @@ function EventSuccess(e)
 
 	eq.depop_all(MANGLED_TYPE);
 	eq.depop_all(VEGDESPAWN_TYPE);
-	eq.spawn2(VEGRESET_TYPE, 0, 0, 485, -835, 33.752, 0);
+	taintedKills = 0;
+	local elist = eq.get_entity_list();
+	-- Save the trigger cooldowns; the reset must not depend on a temporary NPC.
+	for _, id in ipairs(TAINTED_SPAWNIDS) do
+		eq.update_spawn_timer(id, SUCCESS_RESPAWN_TIME);
+		elist:GetSpawnByID(id):Enable();
+	end
 	if ( e.self:GetNPCTypeID() == BOSS_TYPE ) then
 		eq.depop_with_timer(VEGEROG_GUY_TYPE);
 	end
@@ -211,29 +218,11 @@ function DespawnTimer(e)
 		
 		local elist = eq.get_entity_list();
 		for _, id in ipairs(TAINTED_SPAWNIDS) do
+			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
 			elist:GetSpawnByID(id):Enable();
 		end
 
 		eq.debug("Vine Ring failed and reset");
-		eq.depop();
-	end
-end
-
-function ResetSpawn(e)
-	eq.set_timer("depop", 237600000); -- 66 hours after successful completion
-end
-
-function ResetTimer(e)
-	if ( e.timer == "depop" ) then
-
-		taintedKills = 0;
-		
-		local elist = eq.get_entity_list();
-		for _, id in ipairs(TAINTED_SPAWNIDS) do
-			elist:GetSpawnByID(id):Enable();
-		end
-		
-		eq.debug("Vine Ring now available");
 		eq.depop();
 	end
 end
@@ -260,7 +249,5 @@ function event_encounter_load(e)
 	eq.register_npc_event("VineRing", Event.spawn, VEGDESPAWN_TYPE, DespawnSpawn);
 	eq.register_npc_event("VineRing", Event.timer, VEGDESPAWN_TYPE, DespawnTimer);
 
-	eq.register_npc_event("VineRing", Event.spawn, VEGRESET_TYPE, ResetSpawn);
-	eq.register_npc_event("VineRing", Event.timer, VEGRESET_TYPE, ResetTimer);
 
 end

@@ -10,7 +10,6 @@ local FILTH_GORGER_TYPE = 218359;
 local MONSTEROUS_MUDWALKER_TYPE = 218360;
 local MERCILESS_MUDSLINGER_TYPE = 218365;
 local MUDESPAWN_TYPE = 218394;
-local MUDRESET_TYPE = 218387;
 local THE_LAST_TYPE = 218085;
 local ARBITOR_GUY_TYPE = 218393;
 local STONE_GUY_TYPE = 218391;
@@ -46,6 +45,8 @@ local GORGER_LOCS = {
 	{ 283, 34, 71 },
 };
 
+local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
+local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
 local blueKills, runners, lurkerState = 0, 0, 0;
 local runX, runY, runZ;
 local reds = {};
@@ -64,9 +65,7 @@ function BlueDeath(e)
 		end
 	end
 	
-	if ( blueKills >= 16 and not elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) 
-		and not elist:IsMobSpawnedByNpcTypeID(MUDRESET_TYPE)
-	) then
+	if ( blueKills >= 16 and not elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) ) then
 	
 		-- start event
 		blueKills, runners, lurkerState = 0, 0, 0;
@@ -296,13 +295,14 @@ function EventSuccess(e)
 	eq.debug("Mud Ring completed");
 	
 	eq.depop_all(MUDESPAWN_TYPE);
-	eq.spawn2(MUDRESET_TYPE, 0, 0, 0, 0, 6, 0);
 	if ( e.self:GetNPCTypeID() == MONSTEROUS_MUDWALKER_TYPE ) then
 		eq.depop_with_timer(MUDDITE_GUY_TYPE);
 	end
 	
 	local elist = eq.get_entity_list();
+	-- Save each trigger's cooldown before enabling it for the next attempt.
 	for _, id in ipairs(BLUE_SPAWNIDS) do
+		eq.update_spawn_timer(id, SUCCESS_RESPAWN_TIME);
 		elist:GetSpawnByID(id):Enable();
 	end
 	
@@ -330,10 +330,10 @@ function DespawnTimer(e)
 		eq.depop_all(MONSTEROUS_MUDWALKER_TYPE);
 		eq.depop_all(MERCILESS_MUDSLINGER_TYPE);
 		
-		--eq.spawn2(MUDRESET_TYPE, 0, 0, 0, 0, 6, 0);
 
 		local elist = eq.get_entity_list();
 		for _, id in ipairs(BLUE_SPAWNIDS) do
+			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
 			elist:GetSpawnByID(id):Enable();
 		end
 
@@ -342,18 +342,6 @@ function DespawnTimer(e)
 		end
 		
 		eq.debug("Mud Ring failed and reset");
-		eq.depop();
-	end
-end
-
-function ResetSpawn(e)
-	eq.set_timer("depop", 237600000); -- 66 hours after successful completion
-end
-
-function ResetTimer(e)
-	if ( e.timer == "depop" ) then
-		
-		eq.debug("Mud Ring now available");
 		eq.depop();
 	end
 end
@@ -392,6 +380,4 @@ function event_encounter_load(e)
 	eq.register_npc_event("StoneRing", Event.spawn, MUDESPAWN_TYPE, DespawnSpawn);
 	eq.register_npc_event("StoneRing", Event.timer, MUDESPAWN_TYPE, DespawnTimer);
 
-	eq.register_npc_event("StoneRing", Event.spawn, MUDRESET_TYPE, ResetSpawn);
-	eq.register_npc_event("StoneRing", Event.timer, MUDRESET_TYPE, ResetTimer);
 end

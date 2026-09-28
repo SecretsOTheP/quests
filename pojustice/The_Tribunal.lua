@@ -192,12 +192,14 @@ function event_signal(e)
 			TRIAL_TEXT[trialNum].." has failed.  The Tribunal's judgment has been rendered.  You will be returned from the trial shortly."
 		);
 		eq.set_timer("failboot"..trialNum, 10000);
+		eq.update_spawn_timer(e.self:GetSpawnPointID(), 60000);
 		eq.set_timer("delay"..trialNum, 60000);
 		trialsUnderway[trialNum] = true;
-		eq.debug(TRIAL_TEXT[trialNum].." failed.  Accessible again in 60 seconds", 1);
+		eq.debug(TRIAL_TEXT[trialNum].." failed.  Accessible again in 1 minute", 1);
 	elseif ( e.signal == (trialNum + 6) ) then
 		eq.set_timer("warn"..trialNum, 540000);
 		eq.set_timer("boot"..trialNum, 599000);
+		eq.update_spawn_timer(e.self:GetSpawnPointID(), 600000);
 		eq.set_timer("delay"..trialNum, 600000);
 		trialsUnderway[trialNum] = true;
 		eq.debug(TRIAL_TEXT[trialNum].." success.  Accessible again in 10 minutes", 1);

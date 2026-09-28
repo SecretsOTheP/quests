@@ -28,7 +28,7 @@ end
 function event_timer(e)
 	if ( e.timer == "depop" ) then
 		eq.debug("Avatar of Earth depop");
-		SetCouncilRespawn(420); -- failed Avatar attempt: restore the Council after 7 minutes
+		SetCouncilRespawn(900); -- failed Avatar attempt: restore the Council after 15 minutes
 		eq.depop();
 	end
 end

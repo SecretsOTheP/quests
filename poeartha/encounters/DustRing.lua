@@ -6,7 +6,6 @@ local PERFECTED_TYPE = 218413;
 local PROTECTOR_TYPE = 218414;
 local FOLLOWER_TYPE = 218415;
 local ELEMDESPAWN_TYPE = 218397;
-local ELEMRESET_TYPE = 218411;
 local STONE_GUY_TYPE = 218391;
 local ARBITOR_GUY_TYPE = 218393;
 local MUDDITE_GUY_TYPE = 218390;
@@ -14,6 +13,8 @@ local POEELEM3DAY_TYPE = 218412;
 local VEGEROG_GUY_TYPE = 218392;
 local THE_CREATURE_TYPE = 218059;
 
+local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
+local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
 local WARDER_SPAWNID = 366233; -- dusty warder
 
 local DEVOTEE_LOCS = {
@@ -278,8 +279,9 @@ function EventSuccess(e)
 	eq.debug("Dust ring completed");
 
 	eq.depop_all(ELEMDESPAWN_TYPE);
-	eq.spawn2(ELEMRESET_TYPE, 0, 0, 28, -560, 28.627, 0);
-	if ( e.self:GetNPCTypeID() == PROTECTOR_TYPE ) then
+	-- The warder's saved respawn is the ring cooldown, including after a restart.
+	eq.update_spawn_timer(WARDER_SPAWNID, SUCCESS_RESPAWN_TIME);
+	if ( e.self:GetNPCTypeID() == PERFECTED_TYPE ) then
 		eq.depop_with_timer(POEELEM3DAY_TYPE);
 	end
 	
@@ -301,27 +303,13 @@ function DespawnTimer(e)
 		eq.depop_all(PROTECTOR_TYPE);
 		eq.depop_all(FOLLOWER_TYPE);
 
-		eq.spawn_from_spawn2(WARDER_SPAWNID);
+		eq.update_spawn_timer(WARDER_SPAWNID, FAILURE_RESPAWN_TIME);
+		eq.get_entity_list():GetSpawnByID(WARDER_SPAWNID):Enable();
 
 		eq.debug("Dust Ring failed and reset");
 		eq.depop();
 	end
 end
-
-function ResetSpawn(e)
-	eq.set_timer("depop", 237600000); -- 66 hours after successful completion
-end
-
-function ResetTimer(e)
-	if ( e.timer == "depop" ) then
-
-		eq.spawn_from_spawn2(WARDER_SPAWNID);
-		
-		eq.debug("Dust Ring now available");
-		eq.depop();
-	end
-end
-
 
 function event_encounter_load(e)
 
@@ -346,6 +334,4 @@ function event_encounter_load(e)
 	eq.register_npc_event("DustRing", Event.spawn, ELEMDESPAWN_TYPE, DespawnSpawn);
 	eq.register_npc_event("DustRing", Event.timer, ELEMDESPAWN_TYPE, DespawnTimer);
 
-	eq.register_npc_event("DustRing", Event.spawn, ELEMRESET_TYPE, ResetSpawn);
-	eq.register_npc_event("DustRing", Event.timer, ELEMRESET_TYPE, ResetTimer);
 end
