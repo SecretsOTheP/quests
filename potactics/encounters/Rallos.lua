@@ -288,10 +288,11 @@ function RespawnDoorGuards(delay)
 	local elist = eq.get_entity_list();
 	local grunhork = elist:GetSpawnByID(GRUNHORK_SPAWNID);
 	local berik = elist:GetSpawnByID(BERIK_SPAWNID);
+	-- Save the cooldown before enabling the spawnpoints so it survives zone unloads.
+	eq.update_spawn_timer(GRUNHORK_SPAWNID, delay);
+	eq.update_spawn_timer(BERIK_SPAWNID, delay);
 	grunhork:Enable();
-	grunhork:SetTimer(delay);
 	berik:Enable();
-	berik:SetTimer(delay);
 	eq.debug("Rallos Zek event reset");
 end
 

@@ -24,6 +24,7 @@ function event_timer(e)
 		end
 		
 	elseif ( e.timer == "depop" ) then
+		eq.update_spawn_timer(RIZLONA_SPAWNID, 600000);
 		eq.get_entity_list():GetSpawnByID(RIZLONA_SPAWNID):SetTimer(600000);
 		eq.depop();
 	end

@@ -25,6 +25,7 @@ function event_timer(e)
 	elseif ( e.timer == "depop" ) then
 		local elist = eq.get_entity_list();
 		for _, id in ipairs(GUARDIAN_SPAWNIDS) do
+			eq.update_spawn_timer(id, 600000);
 			elist:GetSpawnByID(id):SetTimer(600000);
 		end
 		eq.depop();

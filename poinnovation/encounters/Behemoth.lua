@@ -153,6 +153,7 @@ function BehemothTimer(e)
 			eq.stop_timer("wave", controller);
 		end
 		eq.depop_all(CLOCKWORK_DEVICE_TYPE);
+		eq.update_spawn_timer(BEHEMOTH_SPAWNID, FAILURE_RETRY);
 		eq.get_entity_list():GetSpawnByID(BEHEMOTH_SPAWNID):SetTimer(FAILURE_RETRY);
 		eq.depop();
 		woken = false;

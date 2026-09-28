@@ -11,7 +11,6 @@ local ENCRUSTED_DIRT_CLOUD_TYPE = 218373;
 local PEREGRIN_ROCKSKULL_TYPE = 218374;
 local STONETXT_TYPE = 218036; -- invis man where emotes are centered from
 local STONEDESPAWN_TYPE = 218395; -- invis man that spawns when the event begins and depops in 98 minutes which will fail the event
-local STONERESET_TYPE = 218388; -- invis man that spawns when the event ends (win or lose) and prevents the trigger mobs from spawning until depop. (6 hours)
 local STONE_GUY_TYPE = 218391;	-- note: Live servers will not spawn the loot version of the boss if this is spawned.  I'm doing the opposite so zone crashes/reboots won't allow the rings to be redone
 local ARBITOR_GUY_TYPE = 218393;
 local MUDDITE_GUY_TYPE = 218390;
@@ -20,6 +19,8 @@ local VEGEROG_GUY_TYPE = 218392;
 
 local TRIGGER_TYPES = { [CRUMBLING_STONE_MASS_TYPE] = 1, [PILE_OF_BOULDERS_TYPE] = 2, [ROCK_CREATION_TYPE] = 3, [BOULDER_THROWER_TYPE] = 4 };
 local TRIGGER_SPAWNIDS = { 365379, 365553, 365938, 367419, 366541, 366866, 366694, 367274 };
+local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
+local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
 local FAKE_MONSTROSITY_SPAWNID = 366842;
 
 local FORT_LOCS = {
@@ -297,7 +298,14 @@ function EventSuccess(e)
 	eq.debug("Stone Ring completed");
 	
 	eq.depop_all(STONEDESPAWN_TYPE);
-	eq.spawn2(STONERESET_TYPE, 0, 0, -587, -206, 85.75, 0);
+	local elist = eq.get_entity_list();
+	-- Keep the whole ring on the same saved cooldown after a zone unload.
+	for _, id in ipairs(TRIGGER_SPAWNIDS) do
+		eq.update_spawn_timer(id, SUCCESS_RESPAWN_TIME);
+		elist:GetSpawnByID(id):Enable();
+	end
+	eq.update_spawn_timer(FAKE_MONSTROSITY_SPAWNID, SUCCESS_RESPAWN_TIME);
+	elist:GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Enable();
 	if ( e.self:GetNPCTypeID() == PEREGRIN_ROCKSKULL_TYPE ) then
 		eq.depop_with_timer(STONE_GUY_TYPE);
 	end
@@ -320,32 +328,15 @@ function DespawnTimer(e)
 		eq.depop_all(ENCRUSTED_DIRT_CLOUD_TYPE);
 		eq.depop_all(PEREGRIN_ROCKSKULL_TYPE);
 		
-		--eq.spawn2(STONERESET_TYPE, 0, 0, -587, -206, 85.75, 0);
 		local elist = eq.get_entity_list();
 		for _, id in ipairs(TRIGGER_SPAWNIDS) do
+			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
 			elist:GetSpawnByID(id):Enable();
 		end
+		eq.update_spawn_timer(FAKE_MONSTROSITY_SPAWNID, FAILURE_RESPAWN_TIME);
 		elist:GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Enable();
 		
 		eq.debug("Stone Ring failed and reset");
-		eq.depop();
-	end
-end
-
-function ResetSpawn(e)
-	eq.set_timer("depop", 237600000); -- 66 hours after successful completion
-end
-
-function ResetTimer(e)
-	if ( e.timer == "depop" ) then
-		
-		local elist = eq.get_entity_list();
-		for _, id in ipairs(TRIGGER_SPAWNIDS) do
-			elist:GetSpawnByID(id):Enable();
-		end
-		elist:GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Enable();
-		
-		eq.debug("Stone Ring now available");
 		eq.depop();
 	end
 end
@@ -377,6 +368,4 @@ function event_encounter_load(e)
 	eq.register_npc_event("StoneRing", Event.timer, ENCRUSTED_DIRT_CLOUD_TYPE, BossTimer);
 	eq.register_npc_event("StoneRing", Event.timer, PEREGRIN_ROCKSKULL_TYPE, BossTimer);
 	
-	eq.register_npc_event("StoneRing", Event.spawn, STONERESET_TYPE, ResetSpawn);
-	eq.register_npc_event("StoneRing", Event.timer, STONERESET_TYPE, ResetTimer);
 end
