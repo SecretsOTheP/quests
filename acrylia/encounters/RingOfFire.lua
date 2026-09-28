@@ -142,11 +142,11 @@ function SpawnWave()
 	
 		local boss = 1;	-- warmonger
 		
-		if ( roll <= 10 ) then
+		if ( roll <= 25 ) then
 			boss = 4;	-- underking
-		elseif ( roll <= 20 ) then
+		elseif ( roll <= 50 ) then
 			boss = 3;	-- warmaster
-		elseif ( roll <= 35 ) then
+		elseif ( roll <= 75 ) then
 			boss = 2;	-- warlord
 		end
 		
