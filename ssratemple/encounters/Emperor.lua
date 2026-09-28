@@ -26,20 +26,9 @@ local WRAITH_TYPE = 162494;
 local CURSE_TRAP_TYPE = 162478;	-- center room invis man that casts Curse of Ssraeshza after some time
 local ROOM_GUARDS = { [162128] = 1, [162123] = 1, [162130] = 1, [162126] = 1, [162127] = 1, [162129] = 1, [162124] = 1, [162125] = 1 }
 
-local GUARD_SPAWN_POINTS = {
-	{x = 837, y = -365, z = 405.7, h = 42, },
-	{x = 877, y = -379, z = 404.5, h = 5, },
-	{x = 918, y = -364, z = 404.5, h = 227, },
-	{x = 931, y = -323, z = 405.7, h = 200, },
-	{x = 918, y = -282, z = 404.5, h = 172, },
-	{x = 877, y = -270, z = 404.5, h = 136, },
-	{x = 837, y = -283, z = 405.1, h = 88, },
-	{x = 822, y = -323, z = 405.1, h = 65, },
-};
 
 local cursed = false;
 local empDepopped = false;
-local empIsDead = false;
 
 function GovernorTimer(e)
 	if ( e.timer == "despawntraps" ) then
@@ -73,7 +62,6 @@ function GovernorTimer(e)
 					if ( npc:GetZ() < 400 or npc:GetY() > -180 or npc:GetY() < -468 or npc:GetX() < 695 ) then
 						if ( ROOM_GUARDS[npc:GetNPCTypeID()] ) then
 							eq.zone_emote(7, "SploitChecking - Out of range: " .. npc:GetNPCTypeID());
-							SpawnGuardRandom(npc:GetNPCTypeID());
 							npc:Depop();
 						elseif ( npc:GetNPCTypeID() == BLOOD_TYPE ) then
 							eq.spawn2(BLOOD_TYPE, 0, 0, 877, -326, 410.7, 196);
@@ -102,20 +90,6 @@ function GovernorTimer(e)
 	]]
 end
 
-function SpawnGuardRandom(guard_type)
-	local roll = math.random(8);
-	eq.spawn2(guard_type, 0, 0, GUARD_SPAWN_POINTS[roll].x, GUARD_SPAWN_POINTS[roll].y, GUARD_SPAWN_POINTS[roll].z, GUARD_SPAWN_POINTS[roll].h);
-end
-
-function SpawnGuard(input)
-	local guard_type = input + 162122;
-	local guard = eq.get_entity_list():GetMobByNpcTypeID(guard_type);
-	if ( not guard or not guard.valid ) then
-		eq.spawn2(guard_type, 0, 0, GUARD_SPAWN_POINTS[input].x, GUARD_SPAWN_POINTS[input].y, GUARD_SPAWN_POINTS[input].z, GUARD_SPAWN_POINTS[input].h);
-	end
-		
-end
-
 function ActivateTraps()
 
 	eq.stop_timer("despawntraps");
@@ -134,17 +108,11 @@ function ActivateTraps()
 end
 
 function BloodAggro(e)
-	empIsDead = false;
-
 	if ( e.joined ) then
 		ActivateTraps();
 		eq.set_timer("guard_sploitcheck", 5000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
 	else
 		eq.set_timer("despawntraps", 300 * 1000, eq.get_entity_list():GetMobByNpcTypeID(GOVERNOR_TYPE));
-	end
-
-	for spawn = 1, 8 do
-		SpawnGuard(spawn);
 	end
 end
 
@@ -172,7 +140,6 @@ function EmpDeath(e)
 	eq.spawn2(WRAITH_TYPE, 0, 1, 773, -360, 403, 52);
 	eq.spawn2(WRAITH_TYPE, 0, 1, 770, -289, 403, 72);
 	
-	empIsDead = true;
 
 	if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(FAKE_EMP_TYPE) ) then
 		-- possible if emp fight is super long
