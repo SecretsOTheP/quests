@@ -83,7 +83,7 @@ function ControllerTimer(e)
 end
 
 function ControllerSignal(e)
-	if ( eq.get_zone_guild_id() == 1 ) then
+	if ( eq.get_zone_guild_id() == 1 and not eq.guild_one_raid_window_open() ) then
 		return;
 	end
 

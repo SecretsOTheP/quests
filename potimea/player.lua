@@ -22,7 +22,6 @@ function event_click_door(e)
 		end
 
 		local raid = e.self:GetRaid();
-			e.self:Message(15, "DEBUG raid valid: "..tostring(raid.valid)..", members: "..tostring(raid.valid and raid:RaidCount() or 0));
 		
 		if ( not e.self:GetGM() and e.self:GetLevel() < 65 ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
