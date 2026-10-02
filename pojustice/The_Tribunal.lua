@@ -223,6 +223,7 @@ function event_timer(e)
 
 	elseif ( e.timer:sub(1, 8) == "failboot" ) then
 		ReturnTrialPlayers(num, nil);
+		MoveCorpses(num);
 
 	elseif ( e.timer:sub(1, 5) == "delay" ) then
 		MoveCorpses(num);
@@ -302,4 +303,9 @@ function event_say(e)
 			e.other:Message(0, "The Tribunal considers you for a long moment.  'The knowledge of the gods is not so easily given to an unproven mortal.'");
 		end
 	end
+end
+
+function event_trade(e)
+	local item_lib = require("items");
+	item_lib.return_items(e.self, e.other, e.trade);
 end

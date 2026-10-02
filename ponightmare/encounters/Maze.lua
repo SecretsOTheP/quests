@@ -136,6 +136,27 @@ function RemoveFromTrial(i, zone, x, y, z, h, message)
 	end
 end
 
+function MoveFailedTrialCorpses(i)
+	local liveZone = eq.get_zone_guild_id() == -1;
+	local corpseList = eq.get_entity_list():GetCorpseList();
+	if ( corpseList ) then
+		for corpse in corpseList.entries do
+			if ( corpse.valid and corpse:IsPlayerCorpse()
+				and corpse:GetY() < BOUNDARIES[i].t
+				and corpse:GetY() > BOUNDARIES[i].b
+				and corpse:GetX() < BOUNDARIES[i].l
+				and corpse:GetX() > BOUNDARIES[i].r
+			) then
+				if ( liveZone ) then
+					corpse:MoveToGraveyard();
+				else
+					corpse:MoveToInstanceGraveyard();
+				end
+			end
+		end
+	end
+end
+
 function MoveGroup(zone, client, dist, x, y, z, h)
 	local group = client:GetGroup();
 	local raid = client:GetRaid();
@@ -216,6 +237,7 @@ function GovernorTimerEvent(e)
 					instance[i].wait_checks = instance[i].wait_checks + 1;
 
 					if ( instance[i].wait_checks >= 30 ) then
+						MoveFailedTrialCorpses(i);
 						RemoveFromTrial(i, 204, 1668, 282, 213, 255,
 							"Terris Thule invades your thoughts. 'Fools! Did Thelin think to cheat our contract by bringing you here? This nightmare is his alone! Begone!'");
 						instance[i].state = 5;
@@ -540,6 +562,7 @@ function ThelinDeathEvent(e)
 		end
 	end
 	-- have to remove players this way because Banishment doesn't work since it's flagged a beneficial spell
+	MoveFailedTrialCorpses(i);
 	RemoveFromTrial(i, 204, 1668, 282, 213, 255);
 	instance[i].state = 5;
 	eq.debug("Hedge Maze "..i.." failed");
