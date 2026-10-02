@@ -8,7 +8,21 @@ local DEFILER_LARGE_TYPE = 221044;
 local GARG_TYPE = 221043;
 local GARG_SPAWN_IDS = { 365397, 366053, 366176, 367232 };
 
+local function ResetTerrisAdds()
+	eq.depop_all(DEFILER_SMALL_TYPE);
+	eq.depop_all(DEFILER_LARGE_TYPE);
+	eq.depop_all(GARG_TYPE);
+	local elist = eq.get_entity_list();
+	for _, id in ipairs(GARG_SPAWN_IDS) do
+		local spawn = elist:GetSpawnByID(id);
+		if ( not spawn:GetNPC().valid ) then
+			spawn:SetTimer(1);
+		end
+	end
+end
+
 function event_death_complete(e)
+	ResetTerrisAdds();
 	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
 	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 end
@@ -87,8 +101,10 @@ end
 
 function event_combat(e)
 	if ( e.joined ) then
+		eq.stop_timer("checkhp");
 		eq.set_timer("boundscheck", 1000);
 	else
+		ResetTerrisAdds();
 		eq.set_timer("checkhp", 3000);
 		eq.stop_timer("boundscheck");
 	end
@@ -101,24 +117,19 @@ function event_timer(e)
 		if ( e.self:GetHPRatio() == 100 ) then
 			eq.stop_timer("checkhp");
 			eq.set_next_hp_event(95);
-			
-			--[[
-			-- gargs have a brief unaggro depop timer and the untargatbles respawn when they despawn so this isn't neccessary
-			local elist = eq.get_entity_list();
-			
-			for _, id in ipairs(GARG_SPAWN_IDS) do
-				elist:GetSpawnByID(id):SetTimer(1);
-			end
-			eq.depop_all(GARG_TYPE);
-			]]
+			ResetTerrisAdds();
 		end
 		
 	elseif ( e.timer == "boundscheck" ) then
 	
 		if ( e.self:GetX() > -1580 or e.self:GetX() < -2090 or e.self:GetY() > 250 or e.self:GetY() < -280 ) then
+			ResetTerrisAdds();
 			eq.get_entity_list():MessageClose(e.self, true, 200, 0, "Terris Thule disappears into the ether and reforms at the center of her chamber, cleansed of your magic!");
 			e.self:GMMove(e.self:GetSpawnPointX(), e.self:GetSpawnPointY(), e.self:GetSpawnPointZ(), e.self:GetSpawnPointH());
+			e.self:WipeHateList();
 			e.self:CastSpell(3230, e.self:GetID()); -- Balance of the Nameless
+			e.self:SetHP(e.self:GetMaxHP());
+			eq.set_next_hp_event(95);
 		end
 	end
 end
