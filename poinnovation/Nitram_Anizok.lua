@@ -28,6 +28,10 @@ function event_spawn(e)
 	dragonSlain = false;
 	walking = false;
 	flags = 0;
+	local spawn = eq.get_entity_list():GetSpawnByID(e.self:GetSpawnPointID());
+	if ( spawn.valid ) then
+		spawn:SetRespawnTimer(1); -- New attempts can begin after Nitram's flagging window ends.
+	end
 end
 
 function event_signal(e)
@@ -113,6 +117,7 @@ function event_waypoint_arrive(e)
 
 	if ( e.wp == 20 ) then
 		eq.spawn2(DRAGON_TYPE, 0, 0, -711, 1583, -45, 128);
+		e.self:SetInvul(true);
 		
 	elseif ( e.wp == 27 ) then
 		if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(DRAGON_TYPE) ) then
