@@ -6,6 +6,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {4841, 4842, 4843, 4844, 4845, 4846, 4847}); --Umbral Armor
 	if(count > 0) then

@@ -11,6 +11,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	
 	if(e.other:GetLevel() > 19 and item_lib.check_turn_in(e.self, e.trade, {item1 = 22503, item2 = 26697, item3 = 9421, item4 = 28790})) then--Blue Diamond, Rage Filled Gem, Sandstorm Gem, Intermediate Combat Manual

@@ -8,6 +8,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 28741})) then--Locked Tome of Dark Power
 		e.self:Say("Very impressive, this little tome has eluded my aid for quite some time now. How good of you to discover its whereabouts and bring it to me. But from the looks of it, this book has a strong, magically-sealed lock upon its cover. I wonder if Elder Tal Almad would know how to break it? Take this to him in the Plane of Tranquility and let him have a look at it. If he can open it, bring it back to me.");

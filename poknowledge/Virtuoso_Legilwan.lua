@@ -13,6 +13,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {4861, 4862, 4863, 4864, 4865, 4866, 4867}); --Imbrued Platemail Armor
 	if(count > 0) then

@@ -1,0 +1,23 @@
+Deploy these Lua scripts and SQL together. SQL in this directory is MANUAL:
+merging or reloading quests does not execute it.
+
+1. Run 2026_09_26_PoP_Keyring_Keys.sql against the content database.
+2. Run 2026_10_03_Codecay_Throne_Lua_Access.sql against the content database.
+3. Run 2026_10_03_PoP_Trash_Respawn_Timers.sql after the original
+   2026_09_30_PoP_Trash_Respawn_Timers.sql migration.
+   This updates only the original explicit spawn IDs still using the old
+   750/930-second or intermediate test 1050/1350-second timers.
+   Final timers: 930 seconds (15.5 min) and 1230 seconds (20.5 min).
+   Variance and existing saved countdowns are unchanged.
+4. Restart affected zone processes during downtime to load door/spawn data
+   and scripts. Avoid reloading the Maze encounter while an event is active.
+
+No Plane of Time book/NPC/spawn changes are included.
+NPC:ReturnNonQuestItems must remain enabled for NPCs without trade scripts.
+Server rebuild is not required for this quest/SQL package.
+
+Validation:
+- Codecay chair and Glyphed Rune Word return confirmed in game on test.
+- Final respawn values verified on all 4,620 selected oct_test spawn rows.
+- Maze/reaver mock checks pass; gameplay verification remains pending.
+- Keyring portal gameplay verification remains pending.

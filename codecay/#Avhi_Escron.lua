@@ -15,7 +15,10 @@ function SpawnReavers(mob, noEmote)
 end
 
 function event_hate_list(e)
-	if ( not e.joined and e.self:GetHP() > 0 ) then
+	-- Hate removal also fires on memblur, zoning, and encounter resets.
+	-- Only a dead player should feed an additional wave.
+	if ( not e.joined and e.self:GetHP() > 0 and e.other.valid
+		and e.other:IsClient() and e.other:GetHP() <= 0 ) then
 		SpawnReavers(e.self);
 	end
 end
@@ -26,6 +29,7 @@ function event_spawn(e)
 end
 
 function event_timer(e)
+	eq.depop_all(200259);
 	eq.depop();
 end
 
@@ -33,11 +37,14 @@ function event_combat(e)
 	if ( e.joined ) then
 		eq.pause_timer("depop");
 	else
+		eq.depop_all(200259);
+		SpawnReavers(e.self, true);
 		eq.resume_timer("depop");
 	end
 end
 
 function event_death_complete(e)
+	eq.depop_all(200259);
 	eq.zone_emote(0, "The menacing voice is heard once again saying, 'Betrayer and desecrator of storms I call upon you to end the lives of these fools.");
 	eq.unique_spawn(200228, 0, 0, 258, 84, -70, 0); -- #Bishop_Toluwon
 end

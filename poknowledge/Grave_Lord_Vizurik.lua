@@ -6,6 +6,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {5166, 5167, 5168, 5169, 5171, 5172, 5173}); --Greenmist Armor
 	if(count > 0) then

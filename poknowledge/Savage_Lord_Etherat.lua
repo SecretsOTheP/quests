@@ -7,6 +7,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {7817, 7818, 7819, 7832, 7833, 7834, 7835}); --Anthemion Armor
 	if(count > 0) then

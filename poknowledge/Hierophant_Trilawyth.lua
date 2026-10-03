@@ -6,6 +6,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {3801, 3802, 3803, 3804, 3805, 3806, 3807}); --Vermiculated Armor
 	if(count > 0) then
