@@ -21,3 +21,9 @@ Validation:
 - Final respawn values verified on all 4,620 selected oct_test spawn rows.
 - Maze and reaver failure-cleanup mock checks pass; gameplay verification remains pending.
 - Keyring portal gameplay verification remains pending.
+
+Additional loot correction:
+Run 2026_10_03_PoP_Silk_And_Ooze_Drops.sql manually. It replaces only the
+reversed crafting items in loot drops 22937 and 23779, preserving chances
+and all other drops. Verify on newly spawned NPCs after content reload/restart;
+already-generated NPC loot is not rewritten.
