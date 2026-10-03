@@ -19,5 +19,5 @@ Server rebuild is not required for this quest/SQL package.
 Validation:
 - Codecay chair and Glyphed Rune Word return confirmed in game on test.
 - Final respawn values verified on all 4,620 selected oct_test spawn rows.
-- Maze/reaver mock checks pass; gameplay verification remains pending.
+- Maze and reaver failure-cleanup mock checks pass; gameplay verification remains pending.
 - Keyring portal gameplay verification remains pending.
