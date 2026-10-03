@@ -29,7 +29,11 @@ and all other drops. Verify on newly spawned NPCs after content reload/restart;
 already-generated NPC loot is not rewritten.
 
 Lower-plane named respawns:
-Run 2026_10_03_Lower_Planes_Named_Respawns.sql manually. Sets 18 selected
+Run 2026_10_03_Lower_Planes_Named_Respawns.sql manually. Sets 17 selected
 spawn points to 24 hours (Aramin is already 24 hours). Aerin Dar, Seventh
 Hammer, and Manaetic Behemoth remain at 66 hours. Variance and saved
 countdowns are not reset. Existing raid/realm access rules still apply.
+
+The same named migration sets eight selected BoT six-hour named spawn points
+to three hours. Other BoT timers and Storms 90-minute timers stay unchanged.
+Dolshak is excluded because Neffiken.lua controls his availability.

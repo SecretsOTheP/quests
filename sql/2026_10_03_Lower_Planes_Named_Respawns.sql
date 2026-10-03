@@ -63,10 +63,6 @@ WHERE id = 345919 AND zone = 'ponightmare' AND respawntime IN (259200, 86400);
 UPDATE spawn2 SET respawntime = 86400
 WHERE id = 345916 AND zone = 'ponightmare' AND respawntime IN (259200, 86400);
 
--- Dolshak the Ornery
-UPDATE spawn2 SET respawntime = 86400
-WHERE id = 369224 AND zone = 'postorms' AND respawntime IN (604800, 86400);
-
 -- The Sleep Walker (all three NPC versions)
 UPDATE spawn2 SET respawntime = 86400
 WHERE id = 364399 AND zone = 'povalor' AND respawntime IN (259200, 86400);
@@ -77,4 +73,27 @@ WHERE id = 347213 AND zone = 'povalor' AND respawntime IN (345600, 86400);
 
 -- Verify the selected spawn points.
 SELECT id, zone, respawntime, variance FROM spawn2
-WHERE id IN (360632, 360643, 360642, 344766, 344762, 344765, 345148, 345147, 345149, 345473, 345905, 369184, 346307, 345919, 345916, 369224, 364399, 347213) ORDER BY zone, id;
+WHERE id IN (360632, 360643, 360642, 344766, 344762, 344765, 345148, 345147, 345149, 345473, 345905, 369184, 346307, 345919, 345916, 364399, 347213) ORDER BY zone, id;
+
+-- BoT named: six hours -> three hours. Only the six-hour Eindride spawn.
+-- Leave Agnarr, Emmerik, Evynd, and the separate fast Eindride spawn unchanged.
+UPDATE spawn2 SET respawntime = 10800
+WHERE zone = 'bothunder'
+  AND respawntime = 21600
+  AND id IN (
+    360516, -- Gaukr Sandstorm
+    364400, -- Hreidar Lynhillig
+    364397, -- Laef Windfall
+    364401, -- Oreen Wavecrasher
+    360270, -- Auliffe Chaoswind
+    360252, -- Brynju Thunderclap
+    360610, -- Kuanbyr Hailstorm
+    364398  -- Eindride Icestorm
+  );
+
+SELECT id, zone, respawntime, variance FROM spawn2
+WHERE id IN (360516, 364400, 364397, 364401, 360270, 360252, 360610, 364398)
+ORDER BY id;
+
+-- Dolshak is intentionally untouched: Neffiken.lua schedules his spawn
+-- 15-60 minutes after Neffiken dies and depops him when Neffiken spawns.
