@@ -18,6 +18,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 16266})) then --Power of the Planes
 		e.self:Emote("takes the Power from you and hands it to Aid Eino. 'Thank you " .. e.other:GetCleanName() .. ". The energy I must expend to perform such a task is days in the gathering. The city of Tanaan is forever in your debt. Take this, it is but a small token of the gratitude of the city. If it does not suit you, return it to me and I shall give you another reward.'");

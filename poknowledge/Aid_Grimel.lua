@@ -109,6 +109,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 15985})) then --Imbued Breastplate
 		e.self:Emote("smiles. 'What a wonderful job!  Councilman Taldarius shall wear this on our next adventure, I am sure he will find it more protective than his old one.   Take this signet as a token of my gratitude.  If you are not too busy I have another task, do you have any brewing skill?'");

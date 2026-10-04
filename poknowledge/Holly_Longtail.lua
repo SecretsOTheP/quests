@@ -10,6 +10,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 28076})) then--Collection of Taxidermy
 		e.self:Emote("opens the box and carefully inspects its contents. 'These will do. Please accept this as a show of my appreciation. Now if you'll excuse me I have much work left to do.");

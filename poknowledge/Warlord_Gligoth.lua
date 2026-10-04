@@ -5,6 +5,7 @@ function event_say(e)
 	end
 end
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {4911, 4912, 4913, 4914, 4915, 4916, 4917}); --Indicolite Armor
 	if(count > 0) then

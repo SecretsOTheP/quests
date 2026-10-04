@@ -6,6 +6,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {1232, 1233, 1234, 1235, 1236, 1237, 1238}); --Blighted Armor
 	if(count > 0) then

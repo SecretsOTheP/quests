@@ -6,6 +6,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 15958})) then--Note From Tarerd
 		e.self:Emote("quickly reads the note, and says 'Tarerd wants me to give you that book? I thought he wanted me to keep it secret. Well no matter.' Thiran rummages through the books in front of him. 'Well this is unfortunate. It looks like I loaned my friend the incorrect book. I'm not sure where he's gone off to, here is the book he was looking for. If you happen to run into Jeren Manri anywhere, he'll probably exchange this book for the book on the scrying pools.'");

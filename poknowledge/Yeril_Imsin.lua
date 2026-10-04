@@ -8,6 +8,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 10953})) then--Large Shipment of High Quality Ore
 		e.self:Say("Thank you " .. e.other:GetCleanName() .. "! I will prepare the ore for sale and be open for business again momentarily. Here is your payment for your services.");

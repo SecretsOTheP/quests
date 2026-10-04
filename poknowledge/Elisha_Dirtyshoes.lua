@@ -8,6 +8,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 28086})) then--Letter to Elisha
 		e.self:Emote("reads the letter and says, 'Oh happy day! Boiron will be visiting me soon. You may take Narik's ring back to him now. If you'll excuse me, I have some cleaning up to do.'");
