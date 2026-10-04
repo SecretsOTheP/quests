@@ -44,3 +44,6 @@ trash spawn points from 230 to 350 seconds where still at 230.
 Test already has 350-second database timers. Bertox.lua also changes
 the initial post-Spectre start delay to 350 seconds. The event expiration
 and warning timers remain unchanged. Deploy/reload with no event active.
+
+Planar Projections: all 11 projection scripts now use a 20-minute despawn
+timer. Lua only; no database change or server rebuild. Verify with fresh spawns.

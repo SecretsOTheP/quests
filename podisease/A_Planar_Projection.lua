@@ -47,7 +47,7 @@ end
 
 function event_spawn(e)
 	flags = 0;
-	eq.set_timer("depop", 600000);
+	eq.set_timer("depop", 1200000); -- 20 minutes
 end
 
 function event_timer(e)
