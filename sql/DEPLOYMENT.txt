@@ -37,3 +37,10 @@ countdowns are not reset. Existing raid/realm access rules still apply.
 The same named migration sets eight selected BoT six-hour named spawn points
 to three hours. Other BoT timers and Storms 90-minute timers stay unchanged.
 Dolshak is excluded because Neffiken.lua controls his availability.
+
+Bertox event timing:
+Run 2026_10_03_Bertox_Event_Trash_Respawns.sql to change the 32 event
+trash spawn points from 230 to 350 seconds where still at 230.
+Test already has 350-second database timers. Bertox.lua also changes
+the initial post-Spectre start delay to 350 seconds. The event expiration
+and warning timers remain unchanged. Deploy/reload with no event active.
