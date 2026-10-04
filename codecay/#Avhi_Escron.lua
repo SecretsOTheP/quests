@@ -33,6 +33,7 @@ function event_combat(e)
 	if ( e.joined ) then
 		eq.pause_timer("depop");
 	else
+		eq.depop_all(200259);
 		eq.resume_timer("depop");
 	end
 end

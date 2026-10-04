@@ -1,0 +1,49 @@
+Deploy these Lua scripts and SQL together. SQL in this directory is MANUAL:
+merging or reloading quests does not execute it.
+
+1. Run 2026_09_26_PoP_Keyring_Keys.sql against the content database.
+2. Run 2026_10_03_Codecay_Throne_Lua_Access.sql against the content database.
+3. Run 2026_10_03_PoP_Trash_Respawn_Timers.sql after the original
+   2026_09_30_PoP_Trash_Respawn_Timers.sql migration.
+   This updates only the original explicit spawn IDs still using the old
+   750/930-second or intermediate test 1050/1350-second timers.
+   Final timers: 930 seconds (15.5 min) and 1230 seconds (20.5 min).
+   Variance and existing saved countdowns are unchanged.
+4. Restart affected zone processes during downtime to load door/spawn data
+   and scripts. Avoid reloading the Maze encounter while an event is active.
+
+No Plane of Time book/NPC/spawn changes are included.
+NPC:ReturnNonQuestItems must remain enabled for NPCs without trade scripts.
+Server rebuild is not required for this quest/SQL package.
+
+Validation:
+- Codecay chair and Glyphed Rune Word return confirmed in game on test.
+- Final respawn values verified on all 4,620 selected oct_test spawn rows.
+- Maze and reaver failure-cleanup mock checks pass; gameplay verification remains pending.
+- Keyring portal gameplay verification remains pending.
+
+Additional loot correction:
+Run 2026_10_03_PoP_Silk_And_Ooze_Drops.sql manually. It replaces only the
+reversed crafting items in loot drops 22937 and 23779, preserving chances
+and all other drops. Verify on newly spawned NPCs after content reload/restart;
+already-generated NPC loot is not rewritten.
+
+Lower-plane named respawns:
+Run 2026_10_03_Lower_Planes_Named_Respawns.sql manually. Sets 17 selected
+spawn points to 24 hours (Aramin is already 24 hours). Aerin Dar, Seventh
+Hammer, and Manaetic Behemoth remain at 66 hours. Variance and saved
+countdowns are not reset. Existing raid/realm access rules still apply.
+
+The same named migration sets eight selected BoT six-hour named spawn points
+to three hours. Other BoT timers and Storms 90-minute timers stay unchanged.
+Dolshak is excluded because Neffiken.lua controls his availability.
+
+Bertox event timing:
+Run 2026_10_03_Bertox_Event_Trash_Respawns.sql to change the 32 event
+trash spawn points from 230 to 350 seconds where still at 230.
+Test already has 350-second database timers. Bertox.lua also changes
+the initial post-Spectre start delay to 350 seconds. The event expiration
+and warning timers remain unchanged. Deploy/reload with no event active.
+
+Planar Projections: all 11 projection scripts now use a 20-minute despawn
+timer. Lua only; no database change or server rebuild. Verify with fresh spawns.

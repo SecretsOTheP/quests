@@ -157,61 +157,52 @@ function MoveFailedTrialCorpses(i)
 	end
 end
 
-function MoveGroup(zone, client, dist, x, y, z, h)
+-- Snapshot eligible members before moving the speaker: MovePC changes their position.
+function GetMazeGroup(client, dist)
+	local members = {};
 	local group = client:GetGroup();
 	local raid = client:GetRaid();
-
-	if ( group and group:GroupCount() > 0 ) then
+	local x, y, z = client:GetX(), client:GetY(), client:GetZ();
+	local function add(member)
+		if ( member and member.valid and member:CalculateDistance(x, y, z) < dist ) then
+			table.insert(members, member);
+		end
+	end
+	if ( raid and raid.valid ) then
+		local groupID = raid:GetGroup(client:GetName());
+		-- Ungrouped raid members must not bring every other ungrouped member.
+		if ( groupID < 0 or groupID >= 12 ) then
+			add(client);
+		else
+			for i = 0, 71 do
+				local member = raid:GetMember(i);
+				if ( member and member.valid and raid:GetGroup(member:GetName()) == groupID ) then
+					add(member);
+				end
+			end
+		end
+	elseif ( group and group.valid and group:GroupCount() > 0 ) then
 		for i = 0, 5 do
-			local member = group:GetMember(i):CastToClient();
-
-			if ( member.valid ) then
-				if ( member:CalculateDistance(client:GetX(), client:GetY(), client:GetZ()) < dist ) then
-					member:MovePC(zone, x, y, z, h*2);
-					if ( member:GetPet().valid ) then
-						if ( member:GetPet():Charmed() ) then
-							member:GetPet():BuffFadeByEffect(22); -- charm
-						else
-							member:GetPet():GMMove(x, y, z, 0);
-						end
-					end
-					eq.get_entity_list():RemoveFromHateLists(member);
-				end
-			end
+			add(group:GetMember(i):CastToClient());
 		end
-		
-	elseif ( raid and raid.valid ) then
-		local raidGroupID = raid:GetGroup(client:GetName());
-		local member;
-		for i = 0, 71 do
-			member = raid:GetMember(i);
-			
-			if ( member and member.valid and raid:GetGroup(member:GetName()) == raidGroupID ) then
-			
-				if ( member:CalculateDistance(client:GetX(), client:GetY(), client:GetZ()) < dist ) then
-					member:MovePC(zone, x, y, z, h*2);
-					if ( member:GetPet().valid ) then
-						if ( member:GetPet():Charmed() ) then
-							member:GetPet():BuffFadeByEffect(22); -- charm
-						else
-							member:GetPet():GMMove(x, y, z, 0);
-						end
-					end
-					eq.get_entity_list():RemoveFromHateLists(member);
-				end
-			end
-		end		
 	else
-		client:MovePC(zone, x, y, z, h*2);
-		
-		if ( client:GetPet().valid ) then
-			if ( client:GetPet():Charmed() ) then
-				client:GetPet():BuffFadeByEffect(22); -- charm
+		add(client);
+	end
+	return members;
+end
+
+function MoveMazeGroup(members, zone, x, y, z, h)
+	for _, member in ipairs(members) do
+		member:MovePC(zone, x, y, z, h*2);
+		local pet = member:GetPet();
+		if ( pet.valid ) then
+			if ( pet:Charmed() ) then
+				pet:BuffFadeByEffect(22);
 			else
-				client:GetPet():GMMove(x, y, z, 0);
+				pet:GMMove(x, y, z, 0);
 			end
 		end
-		eq.get_entity_list():RemoveFromHateLists(client);
+		eq.get_entity_list():RemoveFromHateLists(member);
 	end
 end
 
@@ -383,7 +374,9 @@ function ThelinOutsideSayEvent(e)
 
 		-- Port-in logic is: Fill an available room already assigned to the raid, then assign another available room.
 		--                   Non-raid groups may share rooms that are not assigned to a raid.
-		--                   No groups are allowed into a room once its waves start or its port limit is reached.
+		--                   No groups are allowed into a room once its waves start or its 24-player limit is reached.
+		local members = GetMazeGroup(e.other, 150);
+		if ( #members == 0 ) then return; end
 		local trial = 0;
 		local rid = 0;
 		local raid = e.other:GetRaid();
@@ -400,7 +393,7 @@ function ThelinOutsideSayEvent(e)
 		if ( rid > 0 ) then
 			for i = 1, 3 do
 			
-				if ( instance[i].rid == rid and instance[i].state == 1 and instance[i].ports < 4 ) then
+				if ( instance[i].rid == rid and instance[i].state == 1 and instance[i].ports + #members <= 24 ) then
 					trial = i; -- fill an available room already assigned to this raid
 					break;
 				end
@@ -419,7 +412,7 @@ function ThelinOutsideSayEvent(e)
 			
 			-- try to fill a trial first
 			for i = 1, 3 do
-				if ( instance[i].rid == 0 and instance[i].state == 1 and instance[i].ports < 4 ) then
+				if ( instance[i].rid == 0 and instance[i].state == 1 and instance[i].ports + #members <= 24 ) then
 					trial = i;
 					break;
 				end
@@ -448,10 +441,11 @@ function ThelinOutsideSayEvent(e)
 				
 				eq.debug("Hedge Maze "..trial.." starting", 1);
 			end
-			instance[trial].ports = instance[trial].ports + 1;
+			local firstEntry = instance[trial].ports == 0;
+			instance[trial].ports = instance[trial].ports + #members;
 			eq.debug("Porting group into hedge maze "..trial.."; raid ID == "..rid, 2);
-			MoveGroup(204, e.other, 150, PORT_COORDS[trial].x, PORT_COORDS[trial].y, PORT_COORDS[trial].z, 64);
-                        if ( instance[trial].ports == 1 ) then
+			MoveMazeGroup(members, 204, PORT_COORDS[trial].x, PORT_COORDS[trial].y, PORT_COORDS[trial].z, 64);
+                        if ( firstEntry ) then
                                 local thelin = GetThelinInTrial(trial);
 
                                 if ( thelin ) then

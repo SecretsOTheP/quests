@@ -7,6 +7,7 @@ function event_say(e)
 	end
 end
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {1239, 1240, 1241, 1242, 1243, 1244, 1245}); --Apothic Armor
 	if(count > 0) then

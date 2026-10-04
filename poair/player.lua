@@ -90,12 +90,16 @@ function event_click_door(e)
 
 	if ( door_id == 1 ) then -- Xegony rainbow
 		local has_key = e.self:GetItemIDAt(0) == 28638; -- Wind Etched Key
+		if ( has_key and not e.self:GetGM() and not e.self:KeyRingCheck(28638) ) then
+			e.self:KeyRingAdd(28638);
+		end
+		local has_keyring_key = not e.self:GetGM() and e.self:KeyRingCheck(28638);
 
-		if ( has_key ) then
+		if ( has_key or has_keyring_key ) then
 			Authorize(e.self);
 		end
 
-		if ( has_key or HasAuthorization(e.self) or e.self:GetGM() ) then
+		if ( has_key or has_keyring_key or HasAuthorization(e.self) or e.self:GetGM() ) then
 			e.self:MovePC(215, -617, 5, 1450, 64 * 2);
 
 			if ( e.self:GetPet().valid ) then

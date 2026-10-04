@@ -15,6 +15,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {1239, 1240, 1241, 1242, 1243, 1244, 1245}); --Apothic Armor
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 28087})) then --Narik's Ring

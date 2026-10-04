@@ -1,6 +1,7 @@
 --Warrior Tomes/Planar Armor Exchange
 --Created file, added warrior tomes as well -Kilelen
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {5174, 5175, 5176, 5177, 5178, 5179, 5180, 5181}); --Legionnaire Scale Armor
 	if(count > 0) then

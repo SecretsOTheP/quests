@@ -10,6 +10,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	item_lib.return_items(e.self, e.other, e.trade)
 end

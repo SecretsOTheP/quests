@@ -16,7 +16,8 @@ function event_click_door(e)
 				end
 			end
 			eq.get_entity_list():RemoveFromHateLists(e.self);
-
+		else
+			e.self:Message(13, "You lack the key required to enter the lower crypt. Seek Tarkil Adan after defeating Carprin Deatharn.");
 		end
 	end
 end

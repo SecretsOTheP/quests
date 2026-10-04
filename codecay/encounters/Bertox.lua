@@ -91,7 +91,7 @@ function ControllerSignal(e)
 	
 		eq.set_timer("expire", 7380000);
 		eq.set_timer("expire_warning", 7080000);
-		eq.set_timer("start", 230000);
+		eq.set_timer("start", 350000); -- 5 minutes 50 seconds
 		
 	elseif ( e.signal == 2 ) then
 		eq.stop_timer("expire");

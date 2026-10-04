@@ -24,6 +24,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	if(e.other:GetLevel() > 19 and item_lib.check_turn_in(e.self, e.trade, {item1 = 28787, item2 = 28745})) then --Planar Blood Brew, Planar Traveler's Manual
 		e.self:Say("Wow, this is great! Wow! This is may be the best Planar Blood Brew I have ever tasted! You have passed the first test with flying colors. Here, you take this book and learn well from it. When you are ready for your next lesson, speak to Xasri Virek.");

@@ -37,7 +37,12 @@ function event_click_door(e)
 	-- switches to open the glass door
 	elseif ( door_id == 8 or door_id == 9 ) then
 		
-		if ( e.self:GetItemIDAt(0) == 25596 ) then -- A Crystalline Globe in cursor
+		local has_globe = e.self:GetItemIDAt(0) == 25596; -- A Crystalline Globe
+		if ( has_globe and not e.self:GetGM() and not e.self:KeyRingCheck(25596) ) then
+			e.self:KeyRingAdd(25596);
+		end
+
+		if ( has_globe or ( not e.self:GetGM() and e.self:KeyRingCheck(25596) ) ) then
 			local door = eq.get_entity_list():GetDoorsByDoorID(2);
 			door:ForceOpen(e.self);
 			e.door:ForceOpen(e.self);

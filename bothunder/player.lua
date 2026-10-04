@@ -1,10 +1,21 @@
 -- this works because all players share these globals
--- logic is: player holding Symbol of Torden clicks on penis; player's raid or group ID is recorded in table
--- all players in his/her raid may then click up for the next 5 minutes.  Symbol and ring not added to keyring in our era
+-- logic is: player holding Symbol of Torden clicks on the tower; player's raid or group ID is recorded in table
+-- all players in his/her raid may then click up for the next 5 minutes.
 
 local raids = {};
 local gargs = 0;	-- remember how many clicks before gargs wake
 local SYMBOL_AUTHORIZATION_SECONDS = 300;
+
+local function HasKey(client, item_id)
+	if ( client:GetItemIDAt(0) == item_id ) then
+		if ( not client:GetGM() and not client:KeyRingCheck(item_id) ) then
+			client:KeyRingAdd(item_id);
+		end
+		return true;
+	end
+
+	return not client:GetGM() and client:KeyRingCheck(item_id);
+end
 
 function FindRaid(e)
 	local myRaid = e.self:GetRaid();
@@ -154,11 +165,13 @@ function event_click_door(e)
 
 	if ( door_id == 51 ) then	-- Agnarr Tower (electric penis)
 	
-		if ( e.self:GetItemIDAt(0) == 9433 ) then
+		local has_symbol = HasKey(e.self, 9433);
+
+		if ( has_symbol ) then
 			AddRaid(e);
 		end
 		
-		if ( FindRaid(e) or e.self:GetItemIDAt(0) == 9433 or e.self:GetGM() ) then
+		if ( FindRaid(e) or has_symbol or e.self:GetGM() ) then
 			e.self:MovePC(209, -765, -1735, 1270, 192*2);
 			
 			if ( e.self:GetPet().valid ) then
@@ -176,25 +189,25 @@ function event_click_door(e)
 
 	elseif ( door_id == 61 ) then
 		
-		if ( e.self:GetItemIDAt(0) == 9425 or e.self:GetGM() ) then
+		if ( HasKey(e.self, 9425) or e.self:GetGM() ) then
 			MoveGroup(209, e.self, 100, 85, 145, 635, 64)
 		end
 		
 	elseif ( door_id == 63 ) then
 		
-		if ( e.self:GetItemIDAt(0) == 9425 or e.self:GetGM() ) then
+		if ( HasKey(e.self, 9425) or e.self:GetGM() ) then
 			MoveGroup(209, e.self, 100, -830, -865, 1375, 64)
 		end
 		
 	elseif ( door_id == 65 ) then
 	
-		if ( e.self:GetItemIDAt(0) == 9425 or e.self:GetGM() ) then
+		if ( HasKey(e.self, 9425) or e.self:GetGM() ) then
 			MoveGroup(209, e.self, 100, -350, -2200, 1955, 128)
 		end
 		
 	elseif ( door_id == 67 ) then
 	
-		if ( e.self:GetItemIDAt(0) == 9425 or e.self:GetGM() ) then
+		if ( HasKey(e.self, 9425) or e.self:GetGM() ) then
 			MoveGroup(209, e.self, 100, 150, -1220, 1120, 64)
 		end
 	end

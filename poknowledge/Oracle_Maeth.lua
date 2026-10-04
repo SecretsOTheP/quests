@@ -6,6 +6,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
 	local count = item_lib.count_handed_item(e.self, e.trade, {4871, 4872, 4873, 4874, 4875, 4876, 4877}); --Rune Etched Armor
 	if(count > 0) then
