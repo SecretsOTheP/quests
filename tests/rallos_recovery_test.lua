@@ -363,6 +363,26 @@ test('guard respawn invalidates queued start and persists across quest reload',f
  assert(fields[9]=='0'and fields[10]=='1','only the returning guard kill must be cleared in saved state')
  w:load();assert(not w:mob(T));w:kill(B);w:eventtimer('doors');assert(w:mob(T)and w:mob(V));w:errors()
 end)
+test('pit Warlord losing all aggro resets home effects and health before another wave',function()
+ local w=world();w:start();w:pit();local n=w:mob(W);w:combat(W,true);w.env.SpawnPitWave();assert(w:count(214287)>0)
+ n.hp=40;n.x=800;n.y=100;n.buffs={[676]=true,[2885]=true,[369]=true};n.keepDebuffs=true
+ w:npctimer(W,'twitch');w:combat(W,false)
+ assert(n.x==705 and n.y==0 and n.z==-290 and n.hp==100 and not n.engaged)
+ assert(n.interrupted and n.fadeAllCalled and not next(n.buffs) and n.spell==3230 and n.spelltarget==n.id)
+ assert(w:count(214287)==0 and w:count(214288)==0);w:eventtimer('wraiths');assert(w:count(214287)==0)
+ w:combat(W,true);assert(n.hp==100 and w.timers[n.id..':twitch']==55000);w:errors()
+end)
+test('pit boundary reset applies Balance once despite nested combat callbacks and preserves idle budget',function()
+ local w=world();w:start();w:pit();local n=w:mob(W);w.now=w.now+40;w:combat(W,true);n.hp=40;n.x=1000
+ local original=n.SpellOnTarget;local casts=0;n.SpellOnTarget=function(self,id,target)casts=casts+1;return original(self,id,target)end
+ w:npctimer(W,'bounds');assert(casts==1 and n.hp==100 and n.x==705 and not n.engaged)
+ assert(n:GetEntityVariable('rallos_resetting')=='0'and w.timers[n.id..':depop']==8960000);w:errors()
+end)
+test('dying pit Warlord is not healed by the final disengage callback and still records success',function()
+ local w=world();w:start();w:pit();local n=w:mob(W);w:combat(W,true);n.hp=0;w:combat(W,false)
+ assert(n.hp==0 and not n.directSpell and not n.fadeAllCalled)
+ w:kill(W);assert(w.saved[BI].ms==237600000);w:errors()
+end)
 local failures=0
 for _,t in ipairs(tests)do local ok,err=pcall(t[2]);print((ok and 'PASS ' or 'FAIL ')..t[1]..(ok and '' or ': '..tostring(err)));if not ok then failures=failures+1 end end
 assert(failures==0,tostring(failures)..' failed tests')

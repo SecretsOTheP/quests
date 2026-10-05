@@ -201,6 +201,15 @@ local function Leash(npc, home)
     end
     Log("LEASH",string.format("%s returned home from %.1f, %.1f, %.1f; aggro wiped, all buffs/debuffs cleared, HP restored; Balance of the Nameless applied: %s.",npc:GetName(),x,y,z,tostring(applied)));
 end
+local function ResetWarlord(npc)
+    -- Wiping aggro can invoke combat(false) while a boundary reset is running.
+    -- Never heal a dying Warlord or recursively start a second reset.
+    if not npc.valid or npc:IsCorpse() or npc:GetHP()<=0 then return; end
+    if npc:GetEntityVariable("rallos_resetting")=="1" then return; end
+    npc:SetEntityVariable("rallos_resetting","1");
+    Leash(npc,{705,0,-290,0});
+    npc:SetEntityVariable("rallos_resetting","0");
+end
 local function Remaining(v)
     return math.max(0,v.remaining-(v.started and (Now()-v.started)*1000 or 0));
 end
@@ -573,8 +582,9 @@ function WarlordCombatEvent(e)
     else
         eq.stop_timer("twitch"); Cancel("wraiths"); ResumeIdle(e.self);
         CleanupPitAdds();
+        ResetWarlord(e.self);
         RP("The Warlord calls back his fallen champions and waits for challengers worthy of War.");
-        Log("DISENGAGE","Warlord disengaged; pending pit wave canceled, pit adds removed, idle timer resumed.");
+        Log("DISENGAGE","Warlord disengaged; pending pit wave canceled, pit adds removed, full reset applied to the living boss, idle timer resumed.");
     end
 end
 
@@ -592,7 +602,7 @@ function WarlordTimerEvent(e)
 				end
 			end
 
-            Leash(e.self,{705,0,-290,0});
+            ResetWarlord(e.self);
             ResumeIdle(e.self);
 		end
 	
