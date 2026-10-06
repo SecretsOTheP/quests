@@ -2,6 +2,15 @@
 -- Actual maze script with simulated clients, raids and delayed teleports. No game server/database access.
 local file=assert(io.open(arg[1]or'ponightmare/encounters/Maze.lua'));local source=file:read('*a');file:close()
 function string.findi(self,needle)return string.find(string.lower(self),string.lower(needle),1,true)end
+local function guardedList(list)
+ local weak=setmetatable({list},{__mode="v"});local nextEntry=list.entries
+ list.entries=function(...)
+  collectgarbage("collect")
+  assert(weak[1],"client-list owner was collected during iteration")
+  return nextEntry(...)
+ end
+ return list
+end
 local function world(count,delay)
  local w={now=100000,clients={},pending={},npcs={},moves={},messages={},logs={},timers={},delay=delay}
  local raids={}
@@ -55,7 +64,7 @@ local function world(count,delay)
  w.governor=setmetatable({valid=true,id=300,t=204458,spawn=0,vars={}},{__index=N})
  local el={RemoveFromHateLists=function()end,GetMobByNpcTypeID=function()return w.governor end}
  function el:GetNPCList()local i=0;return{entries=function()i=i+1;return w.npcs[i]end}end
- function el:GetClientList()local i=0;return{entries=function()i=i+1;return w.clients[i]end}end
+ function el:GetClientList()local i=0;return guardedList({entries=function()i=i+1;return w.clients[i]end})end
  function el:GetCorpseList()return{entries=function()return nil end}end
  function el:GetNPCByID(id)for _,n in ipairs(w.npcs)do if n.id==id then return n end end;return{valid=false}end
  local eq={get_qglobals=function()return{thelin='1'}end,get_entity_list=function()return el end,

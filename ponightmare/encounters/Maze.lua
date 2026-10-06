@@ -56,12 +56,12 @@ local function MazeLog(i,kind,message)
     local text=string.format("[Maze guild=%s room=%d raid=%d state=%d seats=%d] [%s] %s",
         tostring(eq.get_zone_guild_id()),i,room.rid,room.state,Seats(i),kind,message);
     eq.debug(text);
-    for client in eq.get_entity_list():GetClientList().entries do
+    local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do
         if client.valid and client:GetGM() then client:Message(15,text);end
     end
 end
 local function MazeRP(i,message)
-    for client in eq.get_entity_list():GetClientList().entries do
+    local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do
         if client.valid and (instance[i].members[Character(client)] or (client:GetGM() and InRoom(client,i))) then
             client:Message(13,message);
         end
@@ -92,7 +92,7 @@ local function Pending(i)
     return false;
 end
 local function Occupied(i)
-    for client in eq.get_entity_list():GetClientList().entries do
+    local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do
         -- An explicitly admitted GM can test a maze alone; observers do not reserve it.
         if InRoom(client,i) and (not client:GetGM() or instance[i].members[Character(client)]) then return true;end
     end
@@ -100,7 +100,7 @@ local function Occupied(i)
 end
 local function Reconcile(i)
     local room=instance[i];local clients={};local changed=false;
-    for client in eq.get_entity_list():GetClientList().entries do if client.valid then clients[Character(client)]=client;end end
+    local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do if client.valid then clients[Character(client)]=client;end end
     for id,t in pairs(room.members) do
         if InRoom(clients[id],i) then
             if not t.arrived or t.pending_until~=0 then t.arrived=true;t.pending_until=0;changed=true;end
@@ -136,7 +136,7 @@ local function EnsureRouting()
             elseif ClientInTrial(i) then
                 -- Legacy/unverified occupied rooms cannot be silently reassigned to new groups.
                 local room=instance[i];room.state=5;room.members={};local owner=nil;
-                for client in eq.get_entity_list():GetClientList().entries do
+                local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do
                     if InRoom(client,i) and not client:GetGM() then
                         local raid=client:GetRaid();local rid=raid and raid.valid and raid:GetID() or 0;
                         room.members[Character(client)]={pending_until=0,arrived=true};
