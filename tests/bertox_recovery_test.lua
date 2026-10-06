@@ -7,6 +7,17 @@ local SI=360643
 local first={200234,200240,200265,200246,200257,200263,200266,200223}
 local final={200250,200256,200255,200227}
 local trashids={};for i=369228,369264 do if i~=369241 and i~=369244 and i~=369255 and i~=369257 and i~=369260 then trashids[#trashids+1]=i end end
+-- Model luabind's non-owning iterator: collection of a temporary list
+-- invalidates iteration even when the iterator function itself survives.
+local function guardedList(list)
+ local weak=setmetatable({list},{__mode="v"});local nextEntry=list.entries
+ list.entries=function(...)
+  collectgarbage("collect")
+  assert(weak[1],"entity-list owner was collected during iteration")
+  return nextEntry(...)
+ end
+ return list
+end
 local function world(guild)
  local w={now=100000,guild=guild or 2,entities={},spawns={},timers={},buckets={},logs={},emotes={},messages={},saved={},fail={},signals={},nextid=100}
  local N={}
@@ -65,10 +76,10 @@ local function world(guild)
  local el={}
  function el:GetSpawnByID(id)return w.spawns[id]or{valid=false}end
  function el:GetMobByNpcTypeID(t)return w:mob(t)or{valid=false}end
- function el:GetNPCList()local list={};for _,n in pairs(w.entities)do list[#list+1]=n end;local i=0;return{entries=function()i=i+1;return list[i]end}end
+ function el:GetNPCList()local list={};for _,n in pairs(w.entities)do list[#list+1]=n end;local i=0;return guardedList({entries=function()i=i+1;return list[i]end})end
  function el:GetClientList()
   local list={};for _,value in ipairs({true,false})do local gm=value;list[#list+1]={valid=true,GetGM=function()return gm end,Message=function(_,color,text)w.messages[#w.messages+1]={gm=gm,color=color,text=text}end}end
-  local i=0;return{entries=function()i=i+1;return list[i]end}
+  local i=0;return guardedList({entries=function()i=i+1;return list[i]end})
  end
  function w:load()
   self.handlers={};self.encounter={id=-100};self.owner=self.encounter

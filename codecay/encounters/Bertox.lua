@@ -110,7 +110,7 @@ local function Log(kind,message)
     local text=string.format("[Bertox guild=%s attempt=%d phase=%s trash=%d kings=%d] [%s] %s",
         tostring(eq.get_zone_guild_id()),attempt,phaseNames[phase],trashKills,KingKills(),kind,message);
     eq.debug(text);
-    for client in eq.get_entity_list():GetClientList().entries do
+    local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do
         if client.valid and client:GetGM() then client:Message(15,text); end
     end
 end
@@ -150,7 +150,7 @@ local function FindType(t)
     local npc=eq.get_entity_list():GetMobByNpcTypeID(t);return Live(npc) and npc or nil;
 end
 local function Summoners()
-    local n=0;for npc in eq.get_entity_list():GetNPCList().entries do
+    local n=0;local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
         if Live(npc) and npc:GetNPCTypeID()==SUMMONER_TYPE and Tagged(npc) then n=n+1;end
     end;return n;
 end
@@ -165,7 +165,7 @@ local function StopTrash()
 end
 local function Cleanup()
     StopTrash();
-    for npc in eq.get_entity_list():GetNPCList().entries do
+    local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
         if Live(npc) and (KING_TYPES[npc:GetNPCTypeID()] or npc:GetNPCTypeID()==SUMMONER_TYPE or npc:GetNPCTypeID()==BERTOX_TYPE) then
             eq.stop_all_timers(npc);npc:Depop();
         end
@@ -405,7 +405,7 @@ Initialize=function()
         -- Native quake/fresh-zone handling already reset this encounter above.
     elseif not saved then
         local orphan,oldActive=false,false;
-        for npc in eq.get_entity_list():GetNPCList().entries do
+        local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
             if Live(npc) then
                 local t=npc:GetNPCTypeID();
                 if KING_TYPES[t] then orphan=true;
