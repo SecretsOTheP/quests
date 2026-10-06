@@ -1,6 +1,7 @@
 local PLANAR_PROJECTION_TYPE = 208207;
 local MINION_TYPE = 208175; -- A_Mindless_Minion
-local RAHLGON_TYPE = 208176; -- Rahlgon 
+local RAHLGON_TYPE = 208176; -- Rahlgon
+local RAHLGON_SPAWNID = 347213;
 local SPAWNIDS = {
 	347220, 347221,
 	347219, 347217,
@@ -30,11 +31,21 @@ end
 function RespawnAdds()
 	local elist = eq.get_entity_list();
 	for _, id in ipairs(SPAWNIDS) do
-		elist:GetSpawnByID(id):SetTimer(1);
+		local spawn = elist:GetSpawnByID(id);
+		if ( id == RAHLGON_SPAWNID ) then
+			-- Rahlgon has no independent respawn; restore him only for this attempt.
+			spawn:Enable();
+		end
+		spawn:SetTimer(1);
 	end
 end
 
 function event_death_complete(e)
+	-- End the event-owned add's lifetime when Aerin Dar is defeated.
+	local spawn = eq.get_entity_list():GetSpawnByID(RAHLGON_SPAWNID);
+	if ( spawn and spawn.valid ) then
+		spawn:Disable();
+	end
 	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, 360, 2528, 39, 0);
 	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 end
