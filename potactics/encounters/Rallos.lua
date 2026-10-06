@@ -67,7 +67,7 @@ local function Log(kind, message)
     local text = string.format("[RZ guild=%s attempt=%d phase=%s] [%s] %s",
         tostring(eq.get_zone_guild_id()), attempt, phaseNames[phase] or "Unknown", kind, message);
     eq.debug(text);
-    for client in eq.get_entity_list():GetClientList().entries do
+    local clientList=eq.get_entity_list():GetClientList(); for client in clientList.entries do
         if client.valid and client:GetGM() then client:Message(15,text); end
     end
 end
@@ -134,12 +134,12 @@ local function CleanupRoomAdds()
     roomSpawns={};
 end
 local function CleanupElites()
-    for npc in eq.get_entity_list():GetNPCList().entries do
+    local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
         if npc.valid and npc:GetSpawnPointID()==0 and npc:GetNPCTypeID()==ELITE_TYPE then npc:Depop(); end
     end
 end
 local function CleanupPitAdds()
-    for npc in eq.get_entity_list():GetNPCList().entries do
+    local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
         if npc.valid and npc:GetSpawnPointID()==0 and
             (npc:GetNPCTypeID()==BOAR_TYPE or npc:GetNPCTypeID()==WRAITH_TYPE) then npc:Depop(); end
     end
@@ -790,7 +790,7 @@ local function Initialize()
         elseif Alive(TALLON_TYPE) or Alive(VALLON_TYPE) then phase=1; end
         if phase>0 then attempt=attempt+1; Log("WARN","Adopting an existing encounter without saved kill history; missing brothers will cause recovery."); end
     end
-    for npc in eq.get_entity_list():GetNPCList().entries do
+    local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
         if npc.valid and npc:GetSpawnPointID()==0 and npc:GetX()>0 and npc:GetZ()>150 and
             (npc:GetNPCTypeID()==FLAYER_TYPE or npc:GetNPCTypeID()==SHADOW_TYPE or npc:GetNPCTypeID()==VALLON_SPAWN_TYPE) then
             Track(npc);

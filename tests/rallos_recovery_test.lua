@@ -4,6 +4,17 @@ local path=arg[1] or 'potactics/encounters/Rallos.lua'
 local file=assert(io.open(path)); local source=file:read('*a');file:close()
 local B,G,T,V,R,W,U=214056,214057,214313,214320,214311,214312,214052
 local BI,GI,UI=361190,361200,361379
+-- Model luabind's non-owning iterator: collection of a temporary list
+-- invalidates iteration even when the iterator function itself survives.
+local function guardedList(list)
+ local weak=setmetatable({list},{__mode="v"});local nextEntry=list.entries
+ list.entries=function(...)
+  collectgarbage("collect")
+  assert(weak[1],"entity-list owner was collected during iteration")
+  return nextEntry(...)
+ end
+ return list
+end
 local function world(guild)
  local w={now=100000,guild=guild or 66,entities={},spawns={},timers={},buckets={},logs={},saved={},fail={},nextid=100,signals={},clientMessages={}}
  local NPC={}
@@ -109,13 +120,13 @@ local function world(guild)
  function el:GetMobID(id)return w.entities[id] or {valid=false} end
  function el:GetNPCList()
   local list={};for _,n in pairs(w.entities)do list[#list+1]=n end
-  local i=0;return {entries=function()i=i+1;return list[i]end}
+  local i=0;return guardedList({entries=function()i=i+1;return list[i]end})
  end
  function el:GetClientList()
   local list={};for _,isGM in ipairs({true,false})do
    local gm=isGM;list[#list+1]={valid=true,GetGM=function()return gm end,Message=function(_,color,msg)w.clientMessages[#w.clientMessages+1]={gm=gm,color=color,text=msg}end}
   end
-  local i=0;return {entries=function()i=i+1;return list[i]end}
+  local i=0;return guardedList({entries=function()i=i+1;return list[i]end})
  end
  function el:MessageClose()end
  function w:load(deferInitialization)
