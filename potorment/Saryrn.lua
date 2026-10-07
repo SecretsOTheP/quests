@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local PLANAR_PROJECTION_TYPE = 207317;
 local SORROWSONG_TYPEID = 207052;
 local SORROWSONG_SPAWNID = 346761;
@@ -113,6 +115,5 @@ end
 
 function event_death_complete(e)
 	Despawn();
-	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
-	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
 end

@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local PLANAR_PROJECTION_TYPE = 208207;
 local MINION_TYPE = 208175; -- A_Mindless_Minion
 local RAHLGON_TYPE = 208176; -- Rahlgon 
@@ -35,8 +37,7 @@ function RespawnAdds()
 end
 
 function event_death_complete(e)
-	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, 360, 2528, 39, 0);
-	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE, 0, 0, 360, 2528, 39, 0,e.killer);
 end
 
 function event_spawn(e)

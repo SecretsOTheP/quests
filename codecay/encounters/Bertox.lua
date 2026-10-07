@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local BERTOX_TYPE = 200226; -- #Bertoxxulous
 
 local DARWOL_TYPE = 200234; -- Darwol_Adan
@@ -185,8 +187,7 @@ function BertoxDeathComplete(e)
 	eq.signal(CONTROLLER_TYPE, 2);
 	eq.update_spawn_timer(SPECTRE_SPAWNID, SUCCESS_RESPAWN_TIME);
 	eq.zone_emote(0, "A nimbus of light floods throughs the crypt in one magnificent wave as an earth shattering howl is heard.  The Bringer of Plagues, Lord of All Disease and Decay, Bertoxxulous has been defeated. Suddenly an urgent whisper fills your head simply saying, 'The Torch of Lxanvom shall burn bright again.  Freedom is now ours, for that we thank you.'");
-	eq.spawn2(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
-	eq.signal(PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
 end
 
 function event_encounter_load(e)

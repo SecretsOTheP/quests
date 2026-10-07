@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 function event_combat(e)
 	if ( e.joined ) then
 		eq.set_timer("anti_cheat", 30000);
@@ -25,6 +27,5 @@ function event_timer(e)
 end
 
 function event_death_complete(e)
-	eq.spawn2(212420, 0, 0, 0, -815, 244, 128);
-	eq.signal(212420, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(212420, 0, 0, 0, -815, 244, 128,e.killer);
 end
