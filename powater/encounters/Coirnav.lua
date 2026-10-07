@@ -183,6 +183,7 @@ local function Expired()
     return false;
 end
 local function EnsureInitialized()if not initialized then Initialize();end end
+local function ArmSupervisor()eq.set_timer("watchdog",WATCHDOG_MS,encounter);end
 local function SpawnRecord(typ,kind,loc,grid,hp)
     local slot=#records+1;local r={typ=typ,kind=kind,entity=0,status=0};records[slot]=r;Save();creatingSlot=slot;
     local n=eq.spawn2(typ,grid or 0,0,loc[1],loc[2],loc[3],loc[4]or 0);creatingSlot=nil;
@@ -253,6 +254,7 @@ local function BossDeath(e)
     if Live(n)and e.killer and e.killer.valid then eq.signal(PROJECTION_TYPE,e.killer:GetID());else Log("ERROR","Victory saved, but projection spawn or kill-rights recipient was missing.");end
 end
 local function BossSpawn(e)
+    ArmSupervisor();
     EnsureInitialized();if e.self:GetSpawnPointID()~=COIRNAV_SPAWNID then return;end
     if eq.get_zone_guild_id()==1 then Ready(e.self,false);Log("QUAKE","Native Guild 1 Coirnav repop superseded old state.");
     elseif Active()then if not OwnedBoss(e.self,false)then Fail("Coirnav unexpectedly respawned during an active attempt.");end
@@ -265,7 +267,7 @@ local function GuardianDeath(e)
     if phase~=0 then Notice("guardian-death","WARN","Ignored Guardian death during an active attempt/cooldown.");return;end
     local n=Boss();if not n then Notice("boss-missing","ERROR","Guardian killed while Coirnav was missing; preserving native boss cooldown.");return;end
     Cleanup(false);attempt=attempt+1;phase=1;started=Now();deadline=started+EVENT_SECONDS;waves=0;kills=0;nextWarning=1;nextLing=0;cooldownUntil=0;cleanupAt=0;notices={};ownState=true;
-    TagBoss(n);ConfigureBoss(n);Save();SpawnWave(1);
+    TagBoss(n);ConfigureBoss(n);Save();SpawnWave(1);ArmSupervisor();
 end
 Initialize=function()
     if initialized then return;end
@@ -321,7 +323,7 @@ local function Safe(callback)
         Log("ERROR","Lua callback failed: "..tostring(err));local recovered,why=pcall(function()
             if Active()then Fail("Lua callback error.");elseif phase==4 or phase==5 then if Now()>=cleanupAt then Cleanup(true);Save();ApplyCooldown();end end
         end);if not recovered then Log("ERROR","Recovery also failed: "..tostring(why));end
-        eq.set_timer("watchdog",WATCHDOG_MS,encounter);
+        ArmSupervisor();
     end end;
 end
 function event_timer(e)if e.timer=="initialize"then eq.stop_timer(e.timer);Initialize();elseif e.timer=="watchdog"then Watchdog();end end
@@ -331,6 +333,6 @@ function event_encounter_load(e)
     reg(Event.death_complete,GUARDIAN_TYPE,GuardianDeath);
     for t in pairs(ACTORS)do reg(Event.spawn,t,ActorSpawn);if not LINGS[t]then reg(Event.death_complete,t,ActorDeath);end end
     reg(Event.signal,MONSTROUS_TYPE,Legacy);
-    eq.set_timer("initialize",1000,encounter);eq.set_timer("watchdog",WATCHDOG_MS,encounter);
+    eq.set_timer("initialize",1000,encounter);ArmSupervisor();
 end
 local timer=event_timer;event_timer=Safe(timer);

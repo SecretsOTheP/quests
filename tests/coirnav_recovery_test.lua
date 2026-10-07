@@ -235,4 +235,15 @@ check(s.points[365647].deadline==nativeDeadline and s.updates[365647]==nil,"unkn
 s=world();s:start();s:killFiends();s:advance(10);for _,n in ipairs(s:actors())do n:Depop();end;s:boss():Depop();s:load();s:advance(14);
 check(s:phase()==4,"zone restart cannot adopt unverified progress or remove original deadline");
 
+-- Zone::Repop clears every quest timer after encounter load. Starting a new
+-- attempt must re-arm supervision without requiring another quest reload.
+s=world();s:load();s:advance(1);s.timers={};s:kill(s.points[GUARDIAN].npc);s:advance(180);
+check(s:state()[5]=="2","Guardian death re-arms supervisor after forced repop clears timers");
+s:advance(120);check(s:state()[5]=="3","third wave still spawns at five minutes after cleared load timers");
+s:advance(300);check(#s:warnings()==1,"ten-minute warning survives forced-repop timer clearing");
+s:advance(120);check(#s:warnings()==2,"twelve-minute warning survives forced-repop timer clearing");
+s:advance(120);check(#s:warnings()==3,"fourteen-minute warning survives forced-repop timer clearing");
+s:advance(60);check(s:phase()==4,"fifteen-minute failure survives forced-repop timer clearing");
+s:advance(2);check(#s:actors()==0 and not s:boss(),"independent cleanup follows expiry after forced repop");
+
 print(checks.." Coirnav recovery, scheduling, ownership and RP checks passed.");
