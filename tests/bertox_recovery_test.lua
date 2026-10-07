@@ -1,6 +1,7 @@
--- From the repository root: lua5.1 tests/bertox_recovery_test.lua
+local InstallProjectionFixture = assert(loadfile((arg[1] or ".") .. "/tests/flagger_test_fixture.lua"))();
+-- Lua 5.1: lua tests/bertox_recovery_test.lua /path/to/Quests
 -- Isolated mocks only; no database or game server access.
-local path=arg[1] or 'codecay/encounters/Bertox.lua'
+local path=(arg[1]or'.')..'/codecay/encounters/Bertox.lua'
 local file=assert(io.open(path));local source=file:read('*a');file:close()
 local S,C,U,B,P=200016,200195,200260,200226,200269
 local SI=360643
@@ -95,7 +96,7 @@ local function world(guild)
    update_spawn_timer=function(id,ms)self.saved[id]={at=self.now,ms=ms}end,
    signal=function(t,s)self.signals[#self.signals+1]={t=t,value=s}end,
    register_npc_event=function(_,kind,t,callback)self.handlers[t]=self.handlers[t]or{};self.handlers[t][kind]=callback end}
-  local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();env.event_encounter_load({encounter=self.encounter});self:eventtimer('initialize')
+  InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();env.event_encounter_load({encounter=self.encounter});self:eventtimer('initialize')
  end
  function w:prepare()self:load();self:kill(S);assert(self:phase()==1 and self:count(U)==5);self.start=self.now;self:errors()end
  function w:begin()self:prepare();self.now=self.now+350;self:eventtimer('prepare');assert(self:phase()==2);self:errors()end
@@ -171,7 +172,7 @@ test('warning occurs once and the absolute 123-minute deadline wins over a late 
  w.now=w.start+7380;w:kill(B);reset(w);assert(not w:mob(P))
 end)
 test('success awards the projection and preserves the 66-hour cooldown on reload',function()
- local w=world();w:begin();w:kings();w:kill(B);assert(w:phase()==6 and w.saved[SI].ms==237600000 and w:mob(P));assert(w.signals[#w.signals].t==P and w.signals[#w.signals].value==9000)
+ local w=world();w:begin();w:kings();w:kill(B);assert(w:phase()==6 and w.saved[SI].ms==237600000 and w:mob(P));assert(w:mob(P):GetEntityVariable("flagger_v1_ready")=="1" and w:mob(P):GetEntityVariable("flagger_v1_characters")=="|9000|")
  w.now=w.now+120;w:load();assert(w:phase()==6 and w.saved[SI].ms==237480000);w:errors()
 end)
 test('projection failure cannot turn success into a short retry',function()
@@ -198,7 +199,7 @@ end)
 test('RP stays red and technical diagnostics remain GM-only and in server logs',function()
  local w=world();w:begin();w:kings();w:kill(B);assert(#w.messages>0 and #w.logs>0 and #w.emotes>0)
  for _,e in ipairs(w.emotes)do assert(e.color==13 and not e.text:find('[Bertox ',1,true))end
- for _,m in ipairs(w.messages)do assert(m.gm and m.color==15 and m.text:find('[Bertox ',1,true))end;w:errors()
+ for _,m in ipairs(w.messages)do assert(m.gm and m.color==15 and (m.text:find('[Bertox ',1,true)or m.text:find('[Flagger ',1,true)))end;w:errors()
 end)
 test('untracked old active encounters recover with all Adans removed',function()
  local w=world();w:newnpc(first[1]);w:newnpc(U);w:load();reset(w)

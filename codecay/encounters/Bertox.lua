@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local BERTOX_TYPE = 200226; -- #Bertoxxulous
 
 local DARWOL_TYPE = 200234; -- Darwol_Adan
@@ -357,9 +359,7 @@ function BertoxDeathComplete(e)
     phase=6;cooldownUntil=Now()+SUCCESS_RESPAWN_TIME/1000;cooldownReleased=false;
     preparationUntil=0;expiresUntil=0;CancelActions();Save();Cleanup();ApplyCooldown();Save();
     RP(RP_TEXT.victory);Log("SUCCESS",string.format("Bertoxxulous confirmed killed; Spectre cooldown %.1f hours.",SUCCESS_RESPAWN_TIME/3600000));
-    local projection=eq.spawn2(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
-    if Live(projection) and e.killer and e.killer.valid then eq.signal(PROJECTION_TYPE,e.killer:GetID());
-    else Log("ERROR","Victory recorded, but projection spawn or kill-rights recipient is missing.");end
+    ProjectionEligibility.Spawn(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0,e.killer);
 end
 function BossCombat(e)
     if not Active() or not Tagged(e.self) or (not e.joined and e.self:GetHP()<=0) then return;end
