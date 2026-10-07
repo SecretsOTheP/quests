@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local CONTROLLER_TYPE = 214104; -- General_Invisible_Man
 local UNTARGETABLE_TYPE = 214052; -- #Rallos_Zek_
 local RALLOS_ZEK_TYPE = 214311; -- Rallos_Zek
@@ -628,10 +630,7 @@ function WarlordDeathEvent(e)
     cooldownReleased=false; arenaUntil=Now()+1800; SaveState();
     CleanupRoomAdds(); CleanupPitAdds(); CleanupElites();
     ApplyGuardCooldown();
-    local projection=eq.spawn2(PLANAR_PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
-    if projection and projection.valid and e.killer and e.killer.valid then
-        eq.signal(PLANAR_PROJECTION_TYPE,e.killer:GetID());
-    else Log("ERROR","Warlord kill recorded, but projection spawn or kill-rights recipient is missing."); end
+    ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0,e.killer);
     RP("Rallos Zek, the Warlord, has fallen! The halls of Drunder echo with cries of rage as the very foundations of the Plane of Tactics tremble and quake as his colossal form crashes to the ground before the might of the Norrathians!");
     Log("SUCCESS","Warlord confirmed killed; guards on 66-hour cooldown, arena restoration in 30 minutes.");
 end

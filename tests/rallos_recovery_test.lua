@@ -1,6 +1,7 @@
--- From the repository root: lua5.1 tests/rallos_recovery_test.lua
+local InstallProjectionFixture = assert(loadfile((arg[1] or ".") .. "/tests/flagger_test_fixture.lua"))();
+-- Lua 5.1: lua tests/rallos_recovery_test.lua /path/to/Quests
 -- Isolated mocks only; no database or game server access.
-local path=arg[1] or 'potactics/encounters/Rallos.lua'
+local path=(arg[1]or'.')..'/potactics/encounters/Rallos.lua'
 local file=assert(io.open(path)); local source=file:read('*a');file:close()
 local B,G,T,V,R,W,U=214056,214057,214313,214320,214311,214312,214052
 local BI,GI,UI=361190,361200,361379
@@ -152,7 +153,7 @@ local function world(guild)
    signal=function(t,s)self.signals[#self.signals+1]={t,s}end,
    register_npc_event=function(_,kind,t,cb)self.handlers[t]=self.handlers[t] or {};self.handlers[t][kind]=cb end
   }
-  local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();env.event_encounter_load({encounter=self.encounter})
+  InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();env.event_encounter_load({encounter=self.encounter})
   if not deferInitialization then self:eventtimer('initialize');self:flush();self:errors() end
  end
  function w:start()
