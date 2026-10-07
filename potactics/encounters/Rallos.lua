@@ -52,6 +52,7 @@ local BROTHER_HOMES = { [TALLON_TYPE]={319,-85,181.6,128}, [VALLON_TYPE]={319,11
 local COUNCIL_MIN_Y, COUNCIL_MAX_Y = -306, 321;
 local WATCHDOG_MS, MISSING_GRACE = 5000, 10;
 local initialized=false;
+local Initialize;
 local stateKey = "rallos-recovery-v3-" .. tostring(eq.get_zone_guild_id());
 
 -- Zone::Repop clears all quest timers without unloading the encounter.
@@ -336,8 +337,35 @@ function UntargetableSpawnEvent(e)
     end
 end
 
+-- A native Guild 1 guard has already been admitted by the server's repop
+-- path. A prior attempt must not veto that new round with its saved cooldown.
+local function AdmitGuildOneGuard(npc)
+    if eq.get_zone_guild_id()~=1 or phase==0 or not npc or not npc.valid or
+        npc:GetID()==0 or npc:IsCorpse() or npc:GetHP()<=0 then return false; end
+    local t,id=npc:GetNPCTypeID(),npc:GetSpawnPointID();
+    if not ((t==BERIK_TYPE and id==BERIK_SPAWNID) or
+        (t==GRUNHORK_TYPE and id==GRUNHORK_SPAWNID)) then return false; end
+    phase=0; cooldownUntil=0; cooldownReleased=false; arenaUntil=0;
+    CancelActions(); guardDeaths={}; deaths={}; arrived={}; expected={}; idle={};
+    missingSince={}; copiesSpawned=false;
+    for _,typ in ipairs({TALLON_TYPE,VALLON_TYPE,RALLOS_ZEK_TYPE,WARLORD_TYPE}) do
+        local mob=Alive(typ); if mob then eq.stop_all_timers(mob); mob:Depop(); end
+    end
+    CleanupRoomAdds(); CleanupPitAdds(); CleanupElites(); RespawnArena();
+    if arenaEmpty then arenaUntil=Now(); end -- retry missing arena points
+    EnsureUntargetable();
+    for _,spawnID in ipairs({BERIK_SPAWNID,GRUNHORK_SPAWNID}) do
+        local spawn=eq.get_entity_list():GetSpawnByID(spawnID);
+        if spawn and spawn.valid then spawn:Enable(); end
+    end
+    SaveState();
+    Log("QUAKE","Native Guild 1 guard admitted a fresh round; old progress and cooldown cleared without forcing respawn timers.");
+    return true;
+end
+
 function DoorGuardDeathEvent(e)
     RestoreSupervision();
+    if not initialized then Initialize(); end
     if phase~=0 then Log("WARN","Guard death ignored while encounter is not ready."); return; end
     local t=e.self:GetNPCTypeID(); guardDeaths[t]=true;
     if e.killer and e.killer.valid then killerName=e.killer:GetName(); end
@@ -348,6 +376,8 @@ end
 
 function DoorGuardSpawnEvent(e)
     RestoreSupervision();
+    if not initialized then Initialize(); end
+    AdmitGuildOneGuard(e.self);
     local t=e.self:GetNPCTypeID();
     if phase==0 and guardDeaths[t] then
         guardDeaths[t]=nil; SaveState();
@@ -781,7 +811,8 @@ function BossRecoverySignalEvent(e)
         else eq.set_next_hp_event(hp>98 and 98 or (hp>75 and 75 or 50)); end
     elseif t==VALLON_TYPE and phase==1 and not copiesSpawned and e.self:GetHPRatio()>50 then eq.set_next_hp_event(50); end
 end
-local function Initialize()
+Initialize=function()
+    if initialized then return; end
     local saved=LoadState();
     if not saved then
         if Alive(WARLORD_TYPE) then phase=3;
@@ -796,6 +827,8 @@ local function Initialize()
             if npc:GetNPCTypeID()==VALLON_SPAWN_TYPE then npc:SetEntityVariable("rallos_copy","1"); end
         end
     end
+    -- Inspect native guards before restoring an old active phase or cooldown.
+    AdmitGuildOneGuard(Alive(BERIK_TYPE)); AdmitGuildOneGuard(Alive(GRUNHORK_TYPE));
     if phase>=1 and phase<=3 then
         if phase==2 or phase==3 then HideUntargetable(); end
         local types=phase==1 and {TALLON_TYPE,VALLON_TYPE} or {phase==2 and RALLOS_ZEK_TYPE or WARLORD_TYPE};
@@ -821,6 +854,7 @@ local function Initialize()
 end
 local function Watchdog()
     if not initialized then return; end
+    AdmitGuildOneGuard(Alive(BERIK_TYPE)); AdmitGuildOneGuard(Alive(GRUNHORK_TYPE));
     if arenaUntil>0 and Now()>=arenaUntil then
         RespawnArena();
         if not arenaEmpty then

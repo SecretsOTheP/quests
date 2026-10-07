@@ -395,6 +395,61 @@ test('dying pit Warlord is not healed by the final disengage callback and still 
  assert(n.hp==0 and not n.directSpell and not n.fadeAllCalled)
  w:kill(W);assert(w.saved[BI].ms==237600000);w:errors()
 end)
+
+local function assertFreshGuildOne(w)
+ local state=w.buckets['rallos-recovery-v3-1'];local f={};for x in (state..'|'):gmatch('(.-)|')do f[#f+1]=x end
+ assert(f[1]=='0' and f[3]=='0' and f[4]=='0' and f[7]=='0' and f[9]=='0' and f[10]=='0','stale phase/deaths/cooldown survived native reset')
+ assert(not w:mob(T) and not w:mob(V) and not w:mob(R) and not w:mob(W),'old bosses survived native reset')
+ assert(w.spawns[BI].enabled and w.spawns[GI].enabled);w:errors()
+end
+test('Guild 1 quake guards supersede the old success cooldown and restore the arena',function()
+ local w=world(1);w:start();w:pit();w:kill(W);w.now=w.now+60;local saved=w.saved[BI]
+ w:newnpc(B,320,301,168,0,BI);w:newnpc(G,320,-286,168,0,GI);w:eventtimer('watchdog')
+ assert(w:mob(B) and w:mob(G));assertFreshGuildOne(w)
+ assert(w.spawns[361141].enabled and w:mob(U),'arena/placeholder not restored')
+ assert(w.saved[BI]==saved,'native reset wrote a new guard countdown')
+ w:kill(B);w:kill(G);w:eventtimer('doors');assert(w:mob(T) and w:mob(V));w:errors()
+end)
+test('Guild 1 quake guards supersede retry without forcing new native timers',function()
+ local w=world(1);w:start();w.env.FailEncounter('test failure');local saved=w.saved[GI]
+ w.now=w.now+10;w:newnpc(G,320,-286,168,0,GI);w:eventtimer('watchdog');assert(w:mob(G));assertFreshGuildOne(w)
+ assert(w.saved[GI]==saved,'retry reset rewrote native countdown')
+end)
+test('Guild 1 native reset during the pit removes old bosses and event adds',function()
+ local w=world(1);w:start();w:pit();w:combat(W,true);w.env.SpawnPitWave();assert(w:count(214287)>0)
+ w:newnpc(B,320,301,168,0,BI);w:newnpc(G,320,-286,168,0,GI);w:eventtimer('wraiths')
+ assertFreshGuildOne(w);assert(w:count(214287)==0 and w:count(214288)==0 and w.spawns[361141].enabled)
+end)
+test('Guild 1 initialization admits already returned guards before restoring success or retry',function()
+ for _,success in ipairs({true,false})do
+  local w=world(1);w:start();if success then w:pit();w:kill(W)else w.env.FailEncounter('test failure')end
+  w.handlers=nil;w:newnpc(B,320,301,168,0,BI);w:newnpc(G,320,-286,168,0,GI);local saved=w.saved[BI]
+  w:load();w:eventtimer('watchdog');assert(w:mob(B) and w:mob(G));assertFreshGuildOne(w);assert(w.saved[BI]==saved)
+ end
+end)
+test('Guild 1 reload restores active-round arena state before admitting native guards',function()
+ local w=world(1);w:start();w:pit();w.handlers=nil;w:newnpc(B,320,301,168,0,BI);w:newnpc(G,320,-286,168,0,GI)
+ w:load();assertFreshGuildOne(w);assert(w.spawns[361141].enabled and w:mob(U))
+end)
+test('Guild 1 watchdog admits returned guards even when their spawn callbacks were missed',function()
+ local w=world(1);w:start();w:pit();w:kill(W);local handlers=w.handlers;w.handlers=nil
+ w:newnpc(B,320,301,168,0,BI);w:newnpc(G,320,-286,168,0,GI);w.handlers=handlers;w:eventtimer('watchdog')
+ assertFreshGuildOne(w);assert(w:mob(B) and w:mob(G))
+end)
+test('ordinary guild early guards retain the existing success and retry cooldowns',function()
+ for _,success in ipairs({true,false})do
+  local w=world(66);w:start();if success then w:pit();w:kill(W)else w.env.FailEncounter('test failure')end
+  local state=w.buckets['rallos-recovery-v3-66'];w.now=w.now+10
+  w:newnpc(B,320,301,168,0,BI);w:newnpc(G,320,-286,168,0,GI);w:load();w:eventtimer('watchdog')
+  assert(not w:mob(B) and not w:mob(G),'ordinary early guard survived');local before,after={},{};for x in (state..'|'):gmatch('(.-)|')do before[#before+1]=x end;for x in (w.buckets['rallos-recovery-v3-66']..'|'):gmatch('(.-)|')do after[#after+1]=x end;assert(before[1]==after[1] and before[7]==after[7] and before[8]==after[8],'ordinary phase/cooldown changed');w:errors()
+ end
+end)
+test('Guild 1 summoned guards outside the native spawnpoints cannot clear success',function()
+ local w=world(1);w:start();w:pit();w:kill(W);local state=w.buckets['rallos-recovery-v3-1']
+ w:newnpc(B,320,301,168,0);w:newnpc(G,320,-286,168,0);w:eventtimer('watchdog')
+ assert(w.buckets['rallos-recovery-v3-1']==state);w:errors()
+end)
+
 local failures=0
 for _,t in ipairs(tests)do local ok,err=pcall(t[2]);print((ok and 'PASS ' or 'FAIL ')..t[1]..(ok and '' or ': '..tostring(err)));if not ok then failures=failures+1 end end
 assert(failures==0,tostring(failures)..' failed tests')
