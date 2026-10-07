@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 -- Shared Rathe Council / Avatar progression. Native Council combat mechanics
 -- remain in A_Rathe_Councilman.lua; this encounter owns deaths and recovery.
 local MEZABLE, UNMEZABLE, AVATAR, PROJECTION = 222003,222039,222040,222041;
@@ -231,10 +233,8 @@ local function AvatarDeath(e)
     phase=4;cooldownUntil=Now()+SUCCESS;paused=false;Save(true);Cleanup();ApplyCooldown();
     RP("The Avatar of Earth's colossal form fractures and crashes to the ground, shaking Ragrax to its foundations. The voices of the Rathe Council fall silent. Their united power has been overcome, and the Essence of Earth rises from the shattered stone.");
     Log("SUCCESS","Avatar confirmed killed; Council successful reuse and Avatar loot lockout remain 138 hours.");
-    local ok,projection=pcall(eq.spawn2,PROJECTION,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
-    if not ok or not Live(projection)then Log("ERROR","Essence of Earth failed to spawn; recorded success/cooldown retained.");return;end
-    if e.killer and e.killer.valid and e.killer:GetID()~=0 then local signaled,err=pcall(eq.signal,PROJECTION,e.killer:GetID());if not signaled then Log("ERROR","Essence kill-rights signal failed: "..tostring(err));end
-    else Log("ERROR","Avatar death had no valid kill-rights recipient; Essence spawned but cannot be signaled.");end
+    local ok,projection=pcall(ProjectionEligibility.Spawn,PROJECTION,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0,e.killer);
+    if not ok or not Live(projection)then Log("ERROR","Essence of Earth initialization failed; recorded success/cooldown retained.");end
 end
 Initialize=function()
     if initialized then return;end;initialized=true;

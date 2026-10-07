@@ -1,3 +1,4 @@
+local InstallProjectionFixture = assert(loadfile((arg[1] or ".") .. "/tests/flagger_test_fixture.lua"))();
 -- Lua 5.1: lua tests/rathe_recovery_test.lua /path/to/Quests
 local root=arg[1]or".";
 local function read(path)local f=assert(io.open(root.."/"..path));local s=f:read("*a");f:close();return s;end
@@ -91,7 +92,7 @@ local function world(options)
         loadMechanics();self.handlers={};for k,t in pairs(self.timers)do if t.owner.encounter then self.timers[k]=nil;end end
         self.encounter={uid="enc"..tostring(self.uid),encounter=true};self.uid=self.uid+1;
         env=setmetatable({eq=eqmock,os={time=function()return math.floor(s.now);end},Event={spawn="spawn",combat="combat",death_complete="death",signal="signal"}},{__index=_G});
-        local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;self.owner=self.encounter;env.event_encounter_load({encounter=self.encounter});self.owner=nil;
+        InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;self.owner=self.encounter;env.event_encounter_load({encounter=self.encounter});self.owner=nil;
     end
     function s:state()
         local raw=self.saved["rathe-recovery-v1-"..self.guild]or"0|0|2100|0|0|0|0|1|0|";local fields={};for part in(raw.."|"):gmatch("(.-)|")do fields[#fields+1]=part;end;return fields;
@@ -142,7 +143,7 @@ for _,id in ipairs(POINTS)do check(not s.points[id].enabled,"Council held while 
 local a=s:avatar();s:engage(a,true);s:jump(10000);check(s:phase()==2 and tonumber(s:state()[3])==2100,"Avatar combat alone pauses shared idle budget");
 s:engage(a,false);s:jump(120);check(tonumber(s:state()[3])==1980,"clock resumes on disengagement");
 s:kill(a);check(s:phase()==4 and tonumber(s:state()[6])-s.now==496800,"confirmed Avatar death preserves138-hour success");
-check(s.projection==1 and s.signal[1]==222041 and s.signal[2]==9001,"Essence and original kill-rights signal preserved");
+local essence;for _,n in pairs(s.npcs)do if n.typ==222041 then essence=n;end;end;check(s.projection==1 and essence:GetEntityVariable("flagger_v1_ready")=="1" and essence:GetEntityVariable("flagger_v1_characters")=="|9001|","Essence binds directly to kill rights");
 local deadline=s:state()[6];s:load();s:advance(1);check(s:phase()==4 and s:state()[6]==deadline,"success deadline survives reload");
 s:dispatch("death",a,{killer=s.clients[1]});check(s.projection==1,"duplicate Avatar death cannot duplicate rewards");
 for _,entry in ipairs(s.rp)do check(entry.color==13,"player RP is red");end
@@ -167,7 +168,7 @@ s=world();s:start();s:killCouncil();s:jump(15*60);check(s:state()[8]=="2","first
 s=world();s:start();s:killCouncil();s:jump(100);local before=s:state()[3];s:load();s:advance(1);check(s:phase()==2 and tonumber(s:state()[3])<=tonumber(before),"Avatar reload does not reset idle budget");
 s=world();s:start();s.failAvatar=true;s:killCouncil();check(s:phase()==3,"Avatar spawn failure rolls back to recovery");
 s=world();s:start();s:killCouncil();s.throwProjection=true;s:kill(s:avatar());check(s:phase()==4,"projection exception cannot downgrade a confirmed victory");
-s=world();s:start();s:killCouncil();s.throwSignal=true;s:kill(s:avatar());check(s:phase()==4 and s.projection==1,"projection signal error retains success");
+s=world();s:start();s:killCouncil();s.throwSignal=true;s:kill(s:avatar());check(s:phase()==4 and s.projection==1,"legacy signal failure cannot affect direct eligibility handoff");
 s=world();s:start();s:killCouncil();s:kill(s:avatar());deadline=s:state()[6];local f=s:state();f[10]="damaged";s.saved["rathe-recovery-v1-"..s.guild]=table.concat(f,"|");s:load();s:advance(1);check(s:phase()==4 and s:state()[6]==deadline,"damaged terminal records retain full successful cooldown");
 s=world();s:start();s:killCouncil();s:kill(s:avatar());deadline=s:state()[6];f=s:state();f[3]="999999";s.saved["rathe-recovery-v1-"..s.guild]=table.concat(f,"|");s:load();s:advance(1);check(s:phase()==4 and s:state()[6]==deadline,"damaged clock metadata cannot shorten a valid success header");
 
