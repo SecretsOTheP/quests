@@ -22,6 +22,7 @@ function event_timer(e)
 end
 
 function event_say(e)
+    if ProjectionEligibility.ShowStatus(e, FLAG_LIMIT) then return; end
     flags = ProjectionEligibility.Count(e.self);
 	
 	if ( ProjectionEligibility.CanFlag(e.self, e.other) ) then

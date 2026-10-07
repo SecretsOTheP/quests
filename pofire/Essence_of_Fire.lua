@@ -29,6 +29,7 @@ function event_timer(e)
 end
 
 function event_say(e)
+    if ProjectionEligibility.ShowStatus(e, FLAG_LIMIT) then return; end
     flags = ProjectionEligibility.Count(e.self);
     if flags >= FLAG_LIMIT then eq.depop(); return; end
 

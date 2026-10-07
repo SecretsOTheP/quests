@@ -97,6 +97,24 @@ function M.OnSignal(e)
     Bind(e.self, Capture(eq.get_entity_list():GetMob(e.signal)));
 end
 function M.Count(npc) return Number(npc, "count"); end
+function M.ShowStatus(e, limit)
+    if not e.message:findi("flagstatus") then return false; end
+    -- Staff can inspect without enabling GM mode during a player-style test.
+    if not e.other:GetGM() and e.other:Admin() < 200 then return false; end
+    if Get(e.self, "count") == "" then
+        e.other:Message(15, "[Flagger] No saved helper state on this NPC. Use a fresh projection after loading the helper.");
+        return true;
+    end
+    local count = M.Count(e.self);
+    local paused = Get(e.self, "paused") == "1";
+    local seconds = paused and Number(e.self, "remaining")
+        or math.max(0, Number(e.self, "expires") - os.time());
+    e.other:Message(15, string.format(
+        "[Flagger %d] Bound: %s. Claims used: %d/%d; remaining: %d. Lifetime remaining: %d seconds%s.",
+        e.self:GetNPCTypeID(), Get(e.self, "ready") == "1" and "yes" or "no",
+        count, limit, math.max(0, limit - count), seconds, paused and " (paused)" or ""));
+    return true;
+end
 function M.SaveCount(npc, count) Set(npc, "count", count); end
 function M.OnCombat(npc, joined)
     if joined and Get(npc, "paused") ~= "1" then

@@ -27,6 +27,7 @@ function event_combat(e)
 end
 
 function event_say(e)
+    if ProjectionEligibility.ShowStatus(e, MAX_KEYS) then return; end
     keys = ProjectionEligibility.Count(e.self);
 	local qglobals = eq.get_qglobals(e.other);
 

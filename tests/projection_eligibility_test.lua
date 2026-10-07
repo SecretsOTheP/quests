@@ -19,6 +19,7 @@ local function world()
   function c:GetRaid()return affiliation(self.raid);end
   function c:GetGroup()return affiliation(self.group);end
   function c:GetGM()return self.gm or false;end
+  function c:Admin()return self.admin or 0;end
   function c:GetName()return"Character"..self.character;end
   function c:Message(color,text)w.messages[#w.messages+1]={gm=self:GetGM(),color=color,text=text};end
   function c:HasItem(id)return self.items[id]or false;end
@@ -183,4 +184,18 @@ for _,spec in ipairs(pending)do
  w:loadHelper();h=w:handler(spec[1],n);h.hail(killer);
  check(w.module.Count(n)==spec[3],spec[1].." pending-repeat hail after reload consumes no extra claims");
 end
+-- Explicit GM status requests are read-only and do not write server logs.
+w=world();killer=w:client(1,100);n=w.module.Spawn(220025,0,0,0,0,0,0,killer);
+w.module.SaveCount(n,4);local staff=w:client(2);staff.admin=255;
+local statusMessage={findi=function(_,needle)return needle=="flagstatus";end};
+local status={self=n,other=staff,message=statusMessage};local logs=#w.logs;
+check(w.module.ShowStatus(status,144),"staff can inspect while GM mode is off");
+check(w.messages[#w.messages].text:find("Claims used: 4/144; remaining: 140",1,true),"status reports actual grants rather than characters");
+check(w.module.Count(n)==4 and #w.logs==logs,"status consumes no claims and produces no server log");
+local player=w:client(3);status.other=player;local messages=#w.messages;
+check(not w.module.ShowStatus(status,144)and #w.messages==messages,"ordinary players cannot read technical status");
+status.other=staff;status.self=w:npc(220025);w.module.ShowStatus(status,144);
+check(w.messages[#w.messages].text:find("No saved helper state",1,true),"old flaggers do not misleadingly report a zero counter");
+status.self=n;local h=w:handler("hohonorb/A_Planar_Projection.lua",n);w.currentNPC=n;w.currentClient=staff;
+h.event_say(status);check(w.module.Count(n)==4,"actual Marr status handler leaves claims unchanged");
 print("PASS projection eligibility: "..checks.." checks across 16 actual reward scripts");
