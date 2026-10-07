@@ -219,14 +219,14 @@ Advance=function()
             local n=el:GetNPCByID(r.entity);if Live(n)and Tagged(n,r,slot,false)then n:Depop();end;r.status=2;
         end end
         phase=2;building=true;Save();
-        RP("Coirnav the Avatar of Water shouts, \"Fools! You have gotten this far, but you will not succeed. Pwelon, Nrinda and Vamuil—kill these intruders!\"");
+        RP("The currents wrench across the reef as Pwelon, Nrinda and Vamuil gather before Coirnav. The Triumvirate speaks as one through the Avatar of Water: \"We will permit no further advance, Norrathians. Pwelon, Nrinda, Vamuil - unite and drive these invaders from the depths!\"");
         for i,t in ipairs(MINIS)do if not SpawnRecord(t,3,MINI_LOCS[i],0,MINI_HP[i])then building=false;return;end end
         building=false;ConfigureBoss(Boss());Save();Log("PHASE","All 75 fiends confirmed killed; three stronger minibosses summoned and Coirnav made attackable.");
     elseif phase==2 then
         for _,r in ipairs(records)do if r.kind==3 and r.status~=1 then return;end end
         phase=3;Save();local n=Boss();if not n or not OwnedBoss(n,false)then Fail("Coirnav disappeared during final transition.");return;end
         n:SetBaseHP(250000);n:BuffFadeAll();n:WipeHateList();
-        RP("Coirnav the Avatar of Water shouts, \"Defenders of vapor, ice and water, I call thee to my aid! Destroy the defilers of water!\"");
+        RP("Water surges, ice fractures and vapor coils through the reef as Coirnav summons the remaining defenders of the depths. The Triumvirate's voices thunder as one: \"We shall not yield! Defenders of vapor, ice and water - rise! Let the depths claim these invaders!\"");
         LingWave();Log("PHASE","All three stronger minibosses confirmed killed; final phase active without extending the deadline.");
     end
 end
@@ -248,7 +248,7 @@ local function BossDeath(e)
     EnsureInitialized();if(phase~=2 and phase~=3)or not OwnedBoss(e.self,true)or Expired()then Notice("boss-death","WARN","Ignored unverified or premature Coirnav death.");return;end
     phase=5;cooldownUntil=Now()+SUCCESS_SECONDS;cleanupAt=0;records={};ownState=true;released=false;cooldownArmed=false;Save();
     Cleanup(false);ApplyCooldown();
-    RP("The monstrous creature spasms in its last death throes, sending shockwaves through the reef. Coirnav the Avatar of Water, empowered by the focus of the Triumvirate, has fallen at the hands of the brave adventurers deep within the reef.");
+    RP("Coirnav, the Avatar of Water, has fallen! His colossal form collapses, driving a thunderous shockwave through the reef. Ice shatters and currents roar as the voices of the Triumvirate fall silent. The Norrathians have overcome the united power of Povar, E`ci and Tarew Marr, and the Essence of Water rises from the depths!");
     Log("SUCCESS","Coirnav confirmed killed; successful reuse remains 138 hours.");
     local n=eq.spawn2(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
     if Live(n)and e.killer and e.killer.valid then eq.signal(PROJECTION_TYPE,e.killer:GetID());else Log("ERROR","Victory saved, but projection spawn or kill-rights recipient was missing.");end
