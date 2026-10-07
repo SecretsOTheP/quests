@@ -12,7 +12,6 @@ local THRESHOLDS = { 75, 50, 25, 11 };
 local MIN_HITS = { 623, 533, 444, 354, 185 };
 local MAX_HITS = { 2964, 2498, 2032, 1566, 850 };
 
-local killed = {};
 local state = {};
 
 function TeleportClient(c)
@@ -25,26 +24,11 @@ function TeleportClient(c)
 	c:MovePC(222, rollX, rollY, -255, math.random(0, 510));
 end
 
--- if this respawn is the only councilman up, repop all of them
+-- The shared encounter owns native spawn admission and recorded deaths.
 function event_spawn(e)
-	local elist = eq.get_entity_list();
-	
-	local mySpawnID = e.self:GetSpawnPointID();
-	killed[mySpawnID] = nil;
-	state[mySpawnID] = nil;
-
-	for _, id in ipairs(SPAWNIDS) do
-		if ( id ~= mySpawnID ) then
-			if ( elist:GetSpawnByID(id):GetNPC().valid ) then
-				return;
-			end
-		end
-	end
-	
-	for _, id in ipairs(SPAWNIDS) do
-		eq.update_spawn_timer(id, 1);
-	end
-	eq.debug("Full council repop");
+    state[e.self:GetSpawnPointID()] = nil;
+    e.self:SetEntityVariable("rathe_damage_stage", "1");
+    e.self:SetEntityVariable("rathe_mez_since", "");
 end
 
 function event_combat(e)
@@ -60,6 +44,7 @@ function event_combat(e)
 		eq.stop_timer("check_mez");
 		eq.stop_timer("check_unmez");
 		eq.stop_timer("ten_min");
+        e.self:SetEntityVariable("rathe_mez_since", "");
 	end
 end
 
@@ -68,13 +53,14 @@ function event_timer(e)
 	if ( e.timer == "checkhp" ) then
 	
 		local mySpawnID = e.self:GetSpawnPointID();
-		local myState = state[mySpawnID] or 1;
+		local myState = state[mySpawnID] or tonumber(e.self:GetEntityVariable("rathe_damage_stage")) or 1;
 		local ratio = e.self:GetHPRatio();
 		
 		if ( not e.self:IsEngaged() ) then
 			-- reset NPC combat stats if deaggroed and healed
 			if ( myState > 1 and ratio > THRESHOLDS[1] ) then
 				state[mySpawnID] = 1;
+                e.self:SetEntityVariable("rathe_damage_stage", "1");
 				e.self:ModifyNPCStat("min_hit", tostring(MIN_HITS[1]));
 				e.self:ModifyNPCStat("max_hit", tostring(MAX_HITS[1]));
 				e.self:ModifyNPCStat("accuracy", tostring(350));
@@ -109,6 +95,7 @@ function event_timer(e)
 		
 			myState = myState + 1;
 			state[mySpawnID] = myState;
+            e.self:SetEntityVariable("rathe_damage_stage", tostring(myState));
 			e.self:ModifyNPCStat("min_hit", tostring(MIN_HITS[myState]));
 			e.self:ModifyNPCStat("max_hit", tostring(MAX_HITS[myState]));
 			if ( myState == 5 ) then
@@ -119,7 +106,7 @@ function event_timer(e)
 					eq.debug( string.format("PoEarthB Rathe Councilman disempowered; Tank: %s <%s>", e.self:GetTarget():GetName(), e.self:GetTarget():CastToClient():GetGuildName()) );
 				end
 			end
-			eq.zone_emote(0, "The ground shudders beneath your feet as flecks of dirt and stone fall away from one of the Rathe.");
+			eq.zone_emote(13, "The ground shudders beneath your feet as flecks of dirt and stone fall away from one of the Rathe.");
 			
 		end
 	
@@ -160,7 +147,10 @@ function event_timer(e)
 	
 		if ( e.self:IsMezzed() ) then
 			eq.stop_timer(e.timer);
-			eq.set_timer("ten_min", 600000);
+			-- Keep the existing ten-minute mez interval across quest reloads.
+            local since = tonumber(e.self:GetEntityVariable("rathe_mez_since")) or os.time();
+            e.self:SetEntityVariable("rathe_mez_since", tostring(since));
+            eq.set_timer("ten_min", math.max(1, 600000 - math.max(0, os.time() - since) * 1000));
 			eq.set_timer("check_unmez", 1000);
 		end
 		
@@ -169,49 +159,10 @@ function event_timer(e)
 		if ( not e.self:IsMezzed() ) then
 			eq.stop_timer(e.timer);
 			eq.stop_timer("ten_min");
+            e.self:SetEntityVariable("rathe_mez_since", "");
 			eq.set_timer("check_mez", 1000);
 		end
 	end
 end
 
-function event_signal(e)
-	killed[e.signal] = 1;
-end
-
-function event_death_complete(e)
-
-	-- keeping track of kills in case something goes wrong and spawn timers get screwy
-	local mySpawnID = e.self:GetSpawnPointID();
-	killed[mySpawnID] = 1;
-	local myType = e.self:GetNPCTypeID();
-	
-	-- the killed table is not shared between the two types, so have to communicate
-	if ( myType == UNMEZABLE_TYPE ) then
-		eq.signal(MEZABLE_TYPE, mySpawnID);
-	else
-		eq.signal(UNMEZABLE_TYPE, mySpawnID);
-	end
-
-	for _, id in ipairs(SPAWNIDS) do
-		if ( not killed[id] ) then
-			return;
-		end
-	end
-
-	local elist = eq.get_entity_list();
-	if ( not elist:IsMobSpawnedByNpcTypeID(MEZABLE_TYPE) and not elist:IsMobSpawnedByNpcTypeID(UNMEZABLE_TYPE) ) then
-		-- Defense in depth: never allow the completed Council event to produce
-		-- its raid boss outside an instance.
-		if ( eq.get_zone_guild_id() == -1 ) then
-			return;
-		end
-	
-		eq.zone_emote(0, "The last of the council falls to the ground all signs of life gone.  Suddenly twelve voices are heard chanting a mystical spell saying, 'Time comes and time passes for the Stone is forever.  Now we call upon our collective power to defend our Stronghold!'  The chanting then stops and a deep throated primal scream is heard as the Power of Twelve comes together as One.  The Avatar of Earth has been summoned to defend Ragrax.");
-		eq.unique_spawn(222040, 0, 0, 2050, 410, -210, 0); -- #Avatar_of_Earth
-
-		local t = 496800; -- 5 days, 18 hours
-		for i, id in ipairs(SPAWNIDS) do
-			eq.update_spawn_timer(id, t*1000);
-		end
-	end
-end
+-- Death progression and legacy signal rejection are handled by RatheCouncil.
