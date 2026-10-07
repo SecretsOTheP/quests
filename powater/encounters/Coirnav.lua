@@ -174,7 +174,7 @@ Fail=function(reason,force)
     if not Active()and not force then return;end
     local n=Boss();phase=4;cooldownUntil=Now()+FAILURE_SECONDS;cleanupAt=Now()+2;ownState=true;released=false;cooldownArmed=false;records={};missing={};Save();
     local g=GuardianPoint();if g then g:Disable();end
-    RP("Three voices thunder as one through Coirnav. \"The Triumvirate has spoken! These waters reject you, Norrathians. Be banished from our domain!\" A crushing surge tears through the reef as his summoned defenders dissolve into water, ice and vapor.");
+    RP("Three voices thunder as one through Coirnav. \"The Triumvirate has spoken! These waters reject you. Be banished from our domain!\" A crushing surge tears through the reef as his summoned defenders dissolve into water, ice and vapor.");
     Log("FAIL",reason.." Cleanup follows the banishment after two seconds; retry remains ten minutes.");
     if Live(n)then n:CastSpell(1099,n:GetID());end
 end
@@ -295,9 +295,9 @@ local function Watchdog()
         if phase==1 then if waves<2 and Now()>=started+180 then SpawnWave(2);end;if Active()and waves<3 and Now()>=started+300 then SpawnWave(3);end end
         if not Active()then return;end
         local warningAt={600,720,840};local warningText={
-            "The waters churn as three voices rise as one through Coirnav, echoing throughout the reef. \"Norrathians! The powers of Povar, E`ci and Tarew Marr are bound within me. You will not break the will of the Triumvirate!\"",
+            "The waters churn as three voices rise as one through Coirnav, echoing throughout the reef. \"The powers of Povar, E`ci and Tarew Marr are bound within me. You will not break the will of the Triumvirate!\"",
             "Ice spreads across the reef as vapor coils around Coirnav's towering form. His voice rolls through the depths. \"Our power gathers, and your time dwindles. Struggle against the currents! Spend what strength you have left. These waters will yield to no invader!\"",
-            "The reef trembles beneath the gathering fury of water, ice and vapor. Coirnav's voice resounds through the depths. \"Your time is nearly spent, Norrathians! Finish what you began. Soon the united power of the Triumvirate shall sweep you from this domain!\""
+            "The reef trembles beneath the gathering fury of water, ice and vapor. Coirnav's voice resounds through the depths. \"Your time is nearly spent! Finish what you began. Soon the united power of the Triumvirate shall sweep you from this domain!\""
         };
         while warningAt[nextWarning]and Now()>=started+warningAt[nextWarning]do RP(warningText[nextWarning]);Log("WARNING","Time warning at "..(warningAt[nextWarning]/60).." minutes.");nextWarning=nextWarning+1;Save();end
         local el=eq.get_entity_list();for slot,r in ipairs(records)do if r.status==0 then
