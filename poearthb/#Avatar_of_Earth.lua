@@ -1,5 +1,3 @@
-local ProjectionEligibility = require("projection_eligibility");
-
 local PLANAR_PROJECTION_TYPE = 222041; -- Essence_of_Earth
 local COUNCIL_SPAWN_IDS = { 369377, 369380, 369382, 369384, 369386, 369387, 369376, 369378, 369379, 369381, 369383, 369385 };
 
@@ -10,7 +8,8 @@ function SetCouncilRespawn(seconds)
 end
 
 function event_death_complete(e)
-	ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
+	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
+	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 	SetCouncilRespawn(496800); -- restart the Council 5 days, 18 hours after Avatar dies
 end
 

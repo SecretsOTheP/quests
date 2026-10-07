@@ -1,5 +1,3 @@
-local ProjectionEligibility = require("projection_eligibility");
-
 --[[
 p1.1[Tue Jul 10 22:49:39 2012] Coirnav the Avatar of Water shouts 'Those that violate my domain will pay. I call upon the power imbued to me by Povar! Come forth my minions of vapor and destroy these intruders.'
 p1.2[Tue Jul 10 22:52:35 2012] Coirnav the Avatar of Water shouts 'Those that violate my domain will pay. I call upon the power imbued to me by E`ci! Come forth my minions of ice and destroy these intruders.'
@@ -194,7 +192,8 @@ function CoirnavDeathComplete(e)
 	eq.depop_all(ICELING_TYPE);
 	eq.depop_all(WATERLING_TYPE);
 	eq.zone_emote(0, "The monstrous creature spasms in its last death throes sending shockwaves through the reef.  Corinav the Avatar of Water, empowered by the focus of the Triumvirate, has fallen at the hands of the brave adventurers deep within the reef.");
-	ProjectionEligibility.Spawn(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
+	eq.spawn2(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
+	eq.signal(PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 end
 
 function MonstrousSignal(e)

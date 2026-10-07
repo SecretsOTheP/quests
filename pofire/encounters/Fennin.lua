@@ -1,5 +1,3 @@
-local ProjectionEligibility = require("projection_eligibility");
-
 local CONTROLLER_TYPE = 217068; -- A_booming
 local GUARDIAN_TYPE = 217050; -- Guardian_of_Doomfire
 local REAVER_TYPE = 217417; -- a_rage_reaver_of_flame
@@ -298,7 +296,8 @@ end
 function FenninDeathComplete(e)
 	eq.signal(CONTROLLER_TYPE, 2);
 	eq.update_spawn_timer(GUARDIAN_SPAWN_ID, SUCCESS_RESPAWN_TIME);
-	ProjectionEligibility.Spawn(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
+	eq.spawn2(PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
+	eq.signal(PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 	eq.zone_emote(0, "Loud cries of hopelessness echo throughout the Burning Lands. The creatures of Doomfire call out to their Master, Fennin Ro the Tyrant of Fire, for his dead body now lies at the feet of the mighty adventurers.");
 end
 

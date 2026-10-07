@@ -1,5 +1,3 @@
-local ProjectionEligibility = require("projection_eligibility");
-
 local CONTROLLER_TYPE = 214104; -- General_Invisible_Man
 local UNTARGETABLE_TYPE = 214052; -- #Rallos_Zek_
 local RALLOS_ZEK_TYPE = 214311; -- Rallos_Zek
@@ -460,7 +458,8 @@ function WarlordTimerEvent(e)
 end
 
 function WarlordDeathEvent(e)
-	ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
+	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
+	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
 	RespawnDoorGuards(SUCCESS_RESPAWN_TIME);
 	eq.signal(CONTROLLER_TYPE, 3);
 	eq.debug(string.format("PoTactics Rallos Zek the Warlord slain by %s's raid <%s>", e.killer:GetName(), e.killer:CastToClient():GetGuildName()));
