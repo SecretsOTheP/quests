@@ -59,7 +59,7 @@ local SPAWN_LOCS = {
 };
 
 -- Encounter-owned recovery: an NPC depop cannot remove the deadline.
-local EVENT_SECONDS, FAILURE_SECONDS, SUCCESS_SECONDS = 900,600,496800;
+local EVENT_SECONDS, FAILURE_SECONDS, SUCCESS_SECONDS = 900,1200,496800;
 local WATCHDOG_MS, MISSING_GRACE = 1000,10;
 local FIENDS={VAPORFIEND_TYPE,ICEFIEND_TYPE,WATERFIEND_TYPE};
 local MINIS={PWELON_TYPE,NRINDA_TYPE,VAMUIL_TYPE};
@@ -177,7 +177,7 @@ Fail=function(reason,force)
     local n=Boss();phase=4;cooldownUntil=Now()+FAILURE_SECONDS;cleanupAt=Now()+2;ownState=true;released=false;cooldownArmed=false;records={};missing={};Save();
     local g=GuardianPoint();if g then g:Disable();end
     RP("Three voices thunder as one through Coirnav. \"The Triumvirate has spoken! These waters reject you. Be banished from our domain!\" A crushing surge tears through the reef as his summoned defenders dissolve into water, ice and vapor.");
-    Log("FAIL",reason.." Cleanup follows the banishment after two seconds; retry remains ten minutes.");
+    Log("FAIL",reason.." Cleanup follows the banishment after two seconds; retry is twenty minutes.");
     if Live(n)then n:CastSpell(1099,n:GetID());end
 end
 local function Expired()

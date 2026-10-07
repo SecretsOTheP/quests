@@ -102,7 +102,8 @@ local function world(options)
         self.handlers={};for k,t in pairs(self.timers)do if t.owner.encounter then self.timers[k]=nil;end end
         self.encounter={uid="enc"..tostring(self.uid),encounter=true};self.uid=self.uid+1;
         env=setmetatable({eq=eqmock,os={time=function()return math.floor(s.now);end},Event={spawn="spawn",combat="combat",death_complete="death",signal="signal",timer="timer"}},{__index=_G});
-        InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;
+        InstallProjectionFixture(env,root);
+        local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;
         self.owner=self.encounter;env.event_encounter_load({encounter=self.encounter});self.owner=nil;
     end
     function s:state()
@@ -163,7 +164,7 @@ s:killStage();check(s:phase()==4 and #s:actors()==1,"all four Council deaths sum
 check(tonumber(s:state()[3])==17500,"phase changes and Fennin spawn do not extend budget");
 s:advance(1);local elites=0;for _,n in pairs(s.npcs)do if n.typ==217430 and n.valid and n.hp>0 then elites=elites+1;end end
 check(elites==10,"Fennin stage enables all ten elite spawnpoints");
-local boss=s:actors()[1];s:engage(boss,true);local heldBudget=s:state()[3];s:advance(3600);check(s:state()[3]==heldBudget,"only Fennin combat pauses the clock");
+local boss=s:actors()[1];s:engage(boss,true);local combatBudget=tonumber(s:state()[3]);s:advance(3600);check(tonumber(s:state()[3])==combatBudget-3600,"Fennin combat consumes the shared clock");
 s:kill(boss);check(s:phase()==6 and s:state()[8]=="66","final kill durably records success and all 66 confirmed deaths");
 check(s.updates[GUARDIAN]==496800000 and s.projection==1,"success retains 138-hour Guardian reuse and projection");
 check(#s:actors()==0 and not s.points[369529].enabled,"success cleans living event mobs and disables elites");
@@ -205,19 +206,27 @@ check(s:warnings()[4].text:find("Flame and Chaos answer to me!",1,true),"approve
 check(s:warnings()[6].text:find("Soon the flames of Doomfire shall consume you!",1,true),"approved final warning retained");
 s:advance(1300);check(s:phase()==5,"clock expires at 4h 51m 40s");rpCount=#s:warnings();s:advance(3600);check(#s:warnings()==rpCount,"no warnings continue during cooldown");
 
-s=world();s:start();boss=s:fennin();s:advance(2100);s:engage(boss,true);local held=s:state()[3];s:advance(7200);
-check(s:state()[3]==held and #s:warnings()==0,"Fennin combat pauses budget and warnings together");s:load();s:advance(1);
-check(s:phase()==4 and s:state()[3]==held,"paused clock survives quest reload with live tagged Fennin");s:engage(boss,false);s:advance(600);check(#s:warnings()==1,"warning resumes after the remaining idle allowance");
+s=world();s:start();boss=s:fennin();s:advance(2100);s:engage(boss,true);local combatBudget=tonumber(s:state()[3]);s:advance(7200);
+check(tonumber(s:state()[3])==combatBudget-7200 and #s:warnings()==3,"Fennin combat consumes budget and emits scheduled warnings");
+local beforeReload=tonumber(s:state()[3]);s:load();s:advance(6);
+check(s:phase()==4 and tonumber(s:state()[3])==beforeReload-6 and s:state()[5]=="0","combat reload continues the same running clock");
+s:engage(boss,false);s:advance(5);check(tonumber(s:state()[3])==beforeReload-11,"leaving combat never extends the budget");
+
+s=world();s:start();boss=s:fennin();s:engage(boss,true);local legacy=s:state();legacy[5]="1";
+s.saved["fennin-recovery-v1-66"]=table.concat(legacy,"|");s.now=s.now+60;s:load();s:advance(1);
+check(s:phase()==4 and tonumber(s:state()[3])==tonumber(legacy[3])-61 and s:state()[5]=="0","old paused saves migrate without stopping or resetting the clock");
 
 s=world();s:start();s:engage(s:actors()[1],true);s:advance(2700);
 check(#s:warnings()==1 and s:state()[5]=="0","army combat cannot pause warnings or event clock");
 
-s=world();s:start();boss=s:fennin();s:advance(17499);boss.engaged=true;s:advance(1);
-check(s:phase()==4 and s:state()[3]=="0" and s:state()[5]=="1","combat at expiry preserves no extra budget");
-s:advance(3600);s:engage(boss,false);check(s:phase()==5,"expired clock fails as soon as Fennin combat ends");
+s=world();s:start();boss=s:fennin();s:advance(17499);s:engage(boss,true);s:advance(1);
+check(s:phase()==5 and s:state()[3]=="0" and #s:actors()==0,"clock expiry fails and cleans up even during Fennin combat");
 
-s=world();s:start();boss=s:fennin();s:advance(17499);boss.engaged=true;s:advance(1);s:kill(boss);
-check(s:phase()==6,"confirmed killing blow may complete the final combat at the deadline");
+s=world();s:start();boss=s:fennin();s:engage(boss,true);s.now=s.now+17500;s:kill(boss);
+check(s:phase()==5 and s.projection==0,"a killing blow at expiry cannot bypass the hard deadline before the watchdog runs");
+
+s=world();s:start();boss=s:fennin();s:engage(boss,true);s:advance(17499);s:kill(boss);
+check(s:phase()==6 and s.projection==1,"a killing blow before the deadline still awards victory");
 
 s=world();s:start();boss=s:fennin();s.throwProjection=true;s:kill(boss);
 check(s:phase()==6 and s.updates[GUARDIAN]==496800000,"projection error cannot replace successful reuse with short failure cooldown");
@@ -258,9 +267,9 @@ s.saved["fennin-recovery-v1-66"]=table.concat(f,"|");s:load();s:advance(1);
 check(s:phase()==6 and s:state()[7]==terminalUntil,"valid success header preserves full cooldown despite damaged phase records");
 check(s.projection==1,"terminal recovery does not create duplicate projection");
 
-s=world();s:start();boss=s:fennin();s:engage(boss,true);local pausedBudget=s:state()[3];boss:Depop();s:advance(12);
-check(s:phase()==5,"missing Fennin cannot leave a permanently paused event");
-check(tonumber(s:state()[3])<tonumber(pausedBudget),"clock resumes while missing Fennin is investigated");
+s=world();s:start();boss=s:fennin();s:engage(boss,true);local missingBudget=s:state()[3];boss:Depop();s:advance(12);
+check(s:phase()==5,"missing Fennin still triggers failure recovery");
+check(tonumber(s:state()[3])<tonumber(missingBudget),"clock keeps running while missing Fennin is investigated");
 
 s=world();s:start();s:killStage();s:killStage();s.points[369530]=nil;s:killStage();
 check(s:phase()==5 and #s:actors()==0,"missing elite spawnpoint recovers instead of leaving an incomplete final stage");

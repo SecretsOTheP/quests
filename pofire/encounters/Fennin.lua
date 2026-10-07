@@ -145,11 +145,11 @@ local WARNING_TEXT = {
     "Your time dwindles, Norrathians! Face the Tyrant of Fire while your courage still holds. Soon the flames of Doomfire shall consume you!",
 };
 
-local EVENT_SECONDS, WARNING_SECONDS = 17500, 2700; -- original budget; no spawn extension
+local EVENT_SECONDS, WARNING_SECONDS = 17500, 2700; -- original running budget, including combat; no spawn extension
 local WATCHDOG_MS, MISSING_GRACE, SAVE_SECONDS = 1000, 10, 5;
 local PHASE_NAMES = { [0]="Ready", "Army", "Commanders", "Council", "Fennin", "Retry", "Success" };
 local phase, attempt, remaining, clockAt, nextWarning, cooldownUntil, totalKills = 0,0,EVENT_SECONDS,0,1,0,0;
-local paused, initialized, ownState, cooldownReleased, building = false,false,false,false,false;
+local initialized, ownState, cooldownReleased, building = false,false,false,false;
 local records, missingSince, notices = {},{},{};
 local encounter, creatingSlot;
 local lastSaved = 0;
@@ -191,7 +191,8 @@ local function Save(force)
     local list={};for slot,r in ipairs(records) do
         list[#list+1]=table.concat({slot,r.typ,r.entity,r.dead and 1 or 0},":");
     end
-    eq.set_data(stateKey,table.concat({phase,attempt,remaining,clockAt,paused and 1 or 0,
+    -- Keep the legacy pause field in the saved format, always unpaused.
+    eq.set_data(stateKey,table.concat({phase,attempt,remaining,clockAt,0,
         nextWarning,cooldownUntil,totalKills,table.concat(list,";")},"|"));lastSaved=Now();
 end
 local function Load()
@@ -220,7 +221,8 @@ local function Load()
         end
         if expected~=k then return bad("Saved confirmed-kill count differs from phase progress");end
     elseif #loaded~=0 then return bad("Inactive encounter retained phase actors");end
-    phase,attempt,remaining,clockAt,paused,nextWarning,cooldownUntil,totalKills=p,a,r,c,pa==1,w,cd,k;
+    -- Accept old paused saves, but continue charging elapsed time on reload.
+    phase,attempt,remaining,clockAt,nextWarning,cooldownUntil,totalKills=p,a,r,c,w,cd,k;
     records=loaded;ownState=true;return true;
 end
 local function Tagged(npc,slot,row)
@@ -293,7 +295,7 @@ local function ApplyCooldown()
     return true;
 end
 local function Ready(announce)
-    Cleanup();phase=0;remaining=EVENT_SECONDS;clockAt=0;paused=false;nextWarning=1;cooldownUntil=0;totalKills=0;
+    Cleanup();phase=0;remaining=EVENT_SECONDS;clockAt=0;nextWarning=1;cooldownUntil=0;totalKills=0;
     ownState=true;cooldownReleased=false;Save(true);
     if announce then RP(READY_TEXT);Log("READY","Guardian returned; a fresh encounter can begin.");end
 end
@@ -306,30 +308,20 @@ local function GuildOneRepop(npc)
 end
 Fail=function(reason,force)
     if not Active() and not force then return;end
-    phase=5;cooldownUntil=Now()+FAILURE_RETRY_TIME/1000;paused=false;ownState=true;cooldownReleased=false;
+    phase=5;cooldownUntil=Now()+FAILURE_RETRY_TIME/1000;ownState=true;cooldownReleased=false;
     Cleanup();Save(true);RP(FAILURE_TEXT);Log("FAIL",reason);ApplyCooldown();
 end
-local function FenninInCombat()
-    if phase~=4 then return false;end
-    local r=records[1];if not r or r.dead then return false;end
-    local npc=eq.get_entity_list():GetNPCByNPCTypeID(FENNIN_TYPE);
-    return Live(npc) and Tagged(npc,1,r) and npc:IsEngaged() or false;
-end
-local function UpdateClock(finishingCombat)
+local function UpdateClock()
     if not Active() then return false;end
-    local now=Now();local wasPaused=paused;local delta=math.max(0,now-clockAt);
-    if not wasPaused then remaining=math.max(0,remaining-delta);end
-    clockAt=now;paused=FenninInCombat();
-    if wasPaused~=paused then
-        Save(true);Log(paused and "PAUSE" or "RESUME",string.format("Fennin combat %s the shared clock; %.1f minutes remain.",paused and "paused" or "released",remaining/60));
-    else Save(false);end
-    if remaining==0 and not paused and not (finishingCombat and wasPaused) then
+    local now=Now();local delta=math.max(0,now-clockAt);
+    remaining=math.max(0,remaining-delta);clockAt=now;Save(false);
+    if remaining==0 then
         Fail("The original shared event clock expired.");return false;
     end
     return true;
 end
 local function Warnings()
-    if not Active() or paused then return;end
+    if not Active() then return;end
     local elapsed=EVENT_SECONDS-remaining;
     while WARNING_TEXT[nextWarning] and elapsed>=nextWarning*WARNING_SECONDS do
         RP(WARNING_PREFIX..'"'..WARNING_TEXT[nextWarning]..'"');
@@ -378,12 +370,12 @@ local function ConfirmDeath(npc)
     if not Active() or not row or row.dead or not TaggedDeath(npc,slot,row) or npc:GetEntityVariable("fennin_counted")=="1" then
         Notice("foreign-death-"..npc:GetNPCTypeID(),"WARN","Ignored a stale, duplicate or untracked death.");return false;
     end
-    if not UpdateClock(npc:GetNPCTypeID()==FENNIN_TYPE) then return false;end
+    if not UpdateClock() then return false;end
     npc:SetEntityVariable("fennin_counted","1");row.dead=true;missingSince[slot]=nil;totalKills=totalKills+1;
     if row.typ==FENNIN_TYPE then
         -- Persist victory and its full reuse in the same bucket write as the
         -- final confirmed kill; a reload cannot turn that kill into a failure.
-        phase=6;cooldownUntil=Now()+SUCCESS_RESPAWN_TIME/1000;paused=false;cooldownReleased=false;records={};
+        phase=6;cooldownUntil=Now()+SUCCESS_RESPAWN_TIME/1000;cooldownReleased=false;records={};
     end
     Save(true);Log("KILL",Name(npc).." confirmed killed; slot "..slot..", entity "..row.entity..".");return true;
 end
@@ -397,11 +389,10 @@ local function PhaseCombat(e)
     EnsureInitialized();local slot=tonumber(e.self:GetEntityVariable("fennin_slot"));local row=slot and records[slot];
     if not Active() or not row or row.dead or not Tagged(e.self,slot,row) then return;end
     if row.typ==FENNIN_TYPE then
-        local before=paused;if not UpdateClock() then return;end
-        if before~=paused then
-            RP(paused and "The inferno erupts as Fennin Ro meets your challenge. \"Norrathians! You sought the power of a god. Now face the frenzy of Doomfire and the vengeance of its Tyrant!\"" or
+        if not UpdateClock() then return;end
+        RP(e.joined and "The inferno erupts as Fennin Ro meets your challenge. \"Norrathians! You sought the power of a god. Now face the frenzy of Doomfire and the vengeance of its Tyrant!\"" or
                 "Fennin Ro stands amid the raging flames, his laughter rolling across the scorched battlefield. \"Gather your courage, Norrathians! Doomfire still burns, and my vengeance awaits!\"");
-        end
+        Log(e.joined and "ENGAGE" or "DISENGAGE",string.format("Fennin combat %s; the shared clock continues with %.1f minutes remaining.",e.joined and "began" or "ended",remaining/60));
         Warnings();
     elseif e.joined then Log("ENGAGE",Name(e.self).." engaged; army combat does not pause the event clock.");end
 end
@@ -429,7 +420,7 @@ local function GuardianDeath(e)
         return;
     end
     local spawn=Guardian();if not spawn then Fail("Guardian spawnpoint missing at attempt start.",true);return;end
-    Cleanup();attempt=attempt+1;remaining=EVENT_SECONDS;clockAt=Now();paused=false;nextWarning=1;totalKills=0;cooldownUntil=0;
+    Cleanup();attempt=attempt+1;remaining=EVENT_SECONDS;clockAt=Now();nextWarning=1;totalKills=0;cooldownUntil=0;
     ownState=true;notices={};spawn:Disable(false);StartStage(1);ArmSupervisor();
 end
 local function EliteSpawn(e)
@@ -458,7 +449,7 @@ Initialize=function()
             -- A valid terminal header still owns its absolute cooldown even
             -- if obsolete/corrupt phase records cannot be recovered.
             phase=recovery.phase;attempt=recovery.attempt;cooldownUntil=recovery.cooldownUntil;
-            totalKills=recovery.totalKills;paused=false;ownState=true;Cleanup();Save(true);ApplyCooldown();
+            totalKills=recovery.totalKills;ownState=true;Cleanup();Save(true);ApplyCooldown();
             Log("ERROR",why.."; restored the recorded terminal cooldown without granting another attempt.");
         elseif recovery and recovery.phase>=1 and recovery.phase<=4 then
             attempt=recovery.attempt;totalKills=recovery.totalKills;

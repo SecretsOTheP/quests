@@ -111,7 +111,8 @@ local function world(options)
         self.handlers={};for k,t in pairs(self.timers)do if t.owner.encounter then self.timers[k]=nil;end end
         self.encounter={uid="enc"..tostring(self.uid),encounter=true};self.uid=self.uid+1;
         env=setmetatable({eq=eqmock,os={time=function()return math.floor(s.now);end},Event={spawn="spawn",combat="combat",death_complete="death",signal="signal",timer="timer"}},{__index=_G});
-        InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;
+        InstallProjectionFixture(env,root);
+        local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;
         self.owner=self.encounter;env.event_encounter_load({encounter=self.encounter});self.owner=nil;
     end
     function s:state()
@@ -195,9 +196,11 @@ s:advance(129);check(#s:fiends()==25,"scheduled wave remains aligned with origin
 
 s=world();s:start();first=s:fiends()[1];first:Depop();s:killFiends();check(s:state()[6]=="24","depop is not a kill");s:advance(14);
 check(s:phase()==4 and #s:actors()==0 and s.banish[1]==1099,"missing fiend triggers banishment and independent cleanup");
-check(s.updates[365647]<=600000 and s.updates[365647]>590000,"failed attempt retains ten-minute recovery");
+check(s.updates[365647]<=1200000 and s.updates[365647]>1190000,"failed attempt schedules twenty-minute recovery");
 untilTime=s:state()[9];s:load();s:advance(1);check(s:state()[9]==untilTime,"retry deadline survives reload without restarting");
-s:jump(601);s:advance(1);check(s:phase()==0 and s:boss()and s.points[GUARDIAN].npc,"Coirnav and Guardian return after failure reuse");
+s:jump(600);s:advance(1);check(s:phase()==4 and not s:boss()and not s.points[GUARDIAN].npc,"Coirnav and Guardian do not return at the old ten-minute boundary");
+s:jump(tonumber(untilTime)-s.now-1);check(s:phase()==4 and not s:boss(),"retry stays closed until the twenty-minute deadline");
+s:advance(2);check(s:phase()==0 and s:boss()and s.points[GUARDIAN].npc,"Coirnav and Guardian return after twenty-minute failure reuse");
 s:kill(s.points[GUARDIAN].npc);check(s:phase()==1 and s:state()[2]=="2","returned Guardian starts a fresh attempt");
 s:dispatch("death",first,{killer=s.clients[1]});check(s:state()[6]=="0","old death cannot count in new attempt");
 
