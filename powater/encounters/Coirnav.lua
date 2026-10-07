@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 --[[
 p1.1[Tue Jul 10 22:49:39 2012] Coirnav the Avatar of Water shouts 'Those that violate my domain will pay. I call upon the power imbued to me by Povar! Come forth my minions of vapor and destroy these intruders.'
 p1.2[Tue Jul 10 22:52:35 2012] Coirnav the Avatar of Water shouts 'Those that violate my domain will pay. I call upon the power imbued to me by E`ci! Come forth my minions of ice and destroy these intruders.'
@@ -250,8 +252,7 @@ local function BossDeath(e)
     Cleanup(false);ApplyCooldown();
     RP("Coirnav, the Avatar of Water, has fallen! His colossal form collapses, driving a thunderous shockwave through the reef. Ice shatters and currents roar as the voices of the Triumvirate fall silent. The united power of Povar, E`ci and Tarew Marr has been overcome, and the Essence of Water rises from the depths!");
     Log("SUCCESS","Coirnav confirmed killed; successful reuse remains 138 hours.");
-    local n=eq.spawn2(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
-    if Live(n)and e.killer and e.killer.valid then eq.signal(PROJECTION_TYPE,e.killer:GetID());else Log("ERROR","Victory saved, but projection spawn or kill-rights recipient was missing.");end
+    ProjectionEligibility.Spawn(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0,e.killer);
 end
 local function BossSpawn(e)
     ArmSupervisor();

@@ -1,3 +1,4 @@
+local InstallProjectionFixture = assert(loadfile((arg[1] or ".") .. "/tests/flagger_test_fixture.lua"))();
 -- Run with Lua 5.1: lua tests/fennin_recovery_test.lua /path/to/Quests
 local root=arg[1] or ".";
 local source=rawget(_G,"FENNIN_TEST_SOURCE");
@@ -101,7 +102,7 @@ local function world(options)
         self.handlers={};for k,t in pairs(self.timers)do if t.owner.encounter then self.timers[k]=nil;end end
         self.encounter={uid="enc"..tostring(self.uid),encounter=true};self.uid=self.uid+1;
         env=setmetatable({eq=eqmock,os={time=function()return math.floor(s.now);end},Event={spawn="spawn",combat="combat",death_complete="death",signal="signal",timer="timer"}},{__index=_G});
-        local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;
+        InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;
         self.owner=self.encounter;env.event_encounter_load({encounter=self.encounter});self.owner=nil;
     end
     function s:state()

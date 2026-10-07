@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local CONTROLLER_TYPE = 217068; -- A_booming
 local GUARDIAN_TYPE = 217050; -- Guardian_of_Doomfire
 local REAVER_TYPE = 217417; -- a_rage_reaver_of_flame
@@ -389,9 +391,7 @@ local function PhaseDeath(e) EnsureInitialized();if ConfirmDeath(e.self) then Ad
 local function FenninDeath(e)
     EnsureInitialized();if phase~=4 or not ConfirmDeath(e.self) then return;end
     Cleanup();Save(true);ApplyCooldown();RP(VICTORY_TEXT);Log("SUCCESS","Fennin confirmed killed; Guardian reuse remains 138 hours.");
-    local npc=eq.spawn2(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0);
-    if Live(npc) and e.killer and e.killer.valid then eq.signal(PROJECTION_TYPE,e.killer:GetID());
-    else Log("ERROR","Victory recorded, but projection spawn or kill-rights recipient was missing.");end
+    ProjectionEligibility.Spawn(PROJECTION_TYPE,0,0,e.self:GetX(),e.self:GetY(),e.self:GetZ(),0,e.killer);
 end
 local function PhaseCombat(e)
     EnsureInitialized();local slot=tonumber(e.self:GetEntityVariable("fennin_slot"));local row=slot and records[slot];
