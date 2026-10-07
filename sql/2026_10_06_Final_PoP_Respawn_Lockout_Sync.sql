@@ -31,16 +31,16 @@ VALUES
     (216040, 64800, 0, 64800000), -- Ofossaa
     (216041, 64800, 0, 64800000), -- Krziik
     (216043, 64800, 0, 64800000), -- Hydrotha
-    (217003, 172800, 172800, 172800000), -- Blazzax
-    (217005, 172800, 172800, 172800000), -- Babnoxis
-    (217019, 172800, 172800, 172800000), -- Arch Mage Yozanni
-    (217032, 172800, 172800, 172800000), -- General Reparm
-    (217036, 172800, 172800, 172800000), -- General Druav
-    (217049, 172800, 172800, 172800000), -- Jaxoliz
-    (217051, 172800, 172800, 172800000), -- Criare
-    (217056, 172800, 172800, 172800000), -- Quavonis
-    (217059, 172800, 172800, 172800000), -- Magmaton
-    (217063, 172800, 172800, 172800000), -- Pyronis
+    (217003, 237600, 237600, 237600000), -- Blazzax
+    (217005, 237600, 237600, 237600000), -- Babnoxis
+    (217019, 237600, 237600, 237600000), -- Arch Mage Yozanni
+    (217032, 237600, 237600, 237600000), -- General Reparm
+    (217036, 237600, 237600, 237600000), -- General Druav
+    (217049, 237600, 237600, 237600000), -- Jaxoliz
+    (217051, 237600, 237600, 237600000), -- Criare
+    (217056, 237600, 237600, 237600000), -- Quavonis
+    (217059, 237600, 237600, 237600000), -- Magmaton
+    (217063, 237600, 237600, 237600000), -- Pyronis
     (204010, 86400, 86400, 0), -- Bullyrag; also deploy Hobgoblin death script
     (200020, 86400, 0, 0), -- Paffa starter; approved earlier daily respawn
     (206053, 86400, 0, 0), -- Manaetic Prototype X
@@ -74,14 +74,16 @@ DELETE cl FROM character_loot_lockouts AS cl
 JOIN pop_final_cycle_sync AS t ON t.npc_id = cl.npctype_id
 WHERE t.loot_seconds = 0;
 
--- Fire: infer the original kill time from the known 66-hour lockout before
--- shortening to 48 hours. Guard on the old definition makes reruns idempotent.
+-- Fire: restore still-active 48-hour loot lockouts to 66 hours while retaining
+-- the original kill time. Do not revive expired lockouts. The old-definition
+-- guard makes reruns safe, including after the dedicated Fire restoration SQL.
 UPDATE character_loot_lockouts AS cl
 JOIN npc_types AS n ON n.id = cl.npctype_id
 JOIN pop_final_cycle_sync AS t ON t.npc_id = n.id
 SET cl.expiry = cl.expiry - n.loot_lockout + t.loot_seconds
 WHERE cl.expiry > UNIX_TIMESTAMP()
-  AND t.loot_seconds = 172800 AND n.loot_lockout = 237600;
+  AND t.npc_id IN (217003,217005,217019,217032,217036,217049,217051,217056,217059,217063)
+  AND t.loot_seconds = 237600 AND n.loot_lockout = 172800;
 
 UPDATE respawn_times AS rt
 JOIN pop_final_spawn_sync AS t ON t.spawn_id = rt.id
