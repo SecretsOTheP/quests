@@ -1,6 +1,7 @@
 -- Vallon Zek fake 2
 
 function event_spawn(e)
+	e.self:SetEntityVariable("rallos_copy", (e.self:GetX()>0 and e.self:GetZ()>150) and "1" or "0");
 	eq.set_timer("depop", 120000);
 end
 
@@ -20,7 +21,7 @@ function event_timer(e)
 		eq.depop();
 		
 	elseif ( e.timer == "bounds" ) then
-		if ( e.self:GetY() < 1750 and e.self:GetX() < 0 ) then
+		if ( e.self:GetEntityVariable("rallos_copy")~="1" and e.self:GetY() < 1750 and e.self:GetX() < 0 ) then
 			e.self:GMMove(-625, 1980, 204.5, 64);
 		end
 	end
