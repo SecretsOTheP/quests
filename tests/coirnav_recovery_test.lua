@@ -32,7 +32,7 @@ local function world(options)
     end
     point(GUARDIAN,216053,true,496800);
     point(365647,216048,true,options.nativeDelay or 496800);
-    
+
     local function npc(typ,spawnid,x,y,z,h)
         s.uid=s.uid+1;local n={valid=true,uid=s.uid,typ=typ,spawnid=spawnid or 0,hp=100,vars={},x=x or 0,y=y or 0,z=z or 0,h=h or 0};
         function n:GetID()return self.uid;end;function n:GetNPCTypeID()return self.typ;end
