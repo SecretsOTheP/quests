@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 -- dream defilers at 79% and 69%, dispel at 50%, gargoyles at 40%
 -- one defiler seems to spawn for every player that has attacked Terris, not pets or healers; not 100% sure how this works
 -- there are two defilers types.  one is larger and is immune to stuff
@@ -23,8 +25,7 @@ end
 
 function event_death_complete(e)
 	ResetTerrisAdds();
-	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
-	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
 end
 
 function event_spawn(e)
