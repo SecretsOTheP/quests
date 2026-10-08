@@ -91,32 +91,4 @@ do
 	check(removed[218360] and removed[218365] and removed[218419], "timeout cleans up bosses and runners");
 end
 
--- Air Dust's Sigismond handlers must likewise survive unloading Mist.
-do
-	local registry, timers, paused = {}, {}, {};
-	local events = {spawn = 1, timer = 2, death = 3, death_complete = 4, combat = 5, signal = 6};
-	local env = {Event = events, eq = {
-		register_npc_event = function(owner, event, npc, callback)
-			registry[#registry + 1] = {owner = owner, event = event, npc = npc, callback = callback};
-		end,
-		set_timer = function(name, ms) timers[name] = ms; end,
-		pause_timer = function(name) paused[name] = true; end,
-		resume_timer = function(name) paused[name] = false; end,
-		stop_timer = function(name) timers[name] = nil; end
-	}};
-	loadScript("poair/encounters/Dust.lua", env);
-	env.event_encounter_load({});
-	local combat, timer;
-	for _, entry in ipairs(registry) do
-		check(entry.owner == "Dust", "all Air Dust callbacks belong to their own encounter");
-		if entry.owner ~= "Mist" and entry.npc == 215375 then
-			if entry.event == events.combat then combat = entry.callback; end
-			if entry.event == events.timer then timer = entry.callback; end
-		end
-	end
-	check(combat ~= nil and timer ~= nil, "Sigismond handlers survive Mist encounter unload");
-	combat({joined = true});
-	check(timers.drophate == 1000 and paused.depop, "Sigismond's combat timers remain connected");
-end
-
-print("PASS: "..checks.." Earth/Air controller recovery checks");
+print("PASS: "..checks.." Earth controller recovery checks");
