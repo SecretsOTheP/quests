@@ -43,7 +43,7 @@ VALUES
     (217056, 237600, 237600, 237600000), -- Quavonis
     (217059, 237600, 237600, 237600000), -- Magmaton
     (217063, 237600, 237600, 237600000), -- Pyronis
-    (204010, 86400, 86400, 0), -- Bullyrag; also deploy Hobgoblin death script
+    (204010, 86400, 0, 0), -- Bullyrag; no loot lockout; also deploy Hobgoblin death script
     (200020, 86400, 0, 0), -- Paffa starter; approved earlier daily respawn
     (206053, 86400, 0, 0), -- Manaetic Prototype X
     (206054, 86400, 0, 0), -- Manaetic Prototype IX

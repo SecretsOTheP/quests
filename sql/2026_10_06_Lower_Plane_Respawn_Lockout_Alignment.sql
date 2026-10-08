@@ -17,21 +17,22 @@ CREATE TEMPORARY TABLE pop_named_cycle_alignment (
 INSERT INTO pop_named_cycle_alignment
     (spawn_id, zone_name, npc_id, cycle_seconds, loot_seconds)
 VALUES
-    (344762, 'podisease', 205091, 86400, 86400), -- Grummus
-    (345473, 'pojustice', 201492, 86400, 86400), -- ancient crawler; shared spawn has placeholders
-    (360642, 'codecay', 200245, 86400, 86400), -- Carprin starter / High Priest Ultor reward
-    (346764, 'potorment', 207015, 86400, 86400), -- Keeper of Sorrows
-    (369184, 'ponightmare', 204010, 86400, 86400), -- Bullyrag Bat
-    (345905, 'ponightmare', 204034, 86400, 86400), -- Terror Matriarch
-    (345919, 'ponightmare', 204035, 86400, 86400), -- Untel Dak
-    (346876, 'potorment', 207002, 86400, 86400), -- Ta Grusch the Abomination
-    (346763, 'potorment', 207003, 86400, 86400), -- Acolyte of Affliction
-    (346875, 'potorment', 207004, 86400, 86400), -- Maareq the Prophet
-    (346877, 'potorment', 207027, 86400, 86400), -- Salczek the Fleshgrinder
-    (346955, 'potorment', 207028, 86400, 86400), -- normal Baraguj; event version remains separate
-    (364399, 'povalor', 208157, 86400, 86400), -- Sleep Walker variant 1
-    (364399, 'povalor', 208202, 86400, 86400), -- Sleep Walker variant 2
-    (364399, 'povalor', 208208, 86400, 86400), -- Sleep Walker variant 3
+    (344762, 'podisease', 205091, 86400, 0), -- Grummus
+    (345473, 'pojustice', 201492, 86400, 0), -- ancient crawler; shared spawn has placeholders
+    (360642, 'codecay', 200007, 86400, 0), -- Carprin event starter; no loot lockout
+    (360642, 'codecay', 200245, 86400, 0), -- High Priest Ultor reward; shares Carprin event reuse
+    (346764, 'potorment', 207015, 86400, 0), -- Keeper of Sorrows
+    (369184, 'ponightmare', 204010, 86400, 0), -- Bullyrag Bat
+    (345905, 'ponightmare', 204034, 86400, 0), -- Terror Matriarch
+    (345919, 'ponightmare', 204035, 86400, 0), -- Untel Dak
+    (346876, 'potorment', 207002, 86400, 0), -- Ta Grusch the Abomination
+    (346763, 'potorment', 207003, 86400, 0), -- Acolyte of Affliction
+    (346875, 'potorment', 207004, 86400, 0), -- Maareq the Prophet
+    (346877, 'potorment', 207027, 86400, 0), -- Salczek the Fleshgrinder
+    (346955, 'potorment', 207028, 86400, 0), -- normal Baraguj; event version remains separate
+    (364399, 'povalor', 208157, 86400, 0), -- Sleep Walker variant 1
+    (364399, 'povalor', 208202, 86400, 0), -- Sleep Walker variant 2
+    (364399, 'povalor', 208208, 86400, 0), -- Sleep Walker variant 3
     (367163, 'hohonorb', 220012, 237600, 237600), -- Ralthazor; match Mithaniel Marr
     (367227, 'hohonorb', 220021, 237600, 237600), -- Edium; match Mithaniel Marr
     (366604, 'hohonorb', 220022, 237600, 237600), -- Halon; match Mithaniel Marr
@@ -39,17 +40,11 @@ VALUES
 
 START TRANSACTION;
 
--- Lockout records contain only expiry, not kill time. For the known old
--- Grummus/Ultor 66h and crawler 162h definitions, infer kill time from expiry
--- and preserve elapsed time when shortening to 24h. This runs before the NPC
--- definitions change, so reapplying the migration cannot shorten them twice.
-UPDATE character_loot_lockouts AS cl
-JOIN npc_types AS n ON n.id = cl.npctype_id
-JOIN pop_named_cycle_alignment AS t ON t.npc_id = n.id
-SET cl.expiry = cl.expiry - n.loot_lockout + t.cycle_seconds
-WHERE cl.expiry > UNIX_TIMESTAMP()
-  AND ((n.id IN (205091, 200245) AND n.loot_lockout = 237600)
-    OR (n.id = 201492 AND n.loot_lockout = 583200));
+-- Daily named have no loot lockouts. Clear every existing character record,
+-- including expired entries. HoH B and Bertox reward lockouts remain unchanged.
+DELETE cl FROM character_loot_lockouts AS cl
+JOIN pop_named_cycle_alignment AS t ON t.npc_id = cl.npctype_id
+WHERE t.loot_seconds = 0;
 
 -- Rahlgon has no loot and belongs entirely to Aerin Dar's event.
 -- Deploy the matching Aerin Dar / Rahlgon scripts with this migration.
@@ -62,8 +57,7 @@ SET respawntime = 0, variance = 0, boot_respawntime = 0, enabled = 0
 WHERE id = 347213 AND zone = 'povalor';
 DELETE FROM respawn_times WHERE id = 347213;
 
--- Newly locked-out named apply their lockout on future kills. Past kills
--- cannot be backfilled from these tables because no kill timestamp is stored.
+-- Keep daily named free of loot lockouts; retain the specified 66-hour bosses.
 UPDATE npc_types AS n
 JOIN pop_named_cycle_alignment AS t ON t.npc_id = n.id
 SET n.loot_lockout = t.loot_seconds,
@@ -94,7 +88,8 @@ WHERE rt.duration > t.cycle_seconds
 
 COMMIT;
 
--- Independent named respawns and loot lockouts should agree.
+-- Verify daily named have 24-hour respawns and no loot lockout; the retained
+-- 66-hour bosses keep their reward lockouts.
 -- Rahlgon is verified separately: disabled by default, no cooldown or lockout.
 SELECT s.id AS spawn_id, t.zone_name, n.id AS npc_id, n.name,
        s.respawntime / 3600 AS base_respawn_hours,
