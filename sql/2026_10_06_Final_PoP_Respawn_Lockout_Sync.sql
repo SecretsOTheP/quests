@@ -22,7 +22,7 @@ VALUES
     (212014, 237600, 237600, 237600000), -- Jiva
     (212023, 237600, 237600, 237600000), -- Arlyxir
     (212026, 237600, 237600, 237600000), -- Rizlona
-    (212046, 237600, 237600, 237600000), -- Guardian of Dresolik
+    (212046, 237600, 0, 237600000), -- Four Guardians of Dresolik share one NPC type; no loot lockout
     (212055, 237600, 237600, 237600000), -- Xuzl
     (215060, NULL, 0, NULL), -- Lossenmachar; preserve shared spawnpoints
     (215005, NULL, 0, NULL), -- High Councilman; preserve respawn
