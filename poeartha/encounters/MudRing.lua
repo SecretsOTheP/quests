@@ -377,7 +377,7 @@ function event_encounter_load(e)
 	eq.register_npc_event("MudRing", Event.timer, MERCILESS_MUDSLINGER_TYPE, MonsterousTimer);
 	eq.register_npc_event("MudRing", Event.death_complete, MERCILESS_MUDSLINGER_TYPE, EventSuccess);
 	
-	eq.register_npc_event("StoneRing", Event.spawn, MUDESPAWN_TYPE, DespawnSpawn);
-	eq.register_npc_event("StoneRing", Event.timer, MUDESPAWN_TYPE, DespawnTimer);
+	eq.register_npc_event("MudRing", Event.spawn, MUDESPAWN_TYPE, DespawnSpawn);
+	eq.register_npc_event("MudRing", Event.timer, MUDESPAWN_TYPE, DespawnTimer);
 
 end

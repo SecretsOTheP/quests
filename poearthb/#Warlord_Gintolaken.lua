@@ -61,4 +61,9 @@ end
 function event_death_complete(e)
 	eq.get_entity_list():GetSpawnByID(369490):GetNPC():Depop(true);
 	eq.get_entity_list():GetSpawnByID(369490):SetTimer(302400000);
+	-- SetTimer changes only the loaded spawnpoint. Save the same 84-hour
+	-- Council-access window across unloads; retain Guild 1 quake handling.
+	if eq.get_zone_guild_id() > 1 then
+		eq.update_spawn_timer(369490, 302400000);
+	end
 end
