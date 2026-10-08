@@ -23,7 +23,7 @@ VALUES
     (214092, 86400, 0, 0), -- The Diaku Overseer
     (212014, 237600, 237600, 237600000), -- Jiva
     (212023, 237600, 237600, 237600000), -- Arlyxir
-    (212026, 237600, 237600, 237600000), -- Rizlona
+    (212026, 237600, 0, 237600000), -- Rizlona first form; dragon 212407 retains its loot lockout
     (212046, 237600, 0, 237600000), -- Four Guardians of Dresolik share one NPC type; no loot lockout
     (212055, 237600, 237600, 237600000), -- Xuzl
     (215060, NULL, 0, NULL), -- Lossenmachar; preserve shared spawnpoints
