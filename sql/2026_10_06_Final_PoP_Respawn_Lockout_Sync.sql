@@ -2,6 +2,8 @@
 -- Hobgoblin death script. Back up affected rows before applying: content tables
 -- can be MyISAM. Reload affected zones after applying to refresh cached NPC
 -- definitions, respawn countdowns and character loot lockouts.
+-- Apply 2026_10_07_Dresolik_Guardian_Reset.sql for the separate one-time
+-- reset of only the four Guardians of Dresolik.
 -- Seconds for respawn/loot; milliseconds for NPC overrides.
 -- NULL cycle/override means preserve that setting (Air shared/trash spawns).
 CREATE TEMPORARY TABLE pop_final_cycle_sync (
