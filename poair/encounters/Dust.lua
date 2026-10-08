@@ -282,8 +282,8 @@ function event_encounter_load(e)
 	eq.register_npc_event("Dust", Event.death, SPAWN_TYPE, SpawnDeath);
 
 	eq.register_npc_event("Dust", Event.death_complete, SIGISMOND_TYPE, BossDeathComplete);
-	eq.register_npc_event("Mist", Event.combat, SIGISMOND_TYPE, AvatarCombat);
-	eq.register_npc_event("Mist", Event.timer, SIGISMOND_TYPE, AvatarTimer);
+	eq.register_npc_event("Dust", Event.combat, SIGISMOND_TYPE, AvatarCombat);
+	eq.register_npc_event("Dust", Event.timer, SIGISMOND_TYPE, AvatarTimer);
 
 	eq.register_npc_event("Dust", Event.spawn, GUY_TYPE, GuySpawn);
 	
