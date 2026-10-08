@@ -1,3 +1,4 @@
+local Cycle = require("gintolaken_cycle");
 local INVIS_MAN_ID = 369489;
 local AWISANO_TYPE = 222037;
 local AWISANO_SPAWNID = 369492;
@@ -18,8 +19,6 @@ function event_death_complete(e)
 
 		eq.update_spawn_timer(AWISANO_SPAWNID, 1000);
 		
-		local variance = math.random(1, 1440);
-		local t = (60 * 60 + variance) * 60; -- (60 hours/2.5 days * 60 minutes + variance) * 60 seconds
-		eq.update_spawn_timer(SPAWNIDS[1], t*1000);
+		Cycle.GroupCleared(AWISANO_TYPE);
 	end
 end

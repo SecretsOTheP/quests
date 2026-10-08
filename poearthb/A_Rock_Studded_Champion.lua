@@ -1,3 +1,4 @@
+local Cycle = require("gintolaken_cycle");
 local INVIS_MAN_ID = 369488;
 local GALRONAR_TYPE = 222036;
 local GALRONAR_SPAWNID = 369494;
@@ -18,8 +19,6 @@ function event_death_complete(e)
 
 		eq.update_spawn_timer(GALRONAR_SPAWNID, 1000);
 		
-		local variance = math.random(1, 1440);
-		local t = (60 * 60 + variance) * 60; -- (60 hours/2.5 days * 60 minutes + variance) * 60 seconds
-		eq.update_spawn_timer(SPAWNIDS[1], t*1000);
+		Cycle.GroupCleared(GALRONAR_TYPE);
 	end
 end

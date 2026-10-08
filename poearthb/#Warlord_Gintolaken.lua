@@ -1,3 +1,4 @@
+local Cycle = require("gintolaken_cycle");
 local BOSS_TYPES = { 222035, 222037, 222036, 222008, 222009, 222010 }; -- Chieftans, Chieftan spawners
 
 function event_spawn(e)
@@ -61,4 +62,5 @@ end
 function event_death_complete(e)
 	eq.get_entity_list():GetSpawnByID(369490):GetNPC():Depop(true);
 	eq.get_entity_list():GetSpawnByID(369490):SetTimer(302400000);
+	Cycle.GintolakenKilled();
 end
