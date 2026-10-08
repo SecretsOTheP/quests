@@ -1,4 +1,3 @@
-local Cycle = require("gintolaken_cycle");
 local INVIS_MAN_ID = 369487;
 local BIRAK_TYPE = 222035;
 local BIRAK_SPAWNID = 369493;
@@ -19,6 +18,8 @@ function event_death_complete(e)
 
 		eq.update_spawn_timer(BIRAK_SPAWNID, 1000);
 		
-		Cycle.GroupCleared(BIRAK_TYPE);
+		local variance = math.random(1, 1440);
+		local t = (60 * 60 + variance) * 60; -- (60 hours/2.5 days * 60 minutes + variance) * 60 seconds
+		eq.update_spawn_timer(SPAWNIDS[1], t*1000);
 	end
 end

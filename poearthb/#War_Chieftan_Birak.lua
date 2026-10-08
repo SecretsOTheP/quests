@@ -1,4 +1,5 @@
-local Cycle = require("gintolaken_cycle");
+-- Use invis men to indicate kills so Ginto can spawn if zone crashes between Chiefan kills
+local INVIS_MAN_ID = 369487;
 
 function event_spawn(e)
 	eq.set_timer("check", 1000);
@@ -13,6 +14,6 @@ function event_timer(e)
 end
 
 function event_death_complete(e)
-	Cycle.ChieftainKilled(222035);
+	eq.get_entity_list():GetSpawnByID(INVIS_MAN_ID):GetNPC():Depop(true);
 	eq.signal(222034, 1);
 end

@@ -1,51 +1,57 @@
--- Deploy with the matching poearthb scripts and gintolaken_cycle module.
--- Use a 66-hour future prerequisite/event cycle and keep chieftain loot at 66h.
--- Existing saved respawn_times are unchanged. Remove only Gintolaken's loot
--- lockout and all existing character records for his NPC type (222038).
+-- Restore the original prerequisite/marker definitions for the existing scripts.
+-- Groups reset after 60 hours plus 1-1440 random minutes, from the group clear.
+-- Gintolaken's death does not restart the whole prerequisite chain.
+-- Existing saved respawn_times are unchanged. Remove loot lockouts and all old
+-- character records for the prerequisites, three chieftains and Gintolaken.
 -- Spawnpoint 369490 remains the separate 84-hour Council access window.
 -- Fresh Earth B zones pick up these definitions. Back up content rows first;
 -- content tables may be MyISAM.
 CREATE TEMPORARY TABLE gintolaken_prerequisite_sync (
     spawn_id INT NOT NULL PRIMARY KEY,
-    npc_id INT NOT NULL
+    npc_id INT NOT NULL,
+    respawn_seconds INT NOT NULL
 );
-INSERT INTO gintolaken_prerequisite_sync (spawn_id, npc_id) VALUES
-    (369438, 222008),
-    (369439, 222008),
-    (369440, 222008),
-    (369441, 222008),
-    (369442, 222009),
-    (369443, 222009),
-    (369444, 222009),
-    (369445, 222009),
-    (369446, 222010),
-    (369447, 222010),
-    (369448, 222010),
-    (369449, 222010),
-    (369487, 222042),
-    (369488, 222042),
-    (369489, 222042);
+INSERT INTO gintolaken_prerequisite_sync (spawn_id, npc_id, respawn_seconds) VALUES
+    (369438, 222008, 302400),
+    (369439, 222008, 302400),
+    (369440, 222008, 302400),
+    (369441, 222008, 302400),
+    (369442, 222009, 302400),
+    (369443, 222009, 302400),
+    (369444, 222009, 302400),
+    (369445, 222009, 302400),
+    (369446, 222010, 302400),
+    (369447, 222010, 302400),
+    (369448, 222010, 302400),
+    (369449, 222010, 302400),
+    (369487, 222042, 216000),
+    (369488, 222042, 216000),
+    (369489, 222042, 216000);
 
 UPDATE spawn2 AS s
 JOIN gintolaken_prerequisite_sync AS t ON t.spawn_id = s.id
 JOIN spawnentry AS se ON se.spawngroupID = s.spawngroupID AND se.npcID = t.npc_id
-SET s.respawntime = 237600
+SET s.respawntime = t.respawn_seconds
 WHERE s.zone = 'poearthb';
 
--- The three combat prerequisite types can safely have explicit overrides.
--- Do NOT override NPC 222042: it is shared with the 84-hour Council marker.
--- Chieftain deaths explicitly set the three marker timers in Lua instead.
+-- Restore the prerequisites' original zero overrides. Their existing Lua
+-- scripts own the randomized group reset. Do NOT override shared NPC 222042:
+-- its three chieftain markers use 60-hour bases, Council access uses 84 hours.
 UPDATE npc_types AS n
 JOIN gintolaken_prerequisite_sync AS t ON t.npc_id = n.id
 JOIN spawn2 AS s ON s.id = t.spawn_id AND s.zone = 'poearthb'
 JOIN spawnentry AS se ON se.spawngroupID = s.spawngroupID AND se.npcID = n.id
-SET n.instance_spawn_timer_override = 237600000
+SET n.instance_spawn_timer_override = 0
 WHERE n.id IN (222008,222009,222010);
 
--- Gintolaken has no loot cooldown. Keep his normal respawn/instance timer.
--- Clear every old Gintolaken record, without filtering characters or expiry.
-UPDATE npc_types SET loot_lockout = 0 WHERE id = 222038;
-DELETE FROM character_loot_lockouts WHERE npctype_id = 222038;
+-- No loot lockouts on this chain: three prerequisite types, three chieftains,
+-- and Gintolaken. Clear every old record without a character/guild/expiry filter.
+-- Council/Avatar and shared invisible marker 222042 are outside this scope.
+UPDATE npc_types
+SET loot_lockout = 0
+WHERE id IN (222008,222009,222010,222035,222036,222037,222038);
+DELETE FROM character_loot_lockouts
+WHERE npctype_id IN (222008,222009,222010,222035,222036,222037,222038);
 
 SELECT s.id AS spawn_id, n.id AS npc_id, n.name,
        s.respawntime / 3600 AS base_respawn_hours,
@@ -59,8 +65,12 @@ ORDER BY s.id;
 
 DROP TEMPORARY TABLE gintolaken_prerequisite_sync;
 
-SELECT n.id, n.name, n.loot_lockout,
-       n.instance_spawn_timer_override / 3600000 AS override_hours,
-       (SELECT COUNT(*) FROM character_loot_lockouts WHERE npctype_id = 222038)
-           AS gintolaken_character_lockouts_remaining
-FROM npc_types AS n WHERE n.id = 222038;
+SELECT id, name, loot_lockout,
+       instance_spawn_timer_override / 3600000 AS override_hours
+FROM npc_types
+WHERE id IN (222008,222009,222010,222035,222036,222037,222038)
+ORDER BY id;
+
+SELECT COUNT(*) AS gintolaken_chain_character_lockouts_remaining
+FROM character_loot_lockouts
+WHERE npctype_id IN (222008,222009,222010,222035,222036,222037,222038);
