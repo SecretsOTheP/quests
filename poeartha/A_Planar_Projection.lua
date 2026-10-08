@@ -1,4 +1,4 @@
-local MAX_KEYS = 54;
+local MAX_KEYS = 72;
 
 local keys;
 local ProjectionEligibility = require("projection_eligibility");
