@@ -228,4 +228,9 @@ function event_encounter_load(e)
 	eq.register_npc_event("Smoke", Event.spawn, AVATAR_TYPE, AvatarSpawn);
 	eq.register_npc_event("Smoke", Event.combat, AVATAR_TYPE, AvatarCombat);
 	eq.register_npc_event("Smoke", Event.timer, AVATAR_TYPE, AvatarTimer);
+	-- Durable recovery is limited to guild instances; the Guild 1 quake path above is retained.
+	require("air_ring_recovery").install("Smoke", {
+		island=ISLAND_SPAWNIDS, champions=CHAMP_LOCS,
+		combat=AvatarCombat, avatar_timer=AvatarTimer
+	});
 end

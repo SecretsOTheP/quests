@@ -282,12 +282,17 @@ function event_encounter_load(e)
 	eq.register_npc_event("Dust", Event.death, SPAWN_TYPE, SpawnDeath);
 
 	eq.register_npc_event("Dust", Event.death_complete, SIGISMOND_TYPE, BossDeathComplete);
-	eq.register_npc_event("Mist", Event.combat, SIGISMOND_TYPE, AvatarCombat);
-	eq.register_npc_event("Mist", Event.timer, SIGISMOND_TYPE, AvatarTimer);
+	eq.register_npc_event("Dust", Event.combat, SIGISMOND_TYPE, AvatarCombat);
+	eq.register_npc_event("Dust", Event.timer, SIGISMOND_TYPE, AvatarTimer);
 
 	eq.register_npc_event("Dust", Event.spawn, GUY_TYPE, GuySpawn);
 	
 	eq.register_npc_event("Dust", Event.spawn, AVATAR_TYPE, AvatarSpawn);
 	eq.register_npc_event("Dust", Event.combat, AVATAR_TYPE, AvatarCombat);
 	eq.register_npc_event("Dust", Event.timer, AVATAR_TYPE, AvatarTimer);
+	-- Durable recovery is limited to guild instances; the Guild 1 quake path above is retained.
+	require("air_ring_recovery").install("Dust", {
+		island=ISLAND_SPAWNIDS, erratic=ERRATIC_SPAWNIDS,
+		combat=AvatarCombat, avatar_timer=AvatarTimer
+	});
 end

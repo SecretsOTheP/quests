@@ -274,4 +274,9 @@ function event_encounter_load(e)
 	eq.register_npc_event("Wind", Event.spawn, AVATAR_TYPE, AvatarSpawn);
 	eq.register_npc_event("Wind", Event.combat, AVATAR_TYPE, AvatarCombat);
 	eq.register_npc_event("Wind", Event.timer, AVATAR_TYPE, AvatarTimer);
+	-- Durable recovery is limited to guild instances; the Guild 1 quake path above is retained.
+	require("air_ring_recovery").install("Wind", {
+		island=ISLAND_SPAWNIDS, menacing=MENACING_LOCS, bosses=BOSS_LOCS,
+		combat=AvatarCombat, avatar_timer=AvatarTimer
+	});
 end
