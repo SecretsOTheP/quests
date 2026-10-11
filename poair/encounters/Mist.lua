@@ -202,4 +202,9 @@ function event_encounter_load(e)
 	eq.register_npc_event("Mist", Event.spawn, AVATAR_TYPE, AvatarSpawn);
 	eq.register_npc_event("Mist", Event.combat, AVATAR_TYPE, AvatarCombat);
 	eq.register_npc_event("Mist", Event.timer, AVATAR_TYPE, AvatarTimer);
+	-- Durable recovery is limited to guild instances; the Guild 1 quake path above is retained.
+	require("air_ring_recovery").install("Mist", {
+		island=ISLAND_SPAWNIDS, surgers=SURGER_LOCS,
+		combat=AvatarCombat, avatar_timer=AvatarTimer
+	});
 end
