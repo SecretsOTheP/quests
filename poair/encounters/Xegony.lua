@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local XEGONY_TYPE = 215056; -- #Xegony_the_Queen_of_Air
 local PLANAR_PROJECTION_TYPE = 215432; -- Essence_of_Air
 local PRISMATIC_TYPE = 215004; -- A_Prismatic_Guardian_of_Xegony
@@ -135,8 +137,7 @@ function XegonyTimer(e)
 end
 
 function XegonyDeathComplete(e)
-	eq.spawn2(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0);
-	eq.signal(PLANAR_PROJECTION_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(PLANAR_PROJECTION_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), 0,e.killer);
 end
 
 function AddCombat(e)

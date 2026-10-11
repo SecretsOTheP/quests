@@ -1,3 +1,5 @@
+local ProjectionEligibility = require("projection_eligibility");
+
 local CONTROLLER_TYPE = 206197; -- Weapon_Event_Master
 local WAVE_TIME = 48000; -- 48 seconds between waves
 
@@ -167,8 +169,7 @@ function BehemothDeathComplete(e)
 	end
 	eq.depop_all(CLOCKWORK_DEVICE_TYPE);
 	eq.debug("Behemoth defeated; stopped waves and depopped remaining clockwork devices", 1);
-	eq.spawn2(GIWIN_FLAGGER_TYPE, 0, 0, 1013, 0, 2.1, 193);
-	eq.signal(GIWIN_FLAGGER_TYPE, e.killer:GetID()); -- e.killer for death_complete is somebody with kill rights, not death blow
+	ProjectionEligibility.Spawn(GIWIN_FLAGGER_TYPE, 0, 0, 1013, 0, 2.1, 193,e.killer,600);
 	woken = false;
 end
 
