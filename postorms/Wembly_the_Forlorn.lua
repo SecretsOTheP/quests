@@ -2,7 +2,7 @@
 
 function event_say(e)
 	if eq.get_data("pop_alt_access_enabled") ~= "1" then
-		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		e.self:Emote("grumbles under his breath, 'Eh? What? No no no, whatever it is you're after it will have to wait. My thoughts are all a jumble today, must be another storm blowing in. Come back and pester me some other time, yes? Now off with you, I have important sitting to do.");
 		return;
 	end
 
@@ -30,7 +30,7 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	if eq.get_data("pop_alt_access_enabled") ~= "1" then
-		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		e.self:Emote("grumbles under his breath, 'Eh? What? No no no, whatever it is you're after it will have to wait. My thoughts are all a jumble today, must be another storm blowing in. Come back and pester me some other time, yes? Now off with you, I have important sitting to do.");
 		item_lib.return_items(e.self, e.other, e.trade);
 		return;
 	end

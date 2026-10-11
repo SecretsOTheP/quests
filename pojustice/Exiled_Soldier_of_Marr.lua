@@ -14,7 +14,12 @@ end
 
 function event_trade(e)
 	local item_lib = require("items");
-	
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Emote("lies perfectly still, untroubled by your presence. It seems the time to claim these souls has not yet come.");
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 29281}, 0)) then
 		e.other:QuestReward(e.self,{items = {29293,29281}});
 	end
