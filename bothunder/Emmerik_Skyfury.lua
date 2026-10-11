@@ -9,7 +9,7 @@ end
 
 function event_death_complete(e)
 	eq.spawn2(209157, 0, 0, -1065, -1733, 1727, 192); -- ##Askr_the_Lost
-	eq.depop_all(209156); -- #Askr_the_Lost; not sure if this should be here
+	-- Keep the earned lower-floor Askr route for late arrivals through Karana's flagging window.
 end
 
 function event_timer(e)

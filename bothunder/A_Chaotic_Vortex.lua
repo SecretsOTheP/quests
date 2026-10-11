@@ -1,9 +1,9 @@
+local FlaggingTravel = require("flagging_travel");
+
 function event_spawn(e)
-	eq.set_timer("depop", 3300000);
+	FlaggingTravel.Start(e.self, 209136);
 end
 
 function event_timer(e)
-	if ( e.timer == "depop" ) then
-		eq.depop();
-	end
+	FlaggingTravel.OnTimer(e);
 end

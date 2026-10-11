@@ -1,4 +1,7 @@
+local FlaggingTravel = require("flagging_travel");
+
 function event_say(e)
+	if not FlaggingTravel.CanUse(e.self) then return; end
 	if ( e.message:findi("hail") ) then 
 		e.self:Say("Well done "..e.other:GetName()..".  You have succeed where I have failed, but now comes the most dangerous peril the Bastion holds.  The final level of Torden holds the restless spirit of the Rainkeeper himself.  You must find a way to free him from his tormented sleep.  His dreams and visions have coalesced into a dark shade of himself which controls the full fury of the [Storm].");
 		
@@ -9,11 +12,9 @@ function event_say(e)
 end
 
 function event_spawn(e)
-	eq.set_timer("depop", 3300000);
+	FlaggingTravel.Start(e.self, 209136);
 end
 
 function event_timer(e)
-	if ( e.timer == "depop" ) then
-		eq.depop();
-	end
+	FlaggingTravel.OnTimer(e);
 end

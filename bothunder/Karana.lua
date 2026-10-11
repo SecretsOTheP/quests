@@ -1,3 +1,5 @@
+local FlaggingTravel = require("flagging_travel");
+
 local FLAG_LIMIT = 72;
 
 local flags = 0;
@@ -42,6 +44,7 @@ function event_signal(e)
 end
 
 function event_spawn(e)
+	FlaggingTravel.OpenWindow(e.self, 3300, {[209156]=true, [209157]=true, [209158]=true});
 	eq.set_timer("depop", 3300000);
 	flags = 0;
 end
@@ -75,7 +78,7 @@ function event_say(e)
 					eq.delete_global("cl_karana");
 				end
 				
-			elseif ( karana < 3 and not qglobals.zebuxoruk ) then
+			elseif ( karana < 3 and not qglobals.zebuxoruk and not qglobals.cl_karana ) then
 				e.other:Message(0, "Karana begins to laugh quietly.  You seem to notice a great storm cloud brewing once more above him.  'Your path leads you onward mortals.  The path to power or ruin, the choice is up to you.  Speak the words and I will send you on your way.'");
 				eq.set_global("cl_karana", "1", 5, "F");
 				e.other:Message(15, "You have received a new checklist flag!");
