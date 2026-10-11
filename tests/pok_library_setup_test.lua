@@ -114,7 +114,16 @@ local p1=point(7151301,7151301,7151301);
 local p2=point(7151302,7151302,7151302);
 npc({npc_id=7151301,name="Gork"},949,25,3.4);
 npc({npc_id=7151302,name="Mork,_Applied_Physicist"},948,44,389.4);
-tick=load(); tick();
+tick=load();
+local legacy_client={moves=0};
+function legacy_client:GetX() return 949; end
+function legacy_client:GetY() return 25; end
+function legacy_client:GetZ() return 3.4; end
+function legacy_client:Message() end
+function legacy_client:MovePC() self.moves=self.moves+1; end
+handlers[7151301][Event.say]({self=npcs[1],other=legacy_client,message="up"});
+check(legacy_client.moves==1,"recognized prototype remains usable before replacement");
+tick();
 check(#npcs==0 and #created==0 and not p1.enabled and not p2.enabled,"legacy prototypes retire before replacements");
 tick(); check(#npcs==2 and #created==2,"legacy SQL rows do not prevent automatic creation");
 -- Simulate a native spawn appearing late, alongside its automatic replacement.

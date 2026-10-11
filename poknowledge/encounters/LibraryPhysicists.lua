@@ -87,15 +87,16 @@ function event_encounter_load(e)
     end
     encounter = e.encounter;
     for _, d in ipairs(definitions) do
-        local function owned(callback)
+        local function recognized_callback(callback)
             return function(event)
-                if event.self:GetEntityVariable(OWNER) == "1" and recognized(event.self, d) then
+                -- Keep the recognized SQL prototype usable until reconciliation.
+                if recognized(event.self, d) then
                     return callback(event);
                 end
             end;
         end
-        eq.register_npc_event(ENCOUNTER, Event.say, d.id, owned(d.dialogue.event_say));
-        eq.register_npc_event(ENCOUNTER, Event.trade, d.id, owned(d.dialogue.event_trade));
+        eq.register_npc_event(ENCOUNTER, Event.say, d.id, recognized_callback(d.dialogue.event_say));
+        eq.register_npc_event(ENCOUNTER, Event.trade, d.id, recognized_callback(d.dialogue.event_trade));
     end
     -- Let normal database population finish before checking legacy prototypes.
     eq.set_timer("initialize", 1000, encounter);
