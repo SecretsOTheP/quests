@@ -1,4 +1,5 @@
 -- Set the selected lower-plane named/event spawn points to 24 hours.
+-- Spectre of Corruption/Bertox remain on their 66-hour success cycle.
 -- Aerin Dar, The Seventh Hammer, and Manaetic Behemoth remain unchanged at 66 hours.
 -- Preserve variance and realm/raid access rules. Does not clear saved countdowns.
 -- Aramin already uses 24 hours. The crawler shares its spawn point with placeholders.
@@ -7,8 +8,8 @@
 UPDATE spawn2 SET respawntime = 86400
 WHERE id = 360632 AND zone = 'codecay' AND respawntime IN (259200, 86400);
 
--- Spectre of Corruption
-UPDATE spawn2 SET respawntime = 86400
+-- Spectre of Corruption starts Bertox: preserve the script's 66-hour success cycle.
+UPDATE spawn2 SET respawntime = 237600
 WHERE id = 360643 AND zone = 'codecay' AND respawntime IN (237600, 86400);
 
 -- Carprin Deatharn
@@ -67,13 +68,11 @@ WHERE id = 345916 AND zone = 'ponightmare' AND respawntime IN (259200, 86400);
 UPDATE spawn2 SET respawntime = 86400
 WHERE id = 364399 AND zone = 'povalor' AND respawntime IN (259200, 86400);
 
--- Rahlgon
-UPDATE spawn2 SET respawntime = 86400
-WHERE id = 347213 AND zone = 'povalor' AND respawntime IN (345600, 86400);
+-- Rahlgon is event-owned; the follow-up migration removes his independent timer.
 
 -- Verify the selected spawn points.
 SELECT id, zone, respawntime, variance FROM spawn2
-WHERE id IN (360632, 360643, 360642, 344766, 344762, 344765, 345148, 345147, 345149, 345473, 345905, 369184, 346307, 345919, 345916, 364399, 347213) ORDER BY zone, id;
+WHERE id IN (360632, 360643, 360642, 344766, 344762, 344765, 345148, 345147, 345149, 345473, 345905, 369184, 346307, 345919, 345916, 364399) ORDER BY zone, id;
 
 -- BoT named: six hours -> three hours. Only the six-hour Eindride spawn.
 -- Leave Agnarr, Emmerik, Evynd, and the separate fast Eindride spawn unchanged.
