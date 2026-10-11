@@ -38,12 +38,15 @@ local function npc(x, y, z)
 end
 
 local definitions = {
-    {name="Gork", file="library_gork", command="up", wrong="down", x=949,y=25,z=3.4, target={202,948,36,389.4,157}},
-    {name="Mork", file="library_mork", command="down", wrong="up", x=948,y=44,z=389.4, target={202,949,17,3.4,157}}
+    {name="Gork", file="Gork,_Theoretical_Physicist", command="up", wrong="down", x=949,y=25,z=3.4, target={202,948,36,389.4,157}},
+    {name="Mork", file="Mork,_Applied_Physicist", command="down", wrong="up", x=948,y=44,z=389.4, target={202,949,17,3.4,157}}
 };
 
 for _, d in ipairs(definitions) do
-    local environment = require(d.file);
+    local environment = setmetatable({}, {__index=_G});
+    local chunk = assert(loadfile(root .. "/poknowledge/" .. d.file .. ".lua"));
+    setfenv(chunk, environment);
+    chunk();
     local n = npc(d.x,d.y,d.z);
     local bystander = client(d.x,d.y,d.z);
     local function say(c, text)
@@ -91,7 +94,9 @@ end
 -- Round trip through both actual scripts, with the same requesting client.
 local c = client(949,17,3.4);
 for _, d in ipairs(definitions) do
-    local env = require(d.file);
+    local env = setmetatable({}, {__index=_G});
+    local chunk = assert(loadfile(root .. "/poknowledge/" .. d.file .. ".lua"));
+    setfenv(chunk,env); chunk();
     env.event_say({self=npc(d.x,d.y,d.z),other=c,message=d.command});
 end
 check(#c.moves==2 and c.x==949 and c.y==17 and c.z==3.4, "round trip returns to supplied downstairs landing");
