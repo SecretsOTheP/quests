@@ -1,0 +1,38 @@
+Plane of Knowledge library: Gork and Mork
+
+Install the two quest scripts and run the companion SQL manually against the
+content database. Merging this PR or reloading quests does not run the SQL.
+No server rebuild is required.
+
+1. Install these files under poknowledge, keeping the names exactly as written:
+   Gork,_Theoretical_Physicist.lua
+   Mork,_Applied_Physicist.lua
+2. Back up the affected content tables, then run:
+   2026_10_11_PoK_Gork_Mork_Library_Teleports.sql
+   The SQL clones Loreseeker Olgrim (NPC 202026) for the ogre appearance and
+   reserves IDs 7151301 and 7151302 in npc_types, spawngroup and spawn2.
+   It reports READY and creates the two NPCs, groups, entries and spawn points.
+   If the template is missing or a reserved ID is occupied, every insert is
+   skipped. Investigate SKIPPED; it is not proof the NPCs are fully installed.
+   A second run leaves existing rows unchanged. MyISAM cannot roll back a
+   partially completed run after an unexpected SQL error.
+3. Load the quest scripts and spawn data through the normal zone restart/repop
+   process. On TEST, clear the target and use #reload quest followed by #repop.
+   An untargeted #repop affects all NPCs in that zone; plan production timing.
+4. Verify these two NPCs in Plane of Knowledge:
+   Gork, Theoretical Physicist: XYZ 949, 25, 3.4. Say up.
+   Mork, Applied Physicist: XYZ 948, 44, 389.4. Say down.
+   Arrivals: XYZ 948, 36, 389.4 upstairs; XYZ 949, 17, 3.4 downstairs.
+   Mork has a plate helmet (helmtexture 3). Roles are part of the NPC names so
+   clients that omit NPC surnames can still display them.
+
+Hail, physics and plans give private replies. Keywords are typed normally;
+[UP] and [DOWN] are plain text, not clickable links. Only the requesting player
+moves. A 100-unit three-dimensional range check prevents cross-floor use.
+Unwanted items and money are returned without public NPC speech.
+
+The existing elevator and its buttons remain available. This adds a way around
+the unreliable elevator; it does not alter the elevator or its controls.
+
+Focused Lua verification, from the repository root with Lua 5.1:
+  lua tests/pok_library_teleports_test.lua .
