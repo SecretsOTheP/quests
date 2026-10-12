@@ -1,3 +1,5 @@
+local FlaggingTravel = require("flagging_travel");
+
 local KEY_ITEM_ID = 22954; -- Screaming Sphere
 
 function RaidHasKey(client)
@@ -40,6 +42,7 @@ function RaidHasKey(client)
 end
 
 function event_say(e)
+	if not FlaggingTravel.CanUse(e.self) then return; end
 
 	if ( e.message:findi("hail") ) then 
 
@@ -49,10 +52,13 @@ function event_say(e)
 	
 		local qglobals = eq.get_qglobals(e.other);
 		local noflag = false;
+		-- Only Keeper's post-death entrance copy has this route marker.
+		-- CanUse above enforces its window; every visitor still needs the preflag.
+		local keeper_defeated = tonumber(e.self:GetEntityVariable("flagging_travel_fixed_deadline")) ~= nil;
 		
 		if ( e.message:findi("will assist you") ) then
 		
-			if ( qglobals.tylis and RaidHasKey(e.other) ) then
+			if ( qglobals.tylis and (keeper_defeated or RaidHasKey(e.other)) ) then
 				e.self:Say("Please tell me when you are ready.  I do not know if I have enough energy to channel all of you, but I can try.  When you are ready, I will channel you into my pain.");
 			else
 				noflag = true;
@@ -60,7 +66,7 @@ function event_say(e)
 		
 		elseif ( e.message:findi("we are ready") or e.message:findi("i am ready") ) then
 		
-			if ( qglobals.tylis and RaidHasKey(e.other) ) then
+			if ( qglobals.tylis and (keeper_defeated or RaidHasKey(e.other)) ) then
 				e.self:CastSpell(1134, e.other:GetID()); -- Insanity of Tylis
 			else
 				noflag = true;
@@ -75,4 +81,8 @@ function event_say(e)
 			end
 		end
 	end
+end
+
+function event_timer(e)
+	FlaggingTravel.OnTimer(e);
 end

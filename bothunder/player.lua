@@ -1,3 +1,5 @@
+local FlaggingTravel = require("flagging_travel");
+
 -- this works because all players share these globals
 -- logic is: player holding Symbol of Torden clicks on the tower; player's raid or group ID is recorded in table
 -- all players in his/her raid may then click up for the next 5 minutes.
@@ -215,7 +217,9 @@ end
 
 function event_click_merchant(e)
 
-	if ( e.merchant_type_id == 209158 ) then -- A_Chaotic_Vortex 
+	if ( e.merchant_type_id == 209158 ) then -- A_Chaotic_Vortex
+		local vortex = eq.get_entity_list():GetMobByNpcTypeID(e.merchant_type_id);
+		if not FlaggingTravel.CanUse(vortex) then return; end
 	
 		e.self:MovePC(209, -665, -1735, 2251, 192*2);
 		if ( e.self:GetPet().valid and not e.self:GetPet():Charmed() ) then

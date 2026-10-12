@@ -8,9 +8,9 @@ function event_signal(e)
 end
 
 function event_spawn(e)
-    ProjectionEligibility.OnSpawn(e.self, 1200);
+    ProjectionEligibility.OnSpawn(e.self, 1800);
 	flags = 0;
-	eq.set_timer("depop", 1200000); -- 20 minutes
+	eq.set_timer("depop", 1800000); -- 30 minutes
 end
 
 function event_timer(e)

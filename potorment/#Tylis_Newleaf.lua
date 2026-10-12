@@ -1,17 +1,19 @@
+local FlaggingTravel = require("flagging_travel");
+
 local FLAG_LIMIT = 72;
 
 function event_spawn(e)
-	flags = 0;
-	eq.set_timer("depop", 600000);
+	e.self:SetEntityVariable("keeper_flags", "0");
+	FlaggingTravel.StartFixed(e.self, os.time() + 1800);
 end
 
 function event_timer(e)
-	if ( e.timer == "depop" ) then
-		eq.depop();
-	end
+	FlaggingTravel.OnTimer(e);
 end
 
 function event_say(e)
+	if not FlaggingTravel.CanUse(e.self) then return; end
+	local flags = tonumber(e.self:GetEntityVariable("keeper_flags")) or 0;
 	local qglobals = eq.get_qglobals(e.other);
 
 	if ( e.message:findi("hail") ) then 
@@ -24,6 +26,7 @@ function event_say(e)
 				eq.set_global("tylis", "2", 5, "F");
 				e.other:Message(15, "You have received a character flag!");
 				flags = flags + 1;
+				e.self:SetEntityVariable("keeper_flags", tostring(flags));
 			end
 			
 			if ( qglobals.cl_keeper ) then
@@ -37,6 +40,7 @@ function event_say(e)
 				eq.set_global("cl_keeper", "1", 5, "F");
 				e.other:Message(15, "You have received a new checklist flag!");
 				flags = flags + 1;
+				e.self:SetEntityVariable("keeper_flags", tostring(flags));
 			end
 		end
 		

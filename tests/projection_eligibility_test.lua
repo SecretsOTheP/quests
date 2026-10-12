@@ -47,6 +47,10 @@ local function world()
   end
   return list;
  end
+ function entity:GetNPCList()
+  local values={};for _,n in pairs(w.mobs)do if n.valid and n.typ then values[#values+1]=n;end end
+  local i=0;return {entries=function()i=i+1;return values[i];end};
+ end
  function entity:GetClientByID(id)local c=w.mobs[id];return c and c.valid and c:IsClient()and c or invalid;end
  function entity:GetMob(id)return w.mobs[id]or invalid;end
  local eq={};
@@ -69,7 +73,10 @@ local function world()
  function w:loadHelper()local f=assert(loadstring(helper));setfenv(f,self.env);self.module=f();return self.module;end
  w:loadHelper();
  function w:handler(file,npc)
-  local scriptEnv=setmetatable({eq=eq,require=function(name)assert(name=="projection_eligibility");return w.module;end},{__index=_G});
+  local scriptEnv=setmetatable({eq=eq,require=function(name)
+   if name=="projection_eligibility" then return w.module;end
+   assert(name=="flagging_travel");local chunk=assert(loadstring(read("lua_modules/flagging_travel.lua")));setfenv(chunk,w.env);return chunk();
+  end},{__index=_G});
   local f=assert(loadstring(read(file),file));setfenv(f,scriptEnv);f();
   function scriptEnv.hail(c)
    w.currentNPC=npc;w.currentClient=c;
@@ -127,8 +134,8 @@ local specs={
  {"hohonorb/A_Planar_Projection.lua",{hohtrials="111"},"mmarr","1",144},
  {"nightmareb/A_Planar_Projection.lua",{thelin="2"},"thelin","3",72},
  {"podisease/A_Planar_Projection.lua",{fuirstel="1"},"fuirstel","2",144},
- {"poeartha/A_Planar_Projection.lua",{},"earthb_key","1",54},
- {"potorment/A_Planar_Projection.lua",{tylis="2"},"saryrn","1",72},
+ {"poeartha/A_Planar_Projection.lua",{},"earthb_key","1",72},
+ {"potorment/A_Planar_Projection.lua",{tylis="2"},"saryrn","1",72,1800},
  {"povalor/A_Planar_Projection.lua",{mavuin="3"},"aerindar","1",72},
  {"solrotower/A_Planar_Projection.lua",{sol_room="11111",pofire="1",zeks="7"},"pofire","2",72},
  {"potactics/214322.lua",{zeks="6"},"zeks","7",72},
