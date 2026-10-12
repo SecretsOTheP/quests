@@ -202,7 +202,7 @@ function M.install(name, opts)
     end
     local function owned_npcs()
         local result={};
-        for n in eq.get_entity_list():GetNPCList().entries do
+        local npcList=eq.get_entity_list():GetNPCList(); for n in npcList.entries do
             if live(n) and tagged(n) then result[#result+1]=n; end
         end
         return result;
@@ -448,7 +448,7 @@ function M.install(name, opts)
     if name=="Dust" then
         reg(Event.death,215400,function(e)
             inherited_hate={};
-            for entry in e.self:GetHateList().entries do
+            local hateList=e.self:GetHateList(); for entry in hateList.entries do
                 if entry.ent and entry.ent.valid and entry.ent:IsClient() then inherited_hate[#inherited_hate+1]=entry.ent; end
             end
         end);
