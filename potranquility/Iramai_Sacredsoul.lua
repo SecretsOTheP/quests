@@ -3,7 +3,7 @@
 
 function event_say(e)
 	if eq.get_data("pop_alt_access_enabled") ~= "1" then
-		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		e.self:Say("Oh, I am sorry, but I cannot ask for your help with this right now. Phanti needs all of my attention, and the way into Saryrn's domain is closed to us for the time being. Please, return to me another time.");
 		return;
 	end
 
@@ -21,7 +21,7 @@ end
 function event_trade(e)
 	local item_lib = require("items");
 	if eq.get_data("pop_alt_access_enabled") ~= "1" then
-		e.self:Say("There are secrets within these planes that I have yet to unravel. I believe there may be another way to breach the homes of the gods, but I must study further. Return to me another time.");
+		e.self:Say("Oh, I am sorry, but I cannot ask for your help with this right now. Phanti needs all of my attention, and the way into Saryrn's domain is closed to us for the time being. Please, return to me another time.");
 		item_lib.return_items(e.self, e.other, e.trade);
 		return;
 	end

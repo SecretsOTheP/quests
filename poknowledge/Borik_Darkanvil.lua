@@ -1,4 +1,9 @@
 function event_say(e)
+	if eq.get_data("pop_alt_access_enabled") ~= "1" and (e.message:findi("box of souls") or e.message:findi("Perilium") or e.message:findi("forge them for me")) then
+		e.self:Say("I am sorry friend, but that is work I cannot take on at the moment. Some recipes call for more than a steady hammer, and the magic of Tanaan's forges has not been cooperating with me of late. Check back with me another day.");
+		return;
+	end
+
 	if(e.message:findi("Hail")) then
 		e.self:Say("Greetings, Borik Darkanvil, at your service. I was once a planar traveler like you. Those days are behind me, now I am content to earn my keep as a blacksmith, and to experiment with some of the [special recipes] that I have picked up in these outer planes.");
 	elseif(e.message:findi("special recipes")) then
@@ -19,6 +24,12 @@ end
 function event_trade(e)
 	require("knowledge_protection_trade").ReturnProtectedItems(e);
 	local item_lib = require("items");
+	if eq.get_data("pop_alt_access_enabled") ~= "1" then
+		e.self:Say("I am sorry friend, but that is work I cannot take on at the moment. Some recipes call for more than a steady hammer, and the magic of Tanaan's forges has not been cooperating with me of late. Check back with me another day.");
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 29228, item2 = 29229, item3 = 29230, platinum = 3000})) then
 		e.self:Say("Ah ha! Here we go one box of souls!");
 		e.other:QuestReward(e.self,0,0,0,0,29281);
