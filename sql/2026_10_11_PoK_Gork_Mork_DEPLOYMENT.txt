@@ -1,0 +1,57 @@
+Plane of Knowledge library: Gork and Mork
+
+REQUIRED AFTER MERGE: deploy the two Lua files AND run the install SQL once
+against the server's content database. Merging/pulling this quest repository
+or reloading the zone does not, by itself, execute SQL. A deployment operator
+must include the SQL step. No C++ patch, server rebuild or PR #483 is required.
+
+Deployment, in this order:
+1. Deploy these quest files under poknowledge with the exact filenames:
+   Gork,_Theoretical_Physicist.lua
+   Mork,_Applied_Physicist.lua
+2. Back up the affected content rows. In the SQL client connected to the intended
+   content database, run the ENTIRE following file in ONE connection, stopping
+   on errors (do not use a continue-on-error / --force option):
+   sql/2026_10_11_PoK_Gork_Mork_Library_Teleports.sql
+3. Require two final INSTALLED rows: NPC 7151301 Gork and NPC 7151302 Mork.
+   STOP means the reserved IDs/links belong to something unexpected and all
+   persistent changes were skipped. INCOMPLETE or a SQL error is not success.
+   Rerun after resolving the cause; MyISAM cannot roll back a partial install.
+4. Independently confirm the permanent rows with the lightweight read-only file:
+   sql/2026_10_11_PoK_Gork_Mork_VERIFY.sql
+   It always reports both requested IDs using primary-key joins. Missing rows
+   appear as MISSING, rather than disappearing into an empty result set.
+5. Load the new quests and database spawn data with a PoK zone restart. On TEST,
+   #reload quest followed by an untargeted #repop also loads the new spawns.
+   A quest reload alone does not create spawnpoints from SQL. Plan a production
+   zone restart/repop with the players present in mind.
+
+SQL scope and protection:
+- Adds/repairs exactly two rows in each of npc_types, spawngroup, spawnentry,
+  and spawn2. All are persistent content rows; no template NPC is needed.
+- Explicit ogre appearance, no merchant inventory or loot/lockouts, enabled
+  permanent spawnpoints, 100% spawn entries and 60-second respawns.
+- Existing canonical Gork/Mork identities may be repaired. Bare prototype names
+  are accepted only with their matching known PoK group and spawnpoint.
+- Foreign NPCs, group names, spawnpoints, group entries, extra spawnpoints or
+  references to either NPC from another group block all persistent writes.
+- The ownership preflight is capped at two seconds. It also checks spawnentry
+  references by NPC ID (not indexed in the inspected TEST schema); stop and
+  review a timeout instead of assuming it installed.
+- Existing elevator/button rows, players, other NPCs and saved timers are untouched.
+
+Gork: XYZ 949,25,3.4, heading 157. Say up.
+Mork: XYZ 948,44,389.4, heading 157. Say down.
+Arrivals: upstairs XYZ 948,36,389.4; downstairs XYZ 949,17,3.4; heading 157.
+Roles are part of their names for Zeal nameplates; Mork has a plate helmet.
+Hail, physics, plans and travel replies go privately to the requesting player.
+[UP]/[DOWN] are plain-text cues; type the word without brackets. No clickable
+links. A 100-unit 3D range check prevents cross-floor use, and unwanted items
+and money are returned without public NPC speech.
+
+The previously proposed script-created NPC approach was withdrawn. Do not run
+its old build/automatic-install command. Neither that approach nor server #483
+is part of this PR's final deployment.
+
+Lua verification from the quest root with Lua 5.1:
+  lua tests/pok_library_teleports_test.lua .
