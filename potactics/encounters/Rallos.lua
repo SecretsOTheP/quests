@@ -48,8 +48,8 @@ local killerName, killerGName = "", "";
 local BALANCE_NAMELESS = 3230;
 -- Lua arrival indices are zero-based: DB waypoint number 4 is e.wp == 3.
 local BROTHER_HOMES = { [TALLON_TYPE]={319,-85,181.6,128}, [VALLON_TYPE]={319,110,181.6,0} };
--- Door-guard Y positions, with a 20-unit tolerance; retain the original X/Z limits.
-local COUNCIL_MIN_Y, COUNCIL_MAX_Y = -306, 321;
+-- Arrival detection during reload recovery only; these are not leash boundaries.
+local COUNCIL_ARRIVAL_MIN_Y, COUNCIL_ARRIVAL_MAX_Y = -306, 321;
 local WATCHDOG_MS, MISSING_GRACE = 5000, 10;
 local initialized=false;
 local Initialize;
@@ -126,7 +126,11 @@ local function CancelActions()
     for _,name in ipairs({"doors","brothers_killed","wraiths","respawn","poofadds"}) do Cancel(name); end
 end
 local function Track(mob)
-    if mob and mob.valid then roomSpawns[mob:GetID()] = mob:GetNPCTypeID(); end
+    if mob and mob.valid then
+        roomSpawns[mob:GetID()] = mob:GetNPCTypeID();
+        -- Copies belong to this encounter even when Vallon summons them outside the room.
+        if mob:GetNPCTypeID()==VALLON_SPAWN_TYPE then mob:SetEntityVariable("rallos_copy","1"); end
+    end
 end
 local function CleanupRoomAdds()
     local list=eq.get_entity_list();
@@ -179,9 +183,6 @@ local function HideUntargetable()
     local mob=Alive(UNTARGETABLE_TYPE);
     if mob then eq.stop_all_timers(mob); mob:Depop(); end
 end
-local function OutOfCouncil(npc)
-    return npc:GetX()>820 or npc:GetY()<COUNCIL_MIN_Y or npc:GetY()>COUNCIL_MAX_Y or npc:GetZ()<115;
-end
 local function Leash(npc, home)
     local x,y,z=npc:GetX(),npc:GetY(),npc:GetZ();
     npc:InterruptSpell();
@@ -227,7 +228,8 @@ local function StartIdle(npc, timeout)
     idle[t]={remaining=remaining};
     if not npc:IsEngaged() then idle[t].started=Now(); end
     eq.stop_all_timers(npc);
-    eq.set_timer("bounds",2000,npc);
+    -- Original polling intervals: brothers every five seconds, Rallos every six.
+    eq.set_timer("bounds",(t==TALLON_TYPE or t==VALLON_TYPE) and 5000 or 6000,npc);
     if not npc:IsEngaged() then eq.set_timer("depop",math.max(1,remaining),npc); end
     SaveState();
 end
@@ -383,13 +385,7 @@ function DoorGuardSpawnEvent(e)
         guardDeaths[t]=nil; SaveState();
         Log("RESET",e.self:GetCleanName().." returned to its post; its previous kill no longer counts toward starting the encounter.");
     end
-    eq.set_timer("bounds",2000);
-end
-
-function DoorGuardTimerEvent(e)
-    if e.timer=="bounds" and OutOfCouncil(e.self) then
-        Leash(e.self,{e.self:GetSpawnPointX(),e.self:GetSpawnPointY(),e.self:GetSpawnPointZ(),e.self:GetSpawnPointH()});
-    end
+    eq.stop_timer("bounds"); -- Clear any guard leash left by the previous script.
 end
 
 function BrotherDeathEvent(e)
@@ -406,12 +402,6 @@ function SpawnRoomAdd(t,x,y,h)
     local mob=eq.spawn2(t,0,0,x,y,178,h);
     if not mob or not mob.valid then FailEncounter("Failed to spawn room add type "..t); return; end
     Track(mob); mob:SetSpecialAbility(49,1); return mob;
-end
-
-function RoomAddTimerEvent(e)
-    if (phase==1 or phase==2) and e.timer=="bounds" and roomSpawns[e.self:GetID()]==VALLON_SPAWN_TYPE and OutOfCouncil(e.self) then
-        Leash(e.self,BROTHER_HOMES[VALLON_TYPE]);
-    end
 end
 
 function RoomAddSpawnEvent(e)
@@ -471,7 +461,7 @@ end
 function BrotherTimerEvent(e)
     if phase~=1 then return; end
     local t=e.self:GetNPCTypeID();
-    if e.timer=="bounds" and OutOfCouncil(e.self) and (arrived[t] or e.self:IsEngaged()) then
+    if e.timer=="bounds" and e.self:GetX()>820 then
         Leash(e.self,BROTHER_HOMES[t]);
         if not arrived[t] then
             e.self:UpdateWaypoint(3);
@@ -488,7 +478,6 @@ function VallonHPEvent(e)
     if phase~=1 then return; end
 	if ( e.hp_event == 50 and not copiesSpawned ) then
         copiesSpawned=true; SaveState();
-        if OutOfCouncil(e.self) then Leash(e.self,BROTHER_HOMES[VALLON_TYPE]); ResumeIdle(e.self); end
 		-- vallon adds are similar to the other vallon's, so reusing the type
 		local mob = eq.spawn2(VALLON_SPAWN_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ(), e.self:GetHeading());
 		if not mob or not mob.valid then FailEncounter("Vallon copy failed to spawn."); return; end
@@ -530,7 +519,7 @@ end
 
 function RallosTimerEvent(e)
     if phase~=2 then return; end
-    if e.timer=="bounds" and OutOfCouncil(e.self) then
+    if e.timer=="bounds" and e.self:GetZ()<115 then
         Leash(e.self,{500,20,194.125,64}); ResumeIdle(e.self);
     elseif e.timer=="elites" then
         eq.set_timer("elites",50000);
@@ -796,7 +785,7 @@ local function Reattach(npc, timeout)
         if npc:IsEngaged() then eq.set_timer("elites",20000,npc); end
     elseif t==WARLORD_TYPE and npc:IsEngaged() then eq.set_timer("twitch",55000,npc);
     elseif t==TALLON_TYPE or t==VALLON_TYPE then
-        if npc:GetY()>=COUNCIL_MIN_Y and npc:GetY()<=COUNCIL_MAX_Y then arrived[t]=true; end
+        if npc:GetY()>=COUNCIL_ARRIVAL_MIN_Y and npc:GetY()<=COUNCIL_ARRIVAL_MAX_Y then arrived[t]=true; end
         if arrived[t] then npc:SetSpecialAbility(24,0); npc:SetSpecialAbility(35,0); end
         if t==VALLON_TYPE then eq.signal(t,9001); end
         npc:CastToNPC():SetCastRateDetrimental(75);
@@ -821,8 +810,10 @@ Initialize=function()
         if phase>0 then attempt=attempt+1; Log("WARN","Adopting an existing encounter without saved kill history; missing brothers will cause recovery."); end
     end
     local npcList=eq.get_entity_list():GetNPCList(); for npc in npcList.entries do
-        if npc.valid and npc:GetSpawnPointID()==0 and npc:GetX()>0 and npc:GetZ()>150 and
-            (npc:GetNPCTypeID()==FLAYER_TYPE or npc:GetNPCTypeID()==SHADOW_TYPE or npc:GetNPCTypeID()==VALLON_SPAWN_TYPE) then
+        if npc.valid and npc:GetSpawnPointID()==0 and
+            ((npc:GetNPCTypeID()==VALLON_SPAWN_TYPE and npc:GetEntityVariable("rallos_copy")=="1") or
+             (npc:GetX()>0 and npc:GetZ()>150 and
+              (npc:GetNPCTypeID()==FLAYER_TYPE or npc:GetNPCTypeID()==SHADOW_TYPE or npc:GetNPCTypeID()==VALLON_SPAWN_TYPE))) then
             Track(npc);
             if npc:GetNPCTypeID()==VALLON_SPAWN_TYPE then npc:SetEntityVariable("rallos_copy","1"); end
         end
@@ -842,7 +833,7 @@ Initialize=function()
         EnsureUntargetable(); ApplyGuardCooldown();
     else
         for _,t in ipairs({BERIK_TYPE,GRUNHORK_TYPE}) do
-            local npc=Alive(t); if npc then guardDeaths[t]=nil; eq.set_timer("bounds",2000,npc); end
+            local npc=Alive(t); if npc then guardDeaths[t]=nil; eq.stop_timer("bounds",npc); end
         end
         local a=eq.get_entity_list():GetSpawnByID(BERIK_SPAWNID);
         local b=eq.get_entity_list():GetSpawnByID(GRUNHORK_SPAWNID);
@@ -976,15 +967,12 @@ function event_encounter_load(e)
 
     eq.register_npc_event("Rallos",Event.spawn,BERIK_TYPE,SafeHandler(DoorGuardSpawnEvent));
     eq.register_npc_event("Rallos",Event.spawn,GRUNHORK_TYPE,SafeHandler(DoorGuardSpawnEvent));
-    eq.register_npc_event("Rallos",Event.timer,BERIK_TYPE,SafeHandler(DoorGuardTimerEvent));
-    eq.register_npc_event("Rallos",Event.timer,GRUNHORK_TYPE,SafeHandler(DoorGuardTimerEvent));
     eq.register_npc_event("Rallos",Event.death_complete,RALLOS_ZEK_TYPE,SafeHandler(RallosDeathEvent));
     eq.register_npc_event("Rallos",Event.signal,RALLOS_ZEK_TYPE,SafeHandler(BossRecoverySignalEvent));
     eq.register_npc_event("Rallos",Event.signal,VALLON_TYPE,SafeHandler(BossRecoverySignalEvent));
     eq.register_npc_event("Rallos",Event.spawn,FLAYER_TYPE,SafeHandler(RoomAddSpawnEvent));
     eq.register_npc_event("Rallos",Event.spawn,SHADOW_TYPE,SafeHandler(RoomAddSpawnEvent));
     eq.register_npc_event("Rallos",Event.spawn,VALLON_SPAWN_TYPE,SafeHandler(RoomAddSpawnEvent));
-    eq.register_npc_event("Rallos",Event.timer,VALLON_SPAWN_TYPE,SafeHandler(RoomAddTimerEvent));
     eq.set_timer("initialize",1000,encounter);
     eq.set_timer("watchdog",WATCHDOG_MS,encounter);
 end
