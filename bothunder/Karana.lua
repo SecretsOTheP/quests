@@ -44,8 +44,8 @@ function event_signal(e)
 end
 
 function event_spawn(e)
-	FlaggingTravel.OpenWindow(e.self, 3300, {[209156]=true, [209157]=true, [209158]=true});
-	eq.set_timer("depop", 3300000);
+	FlaggingTravel.OpenWindow(e.self, 1200, {[209156]=true, [209157]=true, [209158]=true});
+	eq.set_timer("depop", 1200000);
 	flags = 0;
 end
 

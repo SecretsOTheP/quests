@@ -100,7 +100,8 @@ local function world()
   function n:CastSpell(spell,target)self.lastCast={spell,target};end
   function n:IsClient()return false;end
   function n:IsPet()return false;end
-  self.mobs[#self.mobs+1]=n;self:loadNPC(n);self:call(n,'event_spawn',{});return n;
+  -- QuestManager::spawn2 runs EVENT_SPAWN before EntityList::AddNPC registers the NPC.
+  self:loadNPC(n);self:call(n,'event_spawn',{});self.mobs[#self.mobs+1]=n;return n;
  end
  function w:client(raid,group)
   self.nextid=self.nextid+1;
@@ -243,7 +244,10 @@ w:kill(w:npc(900002),main);local upper=w:get(209157);check(lower.valid and upper
 w:say(upper,alt,'what storm');local vortex=w:get(209158);check(vortex.valid,'upper Askr still requires dialogue to create vortex');
 w:advance(7200);check(lower.valid and upper.valid and vortex.valid,'tower route survives a long encounter before Karana');
 w:kill(w:npc(900003),main);local karana=w:get(209136);
-check(karana.valid and lower.vars.flagging_travel_deadline==tostring(w.now+3300),'Karana starts existing fifty-five minute travel window');
+check(lower.valid and upper.valid and vortex.valid,'Askr and vortex must survive Karana event_spawn before entity-list registration');
+check(karana.valid and lower.vars.flagging_travel_deadline==tostring(w.now+1200),'Karana starts twenty-minute travel window');
+check(w.timers[karana.id..':depop'].ms==1200000,'Karana despawn matches the twenty-minute travel deadline');
+alt.lastMove=nil;w:say(lower,alt,'transport');check(lower.valid and alt.lastMove and alt.lastMove[4]==1729,'late alt can use lower Askr immediately after Karana spawns');
 alt.globals.karana='3';w:say(karana,alt,'follow the path of the Fallen');check(alt.globals.karana=='4','late raid alt can still earn Karana flag');
 local noquest=w:client(10);w:say(karana,noquest,'follow the path of the Fallen');check(noquest.globals.cl_karana=='1' and not noquest.globals.karana,'Karana quest prerequisite preserved');
 local messagesBeforeRepeat=#w.messages;
@@ -256,10 +260,10 @@ local player=w:player();player.event_click_door({self=alt,door={GetDoorID=functi
 player.event_click_door({self=alt,door={GetDoorID=function()return 51;end}});check(not alt.lastMove,'tower key requirement not removed');
 main.cursor=9433;player.event_click_door({self=main,door={GetDoorID=function()return 51;end}});
 player.event_click_door({self=alt,door={GetDoorID=function()return 51;end}});check(alt.lastMove and alt.lastMove[4]==1270,'original keyed raid tower admission still works');
-w:advance(3000);vortex:Depop();w:say(upper,alt,'what storm');vortex=w:get(209158);
+w:advance(900);vortex:Depop();w:say(upper,alt,'what storm');vortex=w:get(209158);
 check(vortex.vars.flagging_travel_deadline==karana.vars.flagging_travel_deadline,'late-created vortex inherits only remaining five minutes');
 player.event_click_merchant({self=alt,merchant_type_id=209158});check(alt.lastMove[4]==2251,'merchant event works with real API type ID, without e.other');
-w:advance(299);w:reload(upper);w:say(upper,alt,'what storm');check(upper.valid and lower.valid and vortex.valid,'entire route available at 54m59s');
+w:advance(299);w:reload(upper);w:say(upper,alt,'what storm');check(upper.valid and lower.valid and vortex.valid,'entire route available at 19m59s');
 w:advance(1);alt.lastMove=nil;player.event_click_merchant({self=alt,merchant_type_id=209158});
 w:say(lower,alt,'transport');w:say(upper,alt,'what storm');
 check(not alt.lastMove and not lower.valid and not upper.valid and not vortex.valid and not karana.valid,'all tower transport closes with Karana');
