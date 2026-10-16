@@ -16,6 +16,10 @@ function event_say(e)
     local message = e.message:lower():match("^%s*(.-)%s*$");
 
     if message == "up" then
+        if e.other:GetHorseId() ~= 0 then
+            tell(e.other, "Oi! Off yer horse first, then say [UP] again. Theory covers boots, not hooves.");
+            return;
+        end
         tell(e.other, "Hold still. I'm testin' a theory.");
         -- Player-supplied XYZ landing, not the moving lift platform.
         e.other:MovePC(202, 948, 36, 389.4, 157);

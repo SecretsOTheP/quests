@@ -15,6 +15,10 @@ function event_say(e)
     local message = e.message:lower():match("^%s*(.-)%s*$");
 
     if message == "down" then
+        if e.other:GetHorseId() ~= 0 then
+            tell(e.other, "Oi! Off yer horse first, then say [DOWN] again. I'm bendin' space, not foldin' horses.");
+            return;
+        end
         tell(e.other, "Mind yer head. I'm movin' the downstairs. Don't slip on the puddle down there. Last test got the soup downstairs before the bowl. Still waitin' on the bowl.");
         e.other:MovePC(202, 949, 17, 3.4, 157);
     elseif message == "hail" or message:match("^hail[%s,]") then
