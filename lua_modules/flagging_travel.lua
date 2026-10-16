@@ -66,7 +66,9 @@ function M.OpenWindow(flagger, seconds, types)
         if Live(npc) and types[npc:GetNPCTypeID()]
             and tonumber(Get(npc, "final_type")) == flagger:GetNPCTypeID() then
             Bind(npc, flagger);
-            M.CanUse(npc);
+            -- event_spawn can run before the flagger enters the entity list.
+            -- Validate on the next tick, once GetMobID can find that flagger.
+            eq.set_timer(TIMER, 10000, npc);
         end
     end
 end
