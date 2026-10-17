@@ -38,6 +38,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+    require("knowledge_protection_trade").ReturnProtectedItems(e);
     -- No purchases or quest hand-ins; return everything without public NPC speech.
     if require("items").return_items(e.self, e.other, e.trade, false) then
         tell(e.other, "Keep yer bits an' coins. The library pays us. Say [UP] when you're ready.");
