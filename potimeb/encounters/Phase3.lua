@@ -118,7 +118,8 @@ function SpawnPhase()
 		bossNum = (wave-1)*2+1;
 
 		if ( shadows[bossNum] and shadows[bossNum] == 1 ) then
-			eq.spawn2(waveTable[1], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			local shadow = eq.spawn2(waveTable[1], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			shadow:CastToNPC():ClearItemList();
 		else
 			eq.spawn2(waveTable[1], 0, 0, x, y, z, h);
 		end
@@ -128,7 +129,8 @@ function SpawnPhase()
 		bossNum = bossNum + 1;
 		
 		if ( shadows[bossNum] and shadows[bossNum] == 1 ) then
-			eq.spawn2(waveTable[2], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			local shadow = eq.spawn2(waveTable[2], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			shadow:CastToNPC():ClearItemList();
 		else
 			eq.spawn2(waveTable[2], 0, 0, x, y, z, h);
 		end
@@ -153,7 +155,8 @@ function SpawnWave()
 		local bossNum = (wave-1)*2+1;
 		
 		if ( shadows[bossNum] and shadows[bossNum] == 1 ) then
-			eq.spawn2(WAVES[wave][1], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			local shadow = eq.spawn2(WAVES[wave][1], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			shadow:CastToNPC():ClearItemList();
 		else
 			eq.spawn2(WAVES[wave][1], 0, 0, x, y, z, h);
 		end
@@ -163,7 +166,8 @@ function SpawnWave()
 		bossNum = bossNum + 1;
 		
 		if ( shadows[bossNum] and shadows[bossNum] == 1 ) then
-			eq.spawn2(WAVES[wave][2], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			local shadow = eq.spawn2(WAVES[wave][2], 0, 0, x, y, z, h, SHADOW_NAMES[bossNum]);
+			shadow:CastToNPC():ClearItemList();
 		else
 			eq.spawn2(WAVES[wave][2], 0, 0, x, y, z, h);
 		end
@@ -229,7 +233,9 @@ end
 function DeathComplete(e)
 	kills = kills + 1;
 	
-	if ( kills == 10 ) then
+	if ( wave == 9 and kills == 2 ) then
+		eq.signal(INSTANCE_CONTROLLER_TYPE, 10, 0); -- both final bosses defeated this attempt
+	elseif ( kills == 10 ) then
 		SpawnWave();
 	end
 end

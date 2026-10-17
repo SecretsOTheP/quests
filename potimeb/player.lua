@@ -30,6 +30,18 @@ end
 
 function event_click_door(e)
 	local door_id = e.door:GetDoorID();
+
+	if ( door_id == 52 ) then
+		-- Match the Time A tombstone: suppress the native public-zone teleport.
+		if ( e.door:GetOpenType() ~= 57 ) then
+			e.door:SetOpenType(57);
+		end
+		if ( e.self:GetHP() > 0 ) then
+			-- Follow the source instance, including visitors and public Time B.
+			e.self:MovePCGuildID(219, eq.get_zone_guild_id(), -110, 0, 5, 0);
+		end
+		return;
+	end
 	
 	-- god portals
 	if ( door_id >= 17 and door_id <= 23 ) then

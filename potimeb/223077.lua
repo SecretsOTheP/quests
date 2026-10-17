@@ -5,8 +5,6 @@ local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
 local EVENTS_CONTROLLER_TYPE = 223078;
 local QUARM_TYPE = 223008;
-local TIMELINE_LIFETIME = 691200; -- 8 days
-local TIMELINE_GRACE = 108000; -- 30 hours after the latest boss lockout
 
 local EMOTE_STRINGS = {
 	[1] = "An hourglass appears in the distance, the few remaining sands trickling down.  As the last grain falls, multicolored lights erupt from it, surrounding you in a brilliant flash.",
@@ -81,14 +79,15 @@ local DIALOG_START_STOPS = { [1] = { 5, 18 }, [2] = { 19, 29 }, [3] = { 30, 34 }
 local zonePhase = 0;
 local zoneRaidID = 0;
 local zoneInstanceID = 0
+local zoneInstanceGeneration;
 local zoneInstanceData = "";
 local zoneTimers = {};
-local zoneHardExpire = 0;
 local zoneBossTable = {};
 local failTime = 0;
 local failWarningMsg;
 local validPlayers;     -- sequential list of sub-tables containing character ID and os.time() of when they zoned
 local bossEngagedTime = 0;
+local phase3Completed = false;
 local trialStates = { [1] = 0, [2] = 0, [3] = 0, [4] = 0, [5] = 0 };
 local dialog;
 local trialSignal, signalTries, confirmSignal, confirmData, pulses;
@@ -163,9 +162,14 @@ function SetBossKilled(phase, bossNum)
 	if ( not zoneBossTable[phase] or not zoneBossTable[phase][bossNum] ) then
 		return false;
 	end
-	zoneBossTable[phase][bossNum] = 1;
-	
-	local t = 583200; -- 6 days, 18 hours
+	local alreadyKilled = zoneBossTable[phase][bossNum] == 1;
+	local now = os.time();
+	local t = 561600; -- original god lockout: 6 days, 12 hours
+	if ( phase == 1 ) then
+		t = 43200; -- original Phase 1 lockout: 12 hours
+	elseif ( phase == 2 or phase == 3 ) then
+		t = 302400; -- original Phase 2/3 lockout: 3 days, 12 hours
+	end
 	
 	local timerNum = phase;
 	if ( phase == 4 ) then
@@ -175,12 +179,15 @@ function SetBossKilled(phase, bossNum)
 	elseif ( phase == 6 ) then
 		timerNum = 12;
 	end
-	if ( phase > 3 or zoneTimers[timerNum] == 0 ) then  -- phase 1-3 start the timer from the frist boss kill
-		zoneTimers[timerNum] = os.time() + t;
+	-- A duplicate god-death signal must not replace a still-active saved lockout
+	-- or award phase completion again. Existing deadlines survive this restoration.
+	if ( phase > 3 and alreadyKilled and zoneTimers[timerNum] >= now ) then
+		return false;
 	end
-	-- Preserve the full boss lockout plus the timeline's recovery window. Ordinary
-	-- saves must never extend this deadline.
-	zoneHardExpire = math.max(zoneHardExpire, zoneTimers[timerNum] + TIMELINE_GRACE);
+	zoneBossTable[phase][bossNum] = 1;
+	if ( phase > 3 or zoneTimers[timerNum] == 0 ) then -- first kill starts a Phase 1-3 timer
+		zoneTimers[timerNum] = now + t;
+	end
 	
 	SetInstanceGlobals();
 	return true;
@@ -255,7 +262,24 @@ function SetInstanceVars(killData, timerData)
 	return true;
 end
 
+-- A new allocation gets a distinct identity even when its numeric ID is reused.
+-- Existing saves without this marker remain legacy timelines.
+local function ValidTimeGeneration(value, instanceID)
+	local epoch = type(value) == "string" and value:match("^"..instanceID..":(%d+)$");
+	return epoch and tonumber(epoch) > 0 and tonumber(epoch) < math.huge;
+end
+
 function SetupNewInstance(controller)
+	-- Keep new saves out of the shared legacy pool (1-999). Public Time uses
+	-- guild -1; every guild gets its own 1000-ID block, even with stale caches
+	-- or simultaneous starts in different guild zones.
+	local guildID = eq.get_zone_guild_id();
+	local firstID = (guildID + 2) * 1000;
+	-- #timelockout reads timeline IDs as uint32. Never wrap into another block.
+	if ( guildID < -1 or firstID + 999 > 4294967295 ) then
+		eq.debug("Cannot allocate Time timeline for guild "..guildID..": ID range is invalid");
+		return 0;
+	end
 	
 	for p = 1, 6 do
 		zoneBossTable[p] = {};
@@ -269,38 +293,66 @@ function SetupNewInstance(controller)
 	end
 	
 	validPlayers = {};
-	zoneHardExpire = os.time() + TIMELINE_LIFETIME;
+	zoneInstanceGeneration = nil;
 	
-	-- look for an open instance slot.  this will break if there are 999 instance qglobals in use
-	local qglobals = eq.get_qglobals(controller);
-	for i = 1, 999 do
-		if ( not qglobals["time_timers_"..i] and not qglobals["time_kills_"..i] ) then
-			eq.debug("Using new instance ID "..i);
-			return i;
-		else
-			eq.debug("Instance ID "..i.." already exists", 3);
-		end	
+	-- Numeric lookup reads current database state instead of the NPC's cache.
+	local qglobals = eq.get_qglobals(POTIMEB_CONTROLLER_TYPE, 223);
+	for slot = 1, 999 do
+		local instanceID = firstID + slot;
+		if (
+			not qglobals["time_timers_"..instanceID] and
+			not qglobals["time_kills_"..instanceID] and
+			not qglobals["time_guild_"..instanceID] and
+			not qglobals["time_expires_"..instanceID] and
+			not qglobals["time_generation_"..instanceID]
+		) then
+			zoneInstanceGeneration = instanceID..":"..os.time();
+			eq.debug("Using new instance ID "..instanceID);
+			return instanceID;
+		end
 	end
 	return 0;
 end
 
-function FindGuildInstance(controller, guildID)
-	local qglobals = eq.get_qglobals(controller);
+-- Legacy retirement metadata must never erase an outstanding boss lockout.
+-- New saves use only the original per-phase/per-god deadlines and record retention.
+function HasActiveTimeLockouts(timerData)
+	if ( type(timerData) ~= "string" or not timerData:match("^%d[%;%d]*%d$")
+		or timerData:find(";;", 1, true) ) then return false, false; end
 	local now = os.time();
+	local count, active = 0, false;
+	for value in timerData:gmatch("([^;]+)") do
+		local deadline = tonumber(value);
+		if ( not deadline or deadline == math.huge ) then return false, false; end
+		count = count + 1;
+		if ( deadline * 100 >= now ) then active = true; end
+	end
+	return active, count == 12;
+end
+
+function IsRetiredLegacyTimeline(qglobals, instanceID)
+	local deadline = tonumber(qglobals["time_expires_"..instanceID]) or 0;
+	local active, valid = HasActiveTimeLockouts(qglobals["time_timers_"..instanceID]);
+	return deadline > 0 and os.time() >= deadline
+		and valid and not active;
+end
+
+function FindGuildInstance(controller, guildID)
+	-- Include legacy saves unchanged, but do not use a stale NPC cache.
+	local qglobals = eq.get_qglobals(POTIMEB_CONTROLLER_TYPE, 223);
 	local instanceID = 0;
 
 	for name, value in pairs(qglobals) do
 		local candidateID = tonumber(name:match("^time_guild_(%d+)$"));
 
 		if ( candidateID and tonumber(value) == guildID ) then
-			local hardExpire = tonumber(qglobals["time_expires_"..candidateID]) or 0;
 			local hasState =
 				qglobals["time_kills_"..candidateID] and
 				qglobals["time_timers_"..candidateID];
 
 			if (
 				hasState and
-				(hardExpire == 0 or now < hardExpire) and
+				not IsRetiredLegacyTimeline(qglobals, candidateID) and
 				(instanceID == 0 or candidateID < instanceID)
 			) then
 				instanceID = candidateID;
@@ -334,15 +386,25 @@ function SetInstanceGlobals()
 	eq.set_global("time_kills_"..zoneInstanceID, killsStr, 2, "D8");
 	eq.set_global("time_timers_"..zoneInstanceID, timersStr, 2, "D8");
 	eq.set_global("time_guild_"..zoneInstanceID, tostring(eq.get_zone_guild_id()), 2, "D8");
-	eq.set_global("time_expires_"..zoneInstanceID, tostring(zoneHardExpire), 2, "D8");
+	-- Zero disables the added whole-timeline retirement. Keep the metadata row
+	-- for existing ownership/ID safeguards and #timelockout compatibility.
+	eq.set_global("time_expires_"..zoneInstanceID, "0", 2, "D8");
+	if ( zoneInstanceGeneration ) then
+		eq.set_global("time_generation_"..zoneInstanceID, zoneInstanceGeneration, 2, "D30");
+	end
 end
 
 function SavePlayerInstance(client)
-	-- Keep the character's pointer longer than the timeline itself. The absolute
-	-- timeline deadline decides whether it can be restored, so an early-phase
-	-- participant cannot lose the pointer before a later boss lockout expires.
+	-- Preserve long-lived character bindings; entry checks use the saved loot
+	-- deadlines, so early participants cannot evade a later boss's lockout.
 	eq.target_global("time_instance", tostring(zoneInstanceID), "D30", 0, client:CharacterID(), 0);
 	eq.target_global("time_instance_guild", tostring(eq.get_zone_guild_id()), "D30", 0, client:CharacterID(), 0);
+	-- Clear a previous generation when legitimately joining a legacy timeline.
+	eq.target_global("time_instance_generation", zoneInstanceGeneration or "0", "D30", 0, client:CharacterID(), 0);
+	if ( zoneInstanceGeneration ) then
+		-- Keep the identity at least as long as the most recent character pointer.
+		eq.set_global("time_generation_"..zoneInstanceID, zoneInstanceGeneration, 2, "D30");
+	end
 
 	-- set zoned-in-from-dial flag to false.  doing this at same time we save player
 	local charID = client:CharacterID();
@@ -627,15 +689,14 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 				instanceID = SetupNewInstance(e.self);
 			else
 				eq.debug("zone inactive and player has previous instance; using previous instance");
-				local qglobals = eq.get_qglobals(e.self);
-				local hardExpire = tonumber(qglobals["time_expires_"..instanceID]) or 0;
-				if ( hardExpire > 0 and os.time() >= hardExpire ) then
+				local qglobals = eq.get_qglobals(POTIMEB_CONTROLLER_TYPE, 223);
+				if ( IsRetiredLegacyTimeline(qglobals, instanceID) ) then
 					eq.debug("Time instance "..instanceID.." reached its retirement deadline; creating a fresh timeline");
 					instanceID = SetupNewInstance(e.self);
 					SendSignalRequestConfirm(9, tostring(charID));
 				else
-					local instanceGuildID = tonumber(qglobals["time_guild_"..instanceID]) or 0;
-					if ( instanceGuildID > 0 and instanceGuildID ~= currentGuildID ) then
+					local instanceGuildID = tonumber(qglobals["time_guild_"..instanceID]);
+					if ( instanceGuildID ~= nil and instanceGuildID ~= currentGuildID ) then
 						eq.debug("Rejected Time instance "..instanceID.." owned by guild zone "..instanceGuildID.." from guild zone "..currentGuildID);
 						SendSignalRequestConfirm(8, tostring(charID));
 						return;
@@ -645,12 +706,15 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 					if ( not killData or not timerData ) then
 						instanceID = SetupNewInstance(e.self);
 					else
-						-- Existing timelines created before this safeguard receive one full
-						-- migration window. Thereafter only boss kills can extend it.
-						zoneHardExpire = hardExpire > 0 and hardExpire or (os.time() + TIMELINE_LIFETIME);
 						eq.debug("Instance kill data: "..killData);
 						eq.debug("Instance timer data: "..timerData);
 						eq.debug("current os.time() is "..os.time());
+						local generation = qglobals["time_generation_"..instanceID];
+						if ( generation ~= nil and not ValidTimeGeneration(generation, instanceID) ) then
+							eq.debug("Error: Time instance generation is corrupted! Instance ID: "..instanceID);
+							return;
+						end
+						zoneInstanceGeneration = generation;
 						if ( not SetInstanceVars(killData, timerData) ) then
 							eq.debug("Error: Time instance qglobals are corrupted!  Instance ID: "..instanceID);
 							return;
@@ -663,43 +727,20 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 				eq.debug("Critical Error: All instance qglobals are in use.");
 				return;
 			end
-zoneRaidID = raidID;
+			-- Original entry flow: every attempt must complete all five Phase 1
+			-- trials together. Saved kills still control shadow loot on retries.
+			zonePhase = 1;
+			zoneRaidID = raidID;
+			phase3Completed = false;
+			CheckPhaseStatus(1);
+			SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
+			SetInstanceGlobals();
+			eq.set_timer("phase1", 45000);
+			eq.set_timer("check_trial_start", 2000);
+			for i = 1, #trialStates do
+				trialStates[i] = 0;
+			end
 
-local nextPhase = 0;
-for phase = 1, 6 do
-    if ( CheckPhaseStatus(phase) ) then
-        nextPhase = phase;
-        break;
-    end
-end
-
-SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
-SetInstanceGlobals();
-
-for i = 1, #trialStates do
-    trialStates[i] = 0;
-end
-
-if ( nextPhase == 1 ) then
-    zonePhase = 1;
-    eq.set_timer("phase1", 45000);
-    eq.set_timer("check_trial_start", 2000);
-elseif ( nextPhase > 1 ) then
-    SetupPhaseOne();
-    zonePhase = nextPhase - 1;
-    PhaseDialog();
-else
-    zonePhase = 6;
-    PhaseDialog();
-end
-
-
-
-
-
-
-
-		
 		elseif ( zonePhase > 0 ) then
 			eq.debug("Error: Zone already active and PoTimeA requesting new instance.  This shouldn't happen. (zone crash?)  Sending zone state update");
 			SendSignalRequestConfirm(4, zoneRaidID..";"..zoneInstanceID..";"..zonePhase);
@@ -761,13 +802,21 @@ end
 				end
 			end
 			
-			if ( phase > 2 and allDead ) then
+			if ( phase > 3 and allDead ) then
 				PhaseDialog();
 			end
 		end
 		
 	elseif ( e.signal == 7 ) then		-- phase 2 completed
-		PhaseDialog();
+		if ( zonePhase == 2 ) then
+			PhaseDialog();
+		end
+
+	elseif ( e.signal == 10 ) then		-- phase 3 final pair defeated in this attempt
+		if ( zonePhase == 3 and not phase3Completed ) then
+			phase3Completed = true;
+			PhaseDialog();
+		end
 		
 	elseif ( e.signal == 8 ) then		-- player zoned or logged into combat area
 
@@ -881,6 +930,10 @@ function event_timer(e)
 		end	
 	
 	elseif ( e.timer == "dialog" ) then
+		if ( zonePhase < 1 or zonePhase > 5 or not dialog ) then
+			eq.stop_timer("dialog");
+			return;
+		end
 		
 		eq.zone_emote(0, EMOTE_STRINGS[dialog]);
 		if ( dialog == DIALOG_START_STOPS[zonePhase][2] ) then
@@ -910,19 +963,28 @@ function event_timer(e)
 		eq.set_timer("fail2", 2500);
 		
 	elseif ( e.timer == "fail2" ) then
+		-- Cancel work from the failed attempt before entering cooldown.
+		eq.stop_timer("phase1");
+		eq.stop_timer("dialog");
+		eq.stop_timer("fail_warning");
+		eq.stop_timer("pulse");
+		eq.stop_timer("check_trial_start");
 		SetInstanceGlobals();
 		SendSignalRequestConfirm(2);	-- tell potimea that instance expired
 		eq.debug("notifying PoTimeA of instance expiry");
 		zonePhase = -1;		-- cooldown
 		eq.set_timer("cooldown", 60000);
 		for i = 1, #trialStates do
+			eq.stop_timer("trial"..i.."start");
 			trialStates[i] = 0;
 		end
 		KickRaid();
 		DepopZone();
 	
 	elseif ( e.timer == "phase1" ) then
-		SetupPhaseOne();
+		if ( zonePhase == 1 ) then
+			SetupPhaseOne();
+		end
 		
 	elseif ( e.timer == "cooldown" ) then
 		zonePhase = 0;
@@ -932,7 +994,7 @@ function event_timer(e)
 	elseif ( e.timer:find("^trial") ) then
 		local _, _, trialNum = e.timer:find("^trial(%d)start$");
 		trialNum = tonumber(trialNum);
-		if ( trialNum ) then
+		if ( trialNum and zonePhase == 1 and trialStates[trialNum] == 1 ) then
 			eq.signal(EVENTS_CONTROLLER_TYPE, tonumber("1"..trialNum.."1"), 0, tostring(zoneBossTable[1][trialNum]));
 			eq.debug("Trial "..trialNum.." spawned.  Boss status == "..tostring(zoneBossTable[1][trialNum]));
 		end
@@ -988,6 +1050,9 @@ end
 -- doesn't handle phase 1
 function PhaseStart()
 	zonePhase = GetNextPhase();
+	if ( zonePhase == 3 ) then
+		phase3Completed = false;
+	end
 	if ( zonePhase == 0 ) then
 		return;
 	end

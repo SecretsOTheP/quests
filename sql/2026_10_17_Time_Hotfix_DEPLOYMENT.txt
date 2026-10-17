@@ -1,0 +1,36 @@
+Plane of Time hotfix -- Lua and manual SQL deployment
+
+No server rebuild is required. Deploy during a break with no active Time
+attempts. Do not reload quests mid-raid, including between pulls: reloading
+discards the controller's in-memory encounter state.
+
+1. Deploy the Time A and Time B Lua together from this revision. Include the
+   full potimea/ and potimeb/ directories, including encounters/ and script_init.
+   Phase1Air.lua, Phase1Earth.lua, Phase1Fire.lua, Phase1Undead.lua,
+   Phase1Water.lua, and Phase2.lua already contain shadow item suppression;
+   they are required even though this PR does not change those files.
+2. Execute sql/2026_10_15_Time_B_Graveyard_Recovery.sql manually against the
+   content database. A quest merge or reload does not execute SQL.
+3. Start fresh Time A and Time B zone processes after deployment so scripts
+   and the zone's graveyard timer are loaded together.
+
+Verify the timer after executing SQL:
+SELECT z.zoneidnumber, z.short_name, z.graveyard_time, z.graveyard_id,
+       g.zone_id AS configured_graveyard_zone
+FROM zone AS z
+LEFT JOIN graveyard AS g ON g.id = z.graveyard_id
+WHERE z.zoneidnumber = 223 AND z.short_name = 'potimeb';
+Expected: graveyard_time 30 and configured_graveyard_zone 223. If no matching
+graveyard exists, the guarded UPDATE changes nothing; inspect the configuration.
+
+This package retains existing native corpse routing: ordinary guild Time B
+corpses move to public Tranquility; public Time B uses its configured graveyard.
+The tombstones separately preserve the source guild copy when moving players
+between Time A and Time B. SQL does not move existing corpses or repoint a GY.
+
+Saved kills and unexpired loot deadlines remain intact. No save/lockout reset
+or database migration is required. The restored durations apply to new loot
+cycles; current deadlines expire naturally. D8 save retention remains separate
+from the removed rolling whole-run retirement deadline.
+
+Local #timedebug modules and recovery NPC helpers are not part of this package.
