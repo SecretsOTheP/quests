@@ -383,12 +383,12 @@ function SetInstanceGlobals()
 		end
 	end
 	
-	eq.set_global("time_kills_"..zoneInstanceID, killsStr, 2, "D8");
-	eq.set_global("time_timers_"..zoneInstanceID, timersStr, 2, "D8");
-	eq.set_global("time_guild_"..zoneInstanceID, tostring(eq.get_zone_guild_id()), 2, "D8");
+	eq.set_global("time_kills_"..zoneInstanceID, killsStr, 2, "D7");
+	eq.set_global("time_timers_"..zoneInstanceID, timersStr, 2, "D7");
+	eq.set_global("time_guild_"..zoneInstanceID, tostring(eq.get_zone_guild_id()), 2, "D7");
 	-- Zero disables the added whole-timeline retirement. Keep the metadata row
 	-- for existing ownership/ID safeguards and #timelockout compatibility.
-	eq.set_global("time_expires_"..zoneInstanceID, "0", 2, "D8");
+	eq.set_global("time_expires_"..zoneInstanceID, "0", 2, "D7");
 	if ( zoneInstanceGeneration ) then
 		eq.set_global("time_generation_"..zoneInstanceID, zoneInstanceGeneration, 2, "D30");
 	end

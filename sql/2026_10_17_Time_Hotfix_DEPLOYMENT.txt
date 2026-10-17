@@ -30,7 +30,16 @@ between Time A and Time B. SQL does not move existing corpses or repoint a GY.
 
 Saved kills and unexpired loot deadlines remain intact. No save/lockout reset
 or database migration is required. The restored durations apply to new loot
-cycles; current deadlines expire naturally. D8 save retention remains separate
-from the removed rolling whole-run retirement deadline.
+cycles; current deadlines expire naturally. Original D7 save retention is
+restored. It controls record storage, not the attempt clock or loot deadlines.
+The longer character/generation identity retention remains for guild binding
+safety; it does not extend attempts or loot lockouts.
+
+Original retry behavior is retained: every new attempt starts Phase 1 with a
+fresh hour and must complete all five trials. Unused time carries forward only
+within that attempt. Timeout permits another attempt after the original
+cooldowns, with saved kills and loot deadlines retained. Fully killed, still-
+locked later phases can be skipped, and still-locked gods remain down. This is
+not a single shared time budget across all retries or a weekly failure lockout.
 
 Local #timedebug modules and recovery NPC helpers are not part of this package.
