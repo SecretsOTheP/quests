@@ -1,3 +1,4 @@
+local Cycle = require("potime_cycle");
 local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
 local DIALS = { 2, 4, 1, 5, 3 };
@@ -91,6 +92,14 @@ function event_click_door(e)
 				-- Pre-marker character bindings are also stale for new allocations.
 				instanceID = 0;
 			end
+		end
+		if ( instanceID > 0 ) then
+			local cycle, valid = Cycle.decode(timelineGlobals["time_cycle_"..instanceID]);
+			if ( not valid ) then
+				e.self:Message(13, "Your saved thread of time could not be read safely. Please contact support.");
+				return;
+			end
+			if ( Cycle.expired(cycle, now) ) then instanceID = 0 end
 		end
 		local savedGuildID = tonumber(timelineGlobals["time_guild_"..instanceID])
 			or tonumber(qglobals.time_instance_guild);

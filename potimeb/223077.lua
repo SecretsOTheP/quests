@@ -3,6 +3,7 @@
 local MAX_CLIENTS = 90;
 local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
+local Cycle = require("potime_cycle");
 local EVENTS_CONTROLLER_TYPE = 223078;
 local QUARM_TYPE = 223008;
 
@@ -88,6 +89,11 @@ local failWarningMsg;
 local validPlayers;     -- sequential list of sub-tables containing character ID and os.time() of when they zoned
 local bossEngagedTime = 0;
 local phase3Completed = false;
+local guildCycle;
+local phaseAdvancePending = false;
+local phaseOneStarted = false;
+local forceClose = false;
+local emptySince;
 local trialStates = { [1] = 0, [2] = 0, [3] = 0, [4] = 0, [5] = 0 };
 local dialog;
 local trialSignal, signalTries, confirmSignal, confirmData, pulses;
@@ -159,6 +165,7 @@ function KickPlayer(client)
 end
 
 function SetBossKilled(phase, bossNum)
+	if ( Cycle.expired(guildCycle, os.time()) ) then EndAttempt(); return false end
 	if ( not zoneBossTable[phase] or not zoneBossTable[phase][bossNum] ) then
 		return false;
 	end
@@ -186,7 +193,8 @@ function SetBossKilled(phase, bossNum)
 	end
 	zoneBossTable[phase][bossNum] = 1;
 	if ( phase > 3 or zoneTimers[timerNum] == 0 ) then -- first kill starts a Phase 1-3 timer
-		zoneTimers[timerNum] = now + t;
+		zoneTimers[timerNum] = guildCycle and
+			(phase > 3 and guildCycle.ends or math.min(now + t, guildCycle.ends)) or now + t;
 	end
 	
 	SetInstanceGlobals();
@@ -210,7 +218,11 @@ function CheckPhaseStatus(phase)
 			timerNum = 12;
 		end
 
-		if ( zoneBossTable[phase][i] == 1 and now > zoneTimers[timerNum] ) then
+		-- God kills last for this cycle, including after loading rounded legacy timers.
+		if ( phase > 3 and guildCycle and zoneBossTable[phase][i] == 1 ) then
+			zoneTimers[timerNum] = guildCycle.ends;
+		end
+		if ( zoneBossTable[phase][i] == 1 and now >= zoneTimers[timerNum] ) then
 			zoneBossTable[phase][i] = 0; -- boss is now alive
 			eq.debug("Phase "..phase.." boss "..i.." timer past expiry; respawning");
 			phaseDown = false;
@@ -294,6 +306,7 @@ function SetupNewInstance(controller)
 	
 	validPlayers = {};
 	zoneInstanceGeneration = nil;
+	guildCycle = Cycle.new(os.time(), false);
 	
 	-- Numeric lookup reads current database state instead of the NPC's cache.
 	local qglobals = eq.get_qglobals(POTIMEB_CONTROLLER_TYPE, 223);
@@ -304,7 +317,8 @@ function SetupNewInstance(controller)
 			not qglobals["time_kills_"..instanceID] and
 			not qglobals["time_guild_"..instanceID] and
 			not qglobals["time_expires_"..instanceID] and
-			not qglobals["time_generation_"..instanceID]
+			not qglobals["time_generation_"..instanceID] and
+			not qglobals["time_cycle_"..instanceID]
 		) then
 			zoneInstanceGeneration = instanceID..":"..os.time();
 			eq.debug("Using new instance ID "..instanceID);
@@ -315,7 +329,7 @@ function SetupNewInstance(controller)
 end
 
 -- Legacy retirement metadata must never erase an outstanding boss lockout.
--- New saves use only the original per-phase/per-god deadlines and record retention.
+-- New saves instead retire at their fixed cycle boundary.
 function HasActiveTimeLockouts(timerData)
 	if ( type(timerData) ~= "string" or not timerData:match("^%d[%;%d]*%d$")
 		or timerData:find(";;", 1, true) ) then return false, false; end
@@ -331,6 +345,9 @@ function HasActiveTimeLockouts(timerData)
 end
 
 function IsRetiredLegacyTimeline(qglobals, instanceID)
+	local cycle, validCycle = Cycle.decode(qglobals["time_cycle_"..instanceID]);
+	if ( not validCycle ) then return false end -- restoration will reject damaged metadata
+	if ( cycle ) then return Cycle.expired(cycle, os.time()) end
 	local deadline = tonumber(qglobals["time_expires_"..instanceID]) or 0;
 	local active, valid = HasActiveTimeLockouts(qglobals["time_timers_"..instanceID]);
 	return deadline > 0 and os.time() >= deadline
@@ -347,8 +364,8 @@ function FindGuildInstance(controller, guildID)
 
 		if ( candidateID and tonumber(value) == guildID ) then
 			local hasState =
-				qglobals["time_kills_"..candidateID] and
-				qglobals["time_timers_"..candidateID];
+				(qglobals["time_kills_"..candidateID] and qglobals["time_timers_"..candidateID])
+				or qglobals["time_cycle_"..candidateID];
 
 			if (
 				hasState and
@@ -386,9 +403,11 @@ function SetInstanceGlobals()
 	eq.set_global("time_kills_"..zoneInstanceID, killsStr, 2, "D7");
 	eq.set_global("time_timers_"..zoneInstanceID, timersStr, 2, "D7");
 	eq.set_global("time_guild_"..zoneInstanceID, tostring(eq.get_zone_guild_id()), 2, "D7");
-	-- Zero disables the added whole-timeline retirement. Keep the metadata row
-	-- for existing ownership/ID safeguards and #timelockout compatibility.
-	eq.set_global("time_expires_"..zoneInstanceID, "0", 2, "D7");
+	-- Storage retention may refresh; the absolute cycle deadline never does.
+	eq.set_global("time_expires_"..zoneInstanceID, tostring(guildCycle and guildCycle.ends or 0), 2, "D7");
+	if ( guildCycle ) then
+		eq.set_global("time_cycle_"..zoneInstanceID, Cycle.encode(guildCycle), 2, "D30");
+	end
 	if ( zoneInstanceGeneration ) then
 		eq.set_global("time_generation_"..zoneInstanceID, zoneInstanceGeneration, 2, "D30");
 	end
@@ -454,6 +473,7 @@ function CheckValidPlayers()
 	local activeClients = 0;
 	local trialClients = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	local bootList = {};
+	local countedPlayers = {};
 	
 	local elist = eq.get_entity_list();
 	local clientList = elist:GetClientList();
@@ -479,6 +499,7 @@ function CheckValidPlayers()
 					isValid, zonedFromDial = IsValidCharID(charID);
 					if ( isValid ) then
 						activeClients = activeClients + 1;
+						countedPlayers[charID] = true;
 						if ( zonedFromDial ) then
 							SavePlayerInstance(client);
 						end
@@ -571,10 +592,13 @@ function CheckValidPlayers()
 		end
 		
 		for charID in pairs(bootList) do		
+			countedPlayers[charID] = nil;
 			KickPlayer(elist:GetClientByCharID(charID));
 		end
 	end
-	return activeClients, trialClients;
+	local ids = {};
+	for charID in pairs(countedPlayers) do table.insert(ids, tostring(charID)) end
+	return activeClients, trialClients, table.concat(ids, ";");
 end
 
 function KickRaid()
@@ -630,7 +654,17 @@ function SetFailWarningTimer()
 		elseif ( hours == 11 ) then failWarningMsg = "eleven hours";
 		else failWarningMsg = ""; eq.debug("Error: hours == "..hours); end
 	end
-	failWarningMsg = string.format(EMOTE_STRINGS[3], failWarningMsg);
+	if ( zonePhase >= 4 and not forceClose and zoneBossTable[6][1] == 0 ) then
+		if ( zonePhase == 5 ) then
+			failWarningMsg = "The gods' room guards may return in "..failWarningMsg..". Your boss progress will remain.";
+		else
+			-- There is no room trash to reset in P4 or P6.
+			eq.stop_timer("fail_warning");
+			return;
+		end
+	else
+		failWarningMsg = string.format(EMOTE_STRINGS[3], failWarningMsg);
+	end
 end
 
 function DoAdditionalHoursEmote(hours)
@@ -658,7 +692,92 @@ function SendSignalRequestConfirm(signal, data)
 	confirmSignal = signal;
 end
 
+function LoadGuildCycle(qglobals, instanceID)
+	local value, valid = Cycle.decode(qglobals["time_cycle_"..instanceID]);
+	if ( not valid ) then return false end
+	if ( not value ) then
+		-- One-time adoption: retain all kills and start a full cycle on entry.
+		-- A completed P3 or any saved god kill demonstrates prior back-half access.
+		local checkpoint = true;
+		for _, killed in ipairs(zoneBossTable[3]) do if killed == 0 then checkpoint = false end end
+		for phase = 4, 6 do
+			for _, killed in ipairs(zoneBossTable[phase]) do if killed == 1 then checkpoint = true end end
+		end
+		value = Cycle.new(os.time(), checkpoint);
+	end
+	guildCycle = value;
+	for phase = 1, 6 do CheckPhaseStatus(phase) end
+	return true;
+end
+
+function EndAttempt()
+	for _, name in ipairs({"phase1", "dialog", "fail", "fail2", "fail_warning", "pulse", "check_trial_start", "late_reset", "cycle_end"}) do
+		eq.stop_timer(name);
+	end
+	if ( zoneInstanceID > 0 ) then SetInstanceGlobals() end
+	SendSignalRequestConfirm(2);
+	zonePhase = -1;
+	phaseAdvancePending, forceClose = false, false;
+	emptySince = nil;
+	eq.set_timer("cooldown", 60000);
+	for i = 1, #trialStates do
+		eq.stop_timer("trial"..i.."start");
+		trialStates[i] = 0;
+	end
+	KickRaid();
+	DepopZone();
+end
+
+function HasActiveCombat()
+	local npcs = eq.get_entity_list():GetNPCList();
+	if ( npcs ) then
+		for npc in npcs.entries do
+			if ( npc.valid and npc:IsEngaged() ) then return true end
+		end
+	end
+	return false;
+end
+
+function HasSessionPlayers()
+	local clients = eq.get_entity_list():GetClientList();
+	if ( clients ) then
+		for client in clients.entries do
+			-- Include the graveyard so a wipe/recovery is not mistaken for leaving.
+			if ( client.valid and client:Connected() and IsValidCharID(client:CharacterID()) ) then return true end
+		end
+	end
+	return false;
+end
+
+function RenewLatePhase()
+	if ( zonePhase < 4 or forceClose or phaseAdvancePending ) then return end
+	eq.stop_timer("fail");
+	eq.stop_timer("fail_warning");
+	if ( zonePhase == 6 and zoneBossTable[6][1] == 1 ) then EndAttempt(); return end
+	if ( HasActiveCombat() ) then
+		eq.set_timer("late_reset", 10000);
+		return;
+	end
+	eq.stop_timer("late_reset");
+	if ( zonePhase == 5 ) then
+		eq.signal(EVENTS_CONTROLLER_TYPE, 502, 0, table.concat(zoneBossTable[5], ";"));
+		eq.zone_emote(0, "The armies of the gods return to guard their surviving masters.");
+	else
+		eq.zone_emote(0, "The hourglass turns. Your progress against the gods remains.");
+	end
+	failTime = os.time() + math.max(1, GetAdditionalHours(zonePhase)) * 3600;
+	eq.set_timer("fail", (failTime - os.time()) * 1000);
+	SetFailWarningTimer();
+end
+
 function event_signal(e)
+	if ( zonePhase > 0 and Cycle.expired(guildCycle, os.time()) ) then EndAttempt(); return end
+	if ( e.signal == 11 ) then
+		if ( zonePhase == 5 and not forceClose and not phaseAdvancePending ) then
+			eq.set_timer("late_reset", 10000);
+		end
+		return;
+	end
 	
 	if ( e.signal == 1 ) then	-- PoTimeA is requesting to start an instance
 	
@@ -703,7 +822,10 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 					end
 					local killData = qglobals["time_kills_"..instanceID];
 					local timerData = qglobals["time_timers_"..instanceID];
-					if ( not killData or not timerData ) then
+					if ( qglobals["time_cycle_"..instanceID] and (not killData or not timerData) ) then
+						eq.debug("Error: Fixed Time cycle is missing saved state; refusing a replacement run.");
+						return;
+					elseif ( not killData or not timerData ) then
 						instanceID = SetupNewInstance(e.self);
 					else
 						eq.debug("Instance kill data: "..killData);
@@ -715,7 +837,7 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 							return;
 						end
 						zoneInstanceGeneration = generation;
-						if ( not SetInstanceVars(killData, timerData) ) then
+						if ( not SetInstanceVars(killData, timerData) or not LoadGuildCycle(qglobals, instanceID) ) then
 							eq.debug("Error: Time instance qglobals are corrupted!  Instance ID: "..instanceID);
 							return;
 						end
@@ -732,7 +854,11 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 			zonePhase = 1;
 			zoneRaidID = raidID;
 			phase3Completed = false;
+			phaseAdvancePending, forceClose = false, false;
+			phaseOneStarted = false;
+			emptySince = nil;
 			CheckPhaseStatus(1);
+			eq.set_timer("cycle_end", math.max(1, guildCycle.ends - os.time()) * 1000);
 			SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
 			SetInstanceGlobals();
 			eq.set_timer("phase1", 45000);
@@ -813,8 +939,10 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 		end
 
 	elseif ( e.signal == 10 ) then		-- phase 3 final pair defeated in this attempt
-		if ( zonePhase == 3 and not phase3Completed ) then
+		if ( zonePhase == 3 and not phase3Completed and not forceClose and os.time() < failTime ) then
 			phase3Completed = true;
+			guildCycle.checkpoint = true;
+			SetInstanceGlobals();
 			PhaseDialog();
 		end
 		
@@ -867,9 +995,11 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 		end
 	
 		if ( op == 1 and zonePhase > 0 ) then	-- reset zone now
+			forceClose = true;
 			eq.set_timer("fail", 1000);
 		
 		elseif ( op == 2 and zonePhase > 0 ) then	-- reset zone in 120 seconds
+			forceClose = true;
 			eq.zone_emote(7, "WARNING: Instance is shutting down in two minutes.  Players will be removed from the combat area.");
 			eq.set_timer("fail", 120000);
 			failTime = os.time() + 120;
@@ -881,8 +1011,7 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 			eq.debug("Active instance raid ID is now "..zoneRaidID);
 			
 		elseif ( op == 4 and zonePhase == 1 ) then	-- force complete phase 1
-			if ( failTime < os.time() ) then
-				eq.stop_timer("phase1");
+			if ( not phaseOneStarted ) then
 				SetupPhaseOne();
 			end
 			for i = 1, 5 do
@@ -902,6 +1031,9 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 end
 
 function event_timer(e)
+	if ( zonePhase > 0 and Cycle.expired(guildCycle, os.time()) ) then EndAttempt(); return end
+	if ( e.timer == "cycle_end" ) then return end
+	if ( e.timer == "late_reset" ) then RenewLatePhase(); return end
 
 	if ( e.timer == "check_trial_start" ) then
 
@@ -910,14 +1042,22 @@ function event_timer(e)
 	
 	elseif ( e.timer == "pulse" ) then
 	
-		if ( failTime >= os.time() ) then
-			local activeClients, regionCounts = CheckValidPlayers();
+		if ( zonePhase > 0 ) then
+			if ( HasSessionPlayers() ) then
+				emptySince = nil;
+			elseif ( not emptySince ) then
+				emptySince = os.time();
+			elseif ( os.time() - emptySince >= Cycle.empty_grace ) then
+				EndAttempt();
+				return;
+			end
+			local activeClients, regionCounts, countedIDs = CheckValidPlayers();
 			
 			data = "";
 			for i = 1, 8 do
 				data = data..tostring(regionCounts[i])..";";
 			end
-			data = data..tostring(activeClients);
+			data = data..tostring(activeClients)..";"..zoneInstanceID..";"..zonePhase.."|"..(countedIDs or "");
 			SignalTimeA(5, data);
 			
 			pulses = pulses + 1;
@@ -959,28 +1099,16 @@ function event_timer(e)
 		end
 		
 	elseif ( e.timer == "fail" ) then
+		if ( zonePhase >= 4 and not forceClose ) then
+			RenewLatePhase();
+			return;
+		end
 		eq.zone_emote(0, EMOTE_STRINGS[1]);
 		eq.set_timer("fail2", 2500);
 		
 	elseif ( e.timer == "fail2" ) then
-		-- Cancel work from the failed attempt before entering cooldown.
-		eq.stop_timer("phase1");
-		eq.stop_timer("dialog");
-		eq.stop_timer("fail_warning");
-		eq.stop_timer("pulse");
-		eq.stop_timer("check_trial_start");
-		SetInstanceGlobals();
-		SendSignalRequestConfirm(2);	-- tell potimea that instance expired
-		eq.debug("notifying PoTimeA of instance expiry");
-		zonePhase = -1;		-- cooldown
-		eq.set_timer("cooldown", 60000);
-		for i = 1, #trialStates do
-			eq.stop_timer("trial"..i.."start");
-			trialStates[i] = 0;
-		end
-		KickRaid();
-		DepopZone();
-	
+		EndAttempt();
+
 	elseif ( e.timer == "phase1" ) then
 		if ( zonePhase == 1 ) then
 			SetupPhaseOne();
@@ -1005,6 +1133,7 @@ function event_timer(e)
 end
 
 function SetTrialCompleted(t)
+	if ( zonePhase ~= 1 or not trialStates[t] or trialStates[t] == 2 ) then return end
 	eq.zone_emote(0, EMOTE_STRINGS[2]);
 	trialStates[t] = 2;
 	
@@ -1038,7 +1167,12 @@ function GetAdditionalHours(phase)
 end
 
 function GetNextPhase()
-	local p = zonePhase + 1;
+	-- Early phases must finish in this attempt until the P4 checkpoint is earned.
+	if ( zonePhase < 3 and not guildCycle.checkpoint ) then
+		CheckPhaseStatus(zonePhase + 1);
+		return zonePhase + 1;
+	end
+	local p = math.max(4, zonePhase + 1);
 	for i = p, 6 do
 		if ( CheckPhaseStatus(i) ) then
 			return i;
@@ -1049,6 +1183,7 @@ end
 
 -- doesn't handle phase 1
 function PhaseStart()
+	phaseAdvancePending = false;
 	zonePhase = GetNextPhase();
 	if ( zonePhase == 3 ) then
 		phase3Completed = false;
@@ -1058,6 +1193,7 @@ function PhaseStart()
 	end
 	SendSignalRequestConfirm(4, zoneRaidID..";"..zoneInstanceID..";"..zonePhase);	-- tell potimea that phase has changed
 	DoAdditionalHoursEmote(GetAdditionalHours(zonePhase));
+	SetFailWarningTimer();
 
 	local data = ""
 	for i, b in ipairs(zoneBossTable[zonePhase]) do
@@ -1072,6 +1208,7 @@ end
 
 function PhaseDialog()
 	local now = os.time();
+	if ( phaseAdvancePending or forceClose or Cycle.expired(guildCycle, now) ) then return end
 	
 	if ( zonePhase == 6 ) then
 		failTime = now + 3598;
@@ -1082,9 +1219,7 @@ function PhaseDialog()
 		eq.debug("Quarm defeated.  Remaining instance time set to 1 hour.");
 		return;
 	end
-	if ( failTime <= now ) then
-		return;
-	end
+	if ( failTime <= now and zonePhase < 4 ) then return end
 	local nextPhase = GetNextPhase();
 	if ( nextPhase == 0 ) then
 		eq.debug("Not advancing phase; bosses in remaining phases have not respawned yet");
@@ -1093,9 +1228,21 @@ function PhaseDialog()
 		eq.debug("Phase "..zonePhase.." completed.  Next phase is "..nextPhase);
 	end
 	
-	failTime = failTime + 3600*GetAdditionalHours(nextPhase);
+	phaseAdvancePending = true;
+	if ( zonePhase == 1 ) then
+		eq.stop_timer("phase1");
+		eq.stop_timer("check_trial_start");
+		for i = 1, 5 do eq.stop_timer("trial"..i.."start") end
+	end
+	eq.stop_timer("late_reset");
+	failTime = math.max(failTime, now) + 3600*GetAdditionalHours(nextPhase);
 	eq.set_timer("fail", (failTime - now)*1000);
 	SetFailWarningTimer();
+	if ( zonePhase == 1 and guildCycle.checkpoint ) then
+		eq.zone_emote(0, "Phase 1 is complete. Your saved progress opens the way to Phase "..nextPhase..".");
+		PhaseStart();
+		return;
+	end
 	
 	eq.set_timer("dialog", 3000);
 	dialog = DIALOG_START_STOPS[zonePhase][1];
@@ -1185,6 +1332,12 @@ function GetEngagedBossTime()
 end
 
 function SetupPhaseOne()
+	if ( phaseOneStarted or zonePhase ~= 1 or phaseAdvancePending ) then return end
+	phaseOneStarted = true;
+	eq.stop_timer("phase1");
+	if ( guildCycle and guildCycle.checkpoint ) then
+		eq.zone_emote(0, "Your guild has already cleared Phase 3 this cycle. After Phase 1 you will continue against the remaining gods.");
+	end
 	zonePhase = 1;
 	failTime = os.time() + 3601;
 	eq.set_timer("fail", 3601000);

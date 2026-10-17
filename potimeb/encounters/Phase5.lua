@@ -179,11 +179,49 @@ function SpawnPhase()
 	end
 end
 
+function RefreshRoomTrash(data)
+	if ( type(data) ~= "string" or not data:match("^[01];[01];[01];[01]$") ) then return end
+	local elist = eq.get_entity_list();
+	local npcs = elist:GetNPCList();
+	if ( npcs ) then
+		for npc in npcs.entries do
+			if ( npc.valid and npc:IsEngaged() ) then
+				-- Combat may have begun after the controller queued this signal.
+				eq.signal(INSTANCE_CONTROLLER_TYPE, 11);
+				return;
+			end
+		end
+	end
+	local savedKills = Unpacket(data, true, true);
+	for typ in pairs(TRASH_LOCS) do eq.depop_all(typ) end
+	for i, typ in ipairs(BOSS_NUMS) do
+		local boss = elist:GetNPCByNPCTypeID(typ);
+		if ( savedKills[i] == 0 and boss.valid ) then
+			-- Relock the existing boss; do not replace it or reset its HP/stages.
+			boss:SetSpecialAbility(24, 1);
+			boss:SetSpecialAbility(35, 1);
+			boss:SetBodyType(11, false);
+			bossState[i] = 1;
+			for trash, master in pairs(TRASH_MASTERS) do
+				if ( master == i ) then
+					for j = 1, #TRASH_LOCS[trash], 3 do
+						eq.spawn2(trash, 0, 0, TRASH_LOCS[trash][j], TRASH_LOCS[trash][j+1], TRASH_LOCS[trash][j+2], 0);
+					end
+				end
+			end
+		else
+			bossState[i] = 0;
+		end
+	end
+end
+
 function Phase5Signal(e)
 
 	if ( e.signal == 501 ) then
 		bosses = Unpacket(e.data, true, true);
 		SpawnPhase();		
+	elseif ( e.signal == 502 ) then
+		RefreshRoomTrash(e.data);
 	end
 end
 

@@ -6,6 +6,8 @@ discards the controller's in-memory encounter state.
 
 1. Deploy the Time A and Time B Lua together from this revision. Include the
    full potimea/ and potimeb/ directories, including encounters/ and script_init.
+   Also deploy lua_modules/potime_cycle.lua. Both controllers require this
+   revision together: their player-count messages now identify arriving players.
    Phase1Air.lua, Phase1Earth.lua, Phase1Fire.lua, Phase1Undead.lua,
    Phase1Water.lua, and Phase2.lua already contain shadow item suppression;
    they are required even though this PR does not change those files.
@@ -28,18 +30,34 @@ corpses move to public Tranquility; public Time B uses its configured graveyard.
 The tombstones separately preserve the source guild copy when moving players
 between Time A and Time B. SQL does not move existing corpses or repoint a GY.
 
-Saved kills and unexpired loot deadlines remain intact. No save/lockout reset
-or database migration is required. The restored durations apply to new loot
-cycles; current deadlines expire naturally. Original D7 save retention is
-restored. It controls record storage, not the attempt clock or loot deadlines.
-The longer character/generation identity retention remains for guild binding
-safety; it does not extend attempts or loot lockouts.
+Each guild has one fixed 6-day, 18-hour cycle starting on entry. Boss kills do
+not extend it. At its end, the next run starts fresh with no kills or loot
+restrictions carried from the previous cycle. P1's 12-hour and P2/P3's 3.5-day
+loot deadlines remain shorter, capped at the cycle end. P4-P6 kills stay down
+until that boundary.
 
-Original retry behavior is retained: every new attempt starts Phase 1 with a
-fresh hour and must complete all five trials. Unused time carries forward only
-within that attempt. Timeout permits another attempt after the original
-cooldowns, with saved kills and loot deadlines retained. Fully killed, still-
-locked later phases can be skipped, and still-locked gods remain down. This is
-not a single shared time budget across all retries or a weekly failure lockout.
+Existing guild saves retain their kills and start a full cycle on first entry
+after deployment. Saved god deadlines align with that new cycle end; existing
+P1-P3 deadlines expire naturally. Completed P3 or a saved god kill grants the
+checkpoint on adoption. Do not delete saved progress or lockouts. No SQL schema
+migration is needed. D7 save retention and longer identity/cycle metadata
+retention govern storage only; they cannot move the fixed gameplay deadline.
+
+Before clearing P3, an attempt must complete P1-P3. Failure returns the attempt
+to P1 after cooldown; still-locked kills return as empty-loot shadows. Clearing
+P3 earns a checkpoint for the cycle. Subsequent visits clear P1, then continue
+at the first unfinished phase from P4 onward without repeating P2/P3.
+
+P4+ attempt expiry preserves bosses. In P5 it refreshes room guards for surviving
+bosses and relocks those bosses until their guards are cleared. Combat defers
+that refresh. P4/P6 have no static room guards to refresh. Ten minutes without
+participating players closes the visit; players recovering in the graveyard
+prevent that empty-zone closure. A cold restart also begins a new P1 visit.
+GM shutdown and Quarm's post-kill cleanup still close visits. The cycle boundary
+ends the run even during combat.
+
+The raid cap remains 90, with 18 allowed immediately in each P1 wing. Repeated
+clicks reserve only one place per character; actual arrivals and fresh player
+counts reconcile those reservations.
 
 Local #timedebug modules and recovery NPC helpers are not part of this package.
