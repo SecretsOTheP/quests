@@ -1032,7 +1032,16 @@ end
 
 function event_timer(e)
 	if ( zonePhase > 0 and Cycle.expired(guildCycle, os.time()) ) then EndAttempt(); return end
-	if ( e.timer == "cycle_end" ) then return end
+	if ( e.timer == "cycle_end" ) then
+		-- Native timer time and os.time() can cross the second boundary apart.
+		-- An early callback must retry the remaining time, not the whole cycle.
+		if ( zonePhase > 0 and guildCycle ) then
+			eq.set_timer("cycle_end", math.max(1, guildCycle.ends - os.time()) * 1000);
+		else
+			eq.stop_timer("cycle_end");
+		end
+		return;
+	end
 	if ( e.timer == "late_reset" ) then RenewLatePhase(); return end
 
 	if ( e.timer == "check_trial_start" ) then
