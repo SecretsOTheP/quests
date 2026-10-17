@@ -30,6 +30,16 @@ function event_trade(e)
 			e.other:QuestReward(e.self,0,0,0,0,15199,0); -- Spell: Harmshield
 		end
 	end
+	if (e.other:IsSelfFound() >= 1 or e.other:IsSoloOnly() >= 1) then
+		if(item_lib.check_turn_in(e.self, e.trade, {item1 = 11865, item2 = 11866, platinum = 50})) then -- Words of Requisition, Words of Acquisition (Beza)
+			e.other:QuestReward(e.self,0,0,0,0,16441,0); -- Spell: Invoke Death
+		end
+	end
+	if (e.other:IsSelfFound() >= 1 or e.other:IsSoloOnly() >= 1) then
+		if(item_lib.check_turn_in(e.self, e.trade, {item1 = 11867, item2 = 11868, platinum = 50})) then -- Words of Grappling, Words of Odus
+			e.other:QuestReward(e.self,0,0,0,0,15456,0); -- Spell: Bond of Death
+		end
+	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
 
