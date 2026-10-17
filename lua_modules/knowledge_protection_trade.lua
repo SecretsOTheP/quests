@@ -35,18 +35,7 @@ function module.ReturnProtectedItems(e)
         return false;
     end
 
-    local returned = false;
-    for slot = 1, 4 do
-        local field = "item" .. slot;
-        local item = e.trade[field];
-        if item and item.valid and PROTECTED_ITEMS[item:GetID()] then
-            -- Force the original quantity when returning a stack to the quest cursor.
-            e.other:SummonItem(item:GetID(), item:GetCharges(), 9999, true);
-            -- Existing quest/return handlers must not process this item again.
-            e.trade[field] = nil;
-            returned = true;
-        end
-    end
+    local returned = require("pop_spell_turnins").ReturnProtectedItems(e);
 
     if returned then
         e.other:Message(13, "What am I supposed to do with this? Take it to someone who knows about such things.");
