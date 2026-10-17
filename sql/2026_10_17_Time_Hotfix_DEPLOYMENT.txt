@@ -25,10 +25,12 @@ WHERE z.zoneidnumber = 223 AND z.short_name = 'potimeb';
 Expected: graveyard_time 30 and configured_graveyard_zone 223. If no matching
 graveyard exists, the guarded UPDATE changes nothing; inspect the configuration.
 
-This package retains existing native corpse routing: ordinary guild Time B
-corpses move to public Tranquility; public Time B uses its configured graveyard.
-The tombstones separately preserve the source guild copy when moving players
-between Time A and Time B. SQL does not move existing corpses or repoint a GY.
+This package changes the corpse delay, not its destination. The native server
+and graveyard configuration determine where corpses move. Our local TEST has
+a separate native PoP-to-Tranquility routing change that is NOT included here;
+do not assume that destination on another server. The tombstones separately
+preserve the source guild copy when moving players between Time A and Time B.
+SQL does not move existing corpses or repoint a graveyard.
 
 Each guild has one fixed 6-day, 18-hour cycle starting on entry. Boss kills do
 not extend it. At its end, the next run starts fresh with no kills or loot
