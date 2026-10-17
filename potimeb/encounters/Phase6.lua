@@ -23,7 +23,7 @@ function Phase6Signal(e)
 		SetQuarmStats(quarm:CastToNPC());
 		quarmMoved = false;		
 		eq.spawn2(EGG_TYPE, 0, 0, -579, -1119, 60, 64);
-		eq.signal(POTIMEA_CONTROLLER_TYPE, 6, 0, tostring(quarmState));
+		eq.cross_zone_signal_npc_by_npc_type_id(POTIMEA_CONTROLLER_TYPE, eq.get_zone_guild_id(), 6, tostring(quarmState));
 	end
 end
 
@@ -50,6 +50,7 @@ function QuarmCombat(e)
 		eq.stop_timer("aoe");
 		eq.stop_timer("vortices");
 		eq.stop_timer("cascade");
+		eq.stop_timer("phase_spell");
 		eq.set_timer("check_hp", 3000);
 		eq.depop_all(VORTEX_TYPE);
 	end
@@ -156,7 +157,7 @@ function QuarmHP(e)
 	eq.set_timer("phase_spell", 4000);
 	eq.set_timer("aoe", 30000);
 	eq.stop_timer("cascade");
-	eq.signal(POTIMEA_CONTROLLER_TYPE, 6, 0, tostring(quarmState));
+	eq.cross_zone_signal_npc_by_npc_type_id(POTIMEA_CONTROLLER_TYPE, eq.get_zone_guild_id(), 6, tostring(quarmState));
 	
 	eq.debug("PoTime Quarm state is now "..quarmState);
 end
@@ -219,9 +220,10 @@ function QuarmTimer(e)
 		if ( e.self:GetHPRatio() > 90 ) then
 			if ( quarmState > 1 ) then
 				quarmState = 1;
+				eq.set_next_hp_event(math.random(73, 77));
 				e.self:SendIllusionPacket({race=304,gender=2,texture=254,helmtexture=0,size=70});
 				SetQuarmStats(e.self);
-				eq.signal(POTIMEA_CONTROLLER_TYPE, 6, 0, tostring(quarmState));
+				eq.cross_zone_signal_npc_by_npc_type_id(POTIMEA_CONTROLLER_TYPE, eq.get_zone_guild_id(), 6, tostring(quarmState));
 			end
 			eq.stop_timer(e.timer);
 		end
@@ -365,5 +367,5 @@ function event_encounter_load(e)
 	eq.register_npc_event("Phase6", Event.spawn, DRUZZIL_TYPE, DruzzilSpawn);
 	eq.register_npc_event("Phase6", Event.timer, DRUZZIL_TYPE, DruzzilTimer);
 	
-	eq.signal(POTIMEA_CONTROLLER_TYPE, 7); -- tell PoTimeA that PoTimeB was reset in case zone B crashes
+	eq.cross_zone_signal_npc_by_npc_type_id(POTIMEA_CONTROLLER_TYPE, eq.get_zone_guild_id(), 7, ""); -- tell PoTimeA that PoTimeB was reset in case zone B crashes
 end
