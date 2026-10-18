@@ -36,6 +36,7 @@ function event_say(e)
 end
 
 function event_trade(e)
+    require("knowledge_protection_trade").ReturnProtectedItems(e);
     if require("items").return_items(e.self, e.other, e.trade, false) then
         tell(e.other, "Keep yer bits an' coins. This ain't a shop. Say [DOWN] an' let a professional bend space.");
     end
