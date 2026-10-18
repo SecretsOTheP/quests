@@ -19,7 +19,20 @@ local RUN_SPEED_BUFFS = { 220,1922,3185, 424,1554,2002, 874,1340, 169, 278,1776,
 
 local activeRaidID, activeInstanceID, numRaiders, activePhase, quarmState = 0, 0, 0, 0, 0;
 local trialRaiders = {};
-local block, playerZoned, pendingStartData, startSignalTries;
+local block, pendingStartData, startSignalTries;
+local reportedCounts = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+local presentPlayers, pendingEntries = {}, {};
+
+function RefreshAdmissionCounts()
+	for i = 1, 9 do trialRaiders[i] = reportedCounts[i] end
+	for _, entry in pairs(pendingEntries) do
+		local region = entry.dial;
+		if ( activePhase == 2 ) then region = region < 3 and 6 or (region == 3 and 7 or 8) end
+		if ( activePhase <= 2 ) then trialRaiders[region] = trialRaiders[region] + 1 end
+		trialRaiders[9] = trialRaiders[9] + 1;
+	end
+	numRaiders = trialRaiders[9];
+end
 
 function Unpacket(s, numberize, returnTable)
 	local t = {};
@@ -47,11 +60,17 @@ function event_signal(e)
 		local charID, dialNum, raidID, instanceID = Unpacket(e.data, true);
 		
 		if ( raidID and instanceID ) then
+			if ( activeInstanceID == instanceID and activePhase > 0 ) then
+				SignalTimeB(2); -- repeated startup confirmation must not clear entry reservations
+				return;
+			end
 			eq.debug("Plane of Time instance started.  Raid ID: "..raidID..";  instanceID: "..instanceID);
 			activeRaidID = raidID;
 			activeInstanceID = instanceID;
 			numRaiders, activePhase, quarmState = 0, 1, 0;
 			pendingStartData, startSignalTries = nil, 0;
+			presentPlayers, pendingEntries = {}, {};
+			reportedCounts = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 			eq.stop_timer("start_retry");
 			for i = 1, 9 do
 				trialRaiders[i] = 0;
@@ -81,7 +100,12 @@ function event_signal(e)
 		end
 		
 		local charID, dialNum, raidID, instanceID = Unpacket(e.data, true);		
+		if ( not charID or not dialNum or dialNum < 1 or dialNum > 5 or dialNum % 1 ~= 0 or not raidID or not instanceID ) then return end
 		local client = eq.get_entity_list():GetClientByCharID(charID);
+		if ( not client or not client.valid ) then return end
+		-- One in-flight entry per character, even when repeated clicks reach us
+		-- after the player script's short click throttle has elapsed.
+		if ( pendingEntries[charID] or presentPlayers[charID] ) then return end
 		local charName = client:GetName();
 		eq.debug("client clicked dial.  charID: "..charID.." ("..charName..");  dialNum: "..dialNum..";  raidID: "..raidID..";  instanceID: "..instanceID);
 		eq.debug("active raid ID: "..activeRaidID..";  active instance ID: "..activeInstanceID);
@@ -177,18 +201,8 @@ function event_signal(e)
 			else
 				client:Message(0, "The portal glows and the mists of time swirl around you.");
 				
-				-- keep track of how many people get in
-				if ( activePhase == 1 ) then
-					trialRaiders[dialNum] = trialRaiders[dialNum] + 1;
-				elseif ( activePhase == 2 ) then
-					if ( dialNum == 1 or dialNum == 2 ) then
-						trialRaiders[6] = trialRaiders[6] + 1;
-					elseif ( dialNum == 3 ) then
-						trialRaiders[7] = trialRaiders[7] + 1;
-					elseif ( dialNum == 4 or dialNum == 5 ) then
-						trialRaiders[8] = trialRaiders[8] + 1;
-					end
-				end
+				pendingEntries[charID] = { dial = dialNum, expires = os.time() + 60 };
+				RefreshAdmissionCounts();
 				
 				-- remove run speed buffs if quarm engaged
 				if ( activePhase == 6 and quarmState > 1 and quarmState < 5 ) then
@@ -203,7 +217,6 @@ function event_signal(e)
 				if ( PHASE_LOCS[activePhase] ) then
 					loc = PHASE_LOCS[activePhase];
 				end
-				playerZoned = true;
 				client:MovePCGuildID(TIMEB_ZONEID, eq.get_zone_guild_id(), loc[1], loc[2], loc[3], loc[4]);
 			end
 		end
@@ -214,7 +227,14 @@ function event_signal(e)
 			return;
 		end
 
+		local previousPhase = activePhase;
 		activeRaidID, activeInstanceID, activePhase = Unpacket(e.data, true);
+		if ( previousPhase == 1 and activePhase == 2 ) then
+			reportedCounts[6] = reportedCounts[1] + reportedCounts[2];
+			reportedCounts[7] = reportedCounts[3];
+			reportedCounts[8] = reportedCounts[4] + reportedCounts[5];
+		end
+		RefreshAdmissionCounts();
 		pendingStartData, startSignalTries = nil, 0;
 		eq.stop_timer("start_retry");
 		
@@ -225,23 +245,20 @@ function event_signal(e)
 	elseif ( e.signal == 5 ) then		-- periodic player counts
 
 		local oldCount = numRaiders;
-		local counts = Unpacket(e.data, true, true);
-		
-		if ( not playerZoned ) then
-			-- use PoTimeB numbers if nobody has zoned since last update.  doing this because if people zone over right before
-			-- TimeB reports counts, then they can be off due to zoning delay
-			trialRaiders = counts;
-			numRaiders = counts[9];
-		else
-			-- somebody zoned over recently, so use higher of the two values
-			for i = 1, 9 do
-				if ( counts[i] > trialRaiders[i] ) then
-					trialRaiders[i] = counts[i];
-				end
-			end
-			numRaiders = trialRaiders[9];
+		-- Time B reports who is actually inside alongside the counts. This
+		-- prevents counting an arrival both as a reservation and as a player.
+		local countData, ids = (e.data or ""):match("^([%d;]+)|([%d;]*)$");
+		if ( not countData ) then return end
+		local counts = Unpacket(countData, true, true);
+		if ( #counts ~= 11 or counts[10] ~= activeInstanceID or counts[11] ~= activePhase or activePhase < 1 ) then return end
+		presentPlayers = {};
+		for id in ids:gmatch("%d+") do presentPlayers[tonumber(id)] = true end
+		for id, entry in pairs(pendingEntries) do
+			-- Only a fresh report may release a failed/timed-out transfer.
+			if ( presentPlayers[id] or os.time() >= entry.expires ) then pendingEntries[id] = nil end
 		end
-		playerZoned = false;		
+		for i = 1, 9 do reportedCounts[i] = counts[i] end
+		RefreshAdmissionCounts();
 		
 		if ( oldCount ~= numRaiders ) then
 			if ( activePhase == 1 ) then
@@ -321,7 +338,9 @@ end
 
 function ResetZone()
 	activeRaidID, activeInstanceID, numRaiders, activePhase = 0, 0, 0, 0;
-	for i = 1, 8 do
+	presentPlayers, pendingEntries = {}, {};
+	reportedCounts = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	for i = 1, 9 do
 		trialRaiders[i] = 0;
 	end
 end
