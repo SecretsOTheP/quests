@@ -238,8 +238,8 @@ do
  w:load(false,60);w:pulse();check(tonumber(w:state()[6])==end_at,"Dust one-hour timer is not restarted by quest reload");
  w.now=end_at;w:pulse();check(w:phase()=="failed" and not w:role("arch1"),"Dust expired attempt cleans up");
  for id=369505,369519 do check(not w.points[id].enabled,"Dust disables erratic spawnpoints on expiry");end
- check(tonumber(w:state()[4])==reset,"Dust cleanup preserves original 66-hour island reset");
- w:load(true,10);w:pulse();check(w:phase()=="island","unloading a failed Dust attempt permits a fresh attempt");
+ check(tonumber(w:state()[4])==end_at+900,"Dust failure retries after 15 minutes");
+ w:load(true,10);w:pulse();check(w:phase()=="failed","unloading preserves the failed Dust cooldown");
 end
 do
  local w=world("Smoke");w:kill_island(5);local n=w:role("champ5");check(n and n.abilities[24]~=0,"early champion remains locked");
@@ -287,3 +287,82 @@ for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
  w:load(true,1);w:pulse();check(not w:role("avatar"),name.." expired Avatar stays expired after unload");
 end
 print("PASS: "..checks.." Air recovery checks");
+
+
+local before=checks;
+for _,name in ipairs({"Dust","Wind","Smoke","Mist"}) do
+ local w=world(name); w:pulse(); w:kill_island();
+ local started=w.now; local limit=name=="Dust" and 3600 or 10800;
+ local finish=tonumber(w:state()[4]);
+ w.now=started+limit-1;w:pulse();
+ check(w:phase()~="failed",name.." not failed before deadline");
+ w.now=started+limit;w:pulse();
+ check(w:phase()=="failed",name.." attempt times out");
+ check(tonumber(w:state()[4])==started+limit+900,name.." retry is 15 minutes after timeout");
+ check(w.consumes==0,name.." failed attempt does not consume Avatar marker");
+ check(not w:role("boss") and not w:role(w.c.first),name.." failed encounter cleaned up");
+ w:load(false,100);w:pulse();
+ check(w:phase()=="failed" and tonumber(w:state()[4])==started+limit+900,name.." reload preserves failure deadline");
+ w:load(true,100);w:pulse();
+ check(w:phase()=="failed",name.." zone unload does not bypass cooldown");
+ w.now=started+limit+899;w:pulse();check(w:phase()=="failed",name.." no early retry");
+ w.now=started+limit+900;w:pulse();check(w:phase()=="island",name.." retry available at exact boundary");
+ w:kill_island();to_boss(w);w:kill_role("boss");w:kill_role("avatar");
+ check(w:phase()=="cooldown",name.." retry can succeed");
+ check(tonumber(w:state()[4])==w.now+237600,name.." successful retry retains 66h");
+ w:load(false,100);w:pulse();check(w:phase()=="cooldown",name.." success survives reload");
+
+ -- A delayed callback uses the actual deadline, not callback time.
+ local late=world(name);late:pulse();late:kill_island();
+ local start=late.now;late.now=start+limit+901;late:pulse();
+ check(late:phase()=="island",name.." late callback does not extend retry");
+
+ -- A kill arriving after timeout cannot earn an Avatar before the next pulse.
+ local stale=world(name);stale:pulse();stale:kill_island();to_boss(stale);
+ stale.now=stale.now+10800;stale:kill_role("boss");
+ check(stale:phase()=="failed" and stale.consumes==0,name.." late boss kill cannot bypass timeout");
+
+ -- Earned Avatars keep their existing idle/combat budget past attempt expiry.
+ local earned=world(name);earned:pulse();earned:kill_island();to_boss(earned);earned:kill_role("boss");
+ earned:dispatch(Event.combat,earned:role("avatar"),{joined=true});
+ earned.now=earned.now+12000;earned:pulse();
+ check(earned:phase()=="avatar",name.." attempt timer does not depop earned Avatar");
+ check(tonumber(earned:state()[4])==finish,name.." earned Avatar success deadline unchanged");
+
+ -- Legacy public scripts use the same retry delay; Guild 1 is excluded.
+ for _,guild in ipairs({0,1}) do
+  local public=world(name,guild);
+  for _,id in ipairs(public.island) do public.points[id].npc.valid=false;end
+  check(public.env.CheckIsland(),name.." public island cleared");
+  local repop=({Dust="spider_repop",Wind="stormrider_repop",Smoke="mephit_repop",Mist="phoenix_repop"})[name];
+  -- Find the actual legacy island timer instead of assuming its label.
+  for key,value in pairs(public.timers) do if value==237600000 then repop=key:match("^(.-):");end end
+  public.now=public.now+10800;
+  public.env.ControllerTimer({timer="air_attempt_end"});
+  check(public.timers[repop..":0"]==(guild==1 and 237600000 or 900000),name.." public failure/Guild 1 timer");
+ end
+ local success=world(name,0);
+ for _,id in ipairs(success.island) do success.points[id].npc.valid=false;end
+ success.env.CheckIsland();success.env.FinishAttempt({});
+ success.now=success.now+10800;success.env.ControllerTimer({timer="air_attempt_end"});
+ local long=false;for _,v in pairs(success.timers) do if v==237600000 then long=true;end end
+ check(long,name.." public success keeps 66h");
+end
+
+local publicDust=world("Dust",0);
+for _,id in ipairs(publicDust.island) do publicDust.points[id].npc.valid=false;end
+publicDust.env.ControllerSignal({signal=1});
+publicDust.now=publicDust.now+3600;
+publicDust.env.ControllerTimer({timer="1h_despawn"});
+check(publicDust.timers["spider_repop:0"]==900000,"public Dust wave failure retries after 15m");
+check(not publicDust:find(215400).valid and not publicDust:find(215375).valid,"public Dust failure removes waves and unfinished boss");
+publicDust.now=publicDust.now+900;publicDust.env.ControllerTimer({timer="spider_repop"});
+check(publicDust:find(215375).valid,"public Dust retry restores unearned boss");
+for _,id in ipairs(publicDust.island) do check(publicDust.points[id]:GetNPC().valid,"public Dust retry restores island");end
+
+local old=world("Dust");old:pulse();old:kill_island();
+local fields=old:state();fields[3]="failed";fields[5]=tostring(old.now-100);fields[6]="0";
+old.buckets[old.key]=table.concat(fields,"|");old:load(false);old:pulse();
+check(tonumber(old:state()[4])==old.now+800,"old failed save capped at failure plus 15m");
+old:load(false,100);old:pulse();check(tonumber(old:state()[4])==old.now+700,"old failed migration is idempotent");
+print("Additional Air retry checks passed: "..(checks-before).." (includes callback registrations)");

@@ -26,6 +26,27 @@ local TIMER = "phoenix_repop";
 
 local eventActive = false;
 
+-- Public-copy timeout handling; guild instances use air_ring_recovery.
+-- Guild 1 retains its existing earthquake behavior.
+local retryPending = false;
+local attemptEnds = 0;
+function FinishAttempt(e)
+    attemptEnds = 0;
+    local controller = eq.get_entity_list():GetNPCByNPCTypeID(CONTROLLER_TYPE);
+    if controller.valid then eq.stop_timer("air_attempt_end", controller); end
+end
+
+function FailAttempt(expires)
+    if eq.get_zone_guild_id() == 1 or retryPending then return; end
+    retryPending = true;
+    eq.stop_timer("air_attempt_end");
+    eq.depop_all(FIRESURGER_TYPE);
+    eq.depop_all(WINDSURGER_TYPE);
+    eq.depop_all(BOSS_TYPE);
+    eq.depop_all(PH_TYPE);
+    eq.set_timer(TIMER, math.max(1, expires + 900 - os.time()) * 1000);
+end
+
 function RepopIsland()
 	local elist = eq.get_entity_list();
 
@@ -44,6 +65,10 @@ function CheckIsland()
 		end
 	end
 	
+    if eq.get_zone_guild_id() ~= 1 and attemptEnds == 0 and not retryPending then
+        attemptEnds = os.time() + 10800;
+        eq.set_timer("air_attempt_end", 10800000);
+    end
 	eq.set_timer(TIMER, 237600000); -- 66 hours
 	return true;
 end
@@ -53,6 +78,10 @@ function ControllerSpawn(e)
 end
 
 function ControllerTimer(e)
+    if e.timer == "air_attempt_end" then
+        if attemptEnds > 0 then FailAttempt(attemptEnds); end
+        return;
+    end
 	if ( e.timer == TIMER ) then
 		
 		if ( eventActive ) then
@@ -65,10 +94,12 @@ function ControllerTimer(e)
 		end
 		
 		RepopIsland(ISLAND_SPAWNIDS);
+        retryPending = false; attemptEnds = 0;
 	end
 end
 
 function ControllerSignal(e)
+    if retryPending then return; end
 	if ( eq.get_zone_guild_id() == 1 and not eq.guild_one_raid_window_open() ) then
 		return;
 	end
@@ -131,6 +162,7 @@ function WindsurgerDeath(e)
 end
 
 function BossDeathComplete(e)
+    FinishAttempt(e);
 	eq.unique_spawn(AVATAR_TYPE, 0, 0, -1573, -570, 356.125, 192);
 	eq.depop_with_timer(GUY_TYPE);
 end
@@ -181,6 +213,7 @@ function AvatarTimer(e)
 end
 
 function event_encounter_load(e)
+    eq.register_npc_event("Mist", Event.death_complete, PH_TYPE, FinishAttempt);
 	eq.register_npc_event("Mist", Event.spawn, CONTROLLER_TYPE, ControllerSpawn);
 	eq.register_npc_event("Mist", Event.timer, CONTROLLER_TYPE, ControllerTimer);
 	eq.register_npc_event("Mist", Event.signal, CONTROLLER_TYPE, ControllerSignal);
