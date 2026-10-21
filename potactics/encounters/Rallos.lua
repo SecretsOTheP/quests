@@ -205,6 +205,14 @@ local function Leash(npc, home)
     end
     Log("LEASH",string.format("%s returned home from %.1f, %.1f, %.1f; aggro wiped, all buffs/debuffs cleared, HP restored; Balance of the Nameless applied: %s.",npc:GetName(),x,y,z,tostring(applied)));
 end
+local function ResetBrother(npc)
+    -- Wiping hate during a boundary reset can also invoke combat(false).
+    if not npc.valid or npc:IsCorpse() or npc:GetHP()<=0 then return; end
+    if npc:GetEntityVariable("rallos_brother_resetting")=="1" then return; end
+    npc:SetEntityVariable("rallos_brother_resetting","1");
+    Leash(npc,BROTHER_HOMES[npc:GetNPCTypeID()]);
+    npc:SetEntityVariable("rallos_brother_resetting","0");
+end
 local function ResetWarlord(npc)
     -- Wiping aggro can invoke combat(false) while a boundary reset is running.
     -- Never heal a dying Warlord or recursively start a second reset.
@@ -462,7 +470,7 @@ function BrotherTimerEvent(e)
     if phase~=1 then return; end
     local t=e.self:GetNPCTypeID();
     if e.timer=="bounds" and e.self:GetX()>820 then
-        Leash(e.self,BROTHER_HOMES[t]);
+        ResetBrother(e.self);
         if not arrived[t] then
             e.self:UpdateWaypoint(3);
             if t==TALLON_TYPE then TallonWaypointArrive({self=e.self,wp=3});
@@ -769,7 +777,13 @@ function DepopCombatEvent(e)
     local t=e.self:GetNPCTypeID();
     if t==TALLON_TYPE or t==VALLON_TYPE then
         if phase~=1 then return; end
-        if e.joined then PauseIdle(e.self); else ResumeIdle(e.self); end
+        if e.joined then
+            PauseIdle(e.self);
+        else
+            -- Do not interrupt the initial procession into the War Room.
+            if arrived[t] then ResetBrother(e.self); end
+            ResumeIdle(e.self);
+        end
         local name=t==TALLON_TYPE and "Tallon Zek" or "Vallon Zek";
         RP(name..(e.joined and " meets your challenge. Steel and sorcery clash in the War Room!" or " withdraws from battle and waits for you in the War Room."));
         Log(e.joined and "ENGAGE" or "DISENGAGE",e.self:GetName()..(e.joined and " engaged; idle timer stopped." or " disengaged; remaining idle timer resumed."));
