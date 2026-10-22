@@ -25,6 +25,32 @@ local kills = 0;
 local archwalkerKills = 0;
 local moveX, moveY, moveZ;
 
+-- Public-copy timeout handling; guild instances use air_ring_recovery.
+-- Guild 1 retains its existing earthquake behavior.
+local retryPending = false;
+local attemptEnds = 0;
+local dustEnds = 0;
+function FinishAttempt(e)
+    attemptEnds = 0;
+    dustEnds = 0;
+    local controller = eq.get_entity_list():GetNPCByNPCTypeID(CONTROLLER_TYPE);
+    if controller.valid then eq.stop_timer("air_attempt_end", controller); end
+end
+
+function FailAttempt(expires)
+    if eq.get_zone_guild_id() == 1 or retryPending then return; end
+    retryPending = true;
+    eq.stop_timer("air_attempt_end");
+    eq.stop_timer("1h_despawn");
+    ToggleErraticSpawns(false);
+    eq.depop_all(ERRATIC_TYPE);
+    eq.depop_all(ARCHWALKER_TYPE);
+    eq.depop_all(SPAWN_TYPE);
+    eq.depop_all(PH_TYPE);
+    eq.depop_all(SIGISMOND_TYPE);
+    eq.set_timer(TIMER, math.max(1, expires + 900 - os.time()) * 1000);
+end
+
 function RepopIsland()
 	local elist = eq.get_entity_list();
 
@@ -43,6 +69,11 @@ function CheckIsland()
 		end
 	end
 	
+    if eq.get_zone_guild_id() ~= 1 and attemptEnds == 0 and not retryPending then
+        attemptEnds = os.time() + 10800;
+        dustEnds = os.time() + 3600;
+        eq.set_timer("air_attempt_end", 10800000);
+    end
 	eq.set_timer(TIMER, 237600000); -- 66 hours
 	return true;
 end
@@ -52,6 +83,10 @@ function ControllerSpawn(e)
 end
 
 function ControllerTimer(e)
+    if e.timer == "air_attempt_end" then
+        if attemptEnds > 0 then FailAttempt(attemptEnds); end
+        return;
+    end
 	if ( e.timer == TIMER ) then
 		
 		if ( eventActive ) then
@@ -61,7 +96,7 @@ function ControllerTimer(e)
 			eq.depop_all(PH_TYPE);
 			
 			local elist = eq.get_entity_list();
-			if ( elist:IsMobSpawnedByNpcTypeID(SIGISMOND_TYPE) ) then
+			if ( elist:IsMobSpawnedByNpcTypeID(SIGISMOND_TYPE) or (retryPending and elist:IsMobSpawnedByNpcTypeID(GUY_TYPE)) ) then
 				elist:GetSpawnByID(SIGISMOND_SPAWNID):Repop();
 			end
 			
@@ -72,8 +107,13 @@ function ControllerTimer(e)
 		end
 		
 		RepopIsland(ISLAND_SPAWNIDS);
+        retryPending = false; attemptEnds = 0; dustEnds = 0;
 		
 	elseif ( e.timer == "1h_despawn" ) then
+        if eq.get_zone_guild_id() ~= 1 then
+            if dustEnds > 0 then FailAttempt(dustEnds); end
+            return;
+        end
 		eq.depop_all(ERRATIC_TYPE);
 		eq.depop_all(ARCHWALKER_TYPE);
 		eq.depop_all(SPAWN_TYPE);
@@ -99,6 +139,7 @@ function ToggleErraticSpawns(state)
 end
 
 function ControllerSignal(e)
+    if retryPending then return; end
 	if ( eq.get_zone_guild_id() == 1 and not eq.guild_one_raid_window_open() ) then
 		return;
 	end
@@ -211,6 +252,7 @@ function SpawnDeath(e)
 end
 
 function BossDeathComplete(e)
+    FinishAttempt(e);
 	ToggleErraticSpawns(false);
 	eq.unique_spawn(AVATAR_TYPE, 0, 0, 1671, 527, 344, 192);
 	eq.depop_with_timer(GUY_TYPE);
@@ -266,6 +308,7 @@ function GuySpawn(e)
 end
 
 function event_encounter_load(e)
+    eq.register_npc_event("Dust", Event.death_complete, PH_TYPE, FinishAttempt);
 	eq.register_npc_event("Dust", Event.spawn, CONTROLLER_TYPE, ControllerSpawn);
 	eq.register_npc_event("Dust", Event.timer, CONTROLLER_TYPE, ControllerTimer);
 	eq.register_npc_event("Dust", Event.signal, CONTROLLER_TYPE, ControllerSignal);

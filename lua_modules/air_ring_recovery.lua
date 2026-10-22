@@ -3,6 +3,8 @@
 local M = {};
 local PULSE = "air_ring_recovery";
 local CYCLE = 237600; -- existing 66-hour island repop
+local RETRY = 900; -- 15 minutes after an unfinished attempt times out
+local ATTEMPT = 10800; -- TAKP three-hour ring window; Dust waves also have a one-hour limit
 local IDLE = 9000; -- existing 2.5-hour Avatar budget, paused in combat
 local configs = {
     Wind = {controller=215420, marker=215414, boss=215390, ph=215425, avatar=215391,
@@ -108,6 +110,12 @@ function M.install(name, opts)
         if valid then
             s={cycle=f[2],phase=f[3],deadline=f[4],stage_at=f[5],dust_end=f[6],remaining=f[7],
                 clock=f[8],paused=f[9],consumed=f[10],real=f[11],position=f[12],island=native,dead=dead,traps=f[15],add_loc=f[16]};
+            -- Migrate failed saves only; earned Avatars and successful cooldowns
+            -- retain their original deadline. Repeated reloads cannot extend it.
+            if s.phase=="failed" and s.deadline>s.stage_at+RETRY then
+                s.deadline=s.stage_at+RETRY; save();
+            end
+
             check_zone_restore=true;
             if s.phase=="avatar" then
                 local avatar=find(c.avatar);
@@ -239,15 +247,22 @@ function M.install(name, opts)
             -- Reloaded quests keep the controller and its entity variables.
             -- A fresh zone resets unfinished rings instead of replaying waves.
             -- Earned Avatars and completed cooldowns are preserved separately.
-            if not same_zone and s.phase~="avatar" and s.phase~="cooldown" then
+            if not same_zone and s.phase~="avatar" and s.phase~="cooldown" and s.phase~="failed" then
                 reset_island();
                 debug("zone unload interrupted the ring; reset for a fresh attempt");
             end
         end
         if s.phase=="avatar" and s.remaining<=0 then transition("cooldown"); end
-        if s.dust_end>0 and os.time()>=s.dust_end then
-            s.dust_end=0; transition("failed");
-            debug("one-hour wave deadline expired; spiders disabled, existing island reset retained");
+        -- The success deadline stays anchored to ring start. Derive the
+        -- attempt deadline separately so failure cannot shorten a clear lockout.
+        if s.phase~="island" and s.phase~="avatar" and s.phase~="cooldown" and s.phase~="failed" then
+            local expires=s.deadline-CYCLE+ATTEMPT;
+            if s.dust_end>0 then expires=math.min(expires,s.dust_end); end
+            if os.time()>=expires then
+                s.deadline=expires+RETRY; s.dust_end=0;
+                transition("failed");
+                debug("attempt expired; island retries after 15 minutes");
+            end
         end
         if os.time()>=s.deadline and s.phase~="avatar" then reset_island(); end
         local rows=expected(); cleanup(rows);
@@ -328,6 +343,9 @@ function M.install(name, opts)
         controller=e.self; ensure();
         local delay=30;
         if s.phase~="avatar" then delay=math.min(delay,s.deadline-os.time()); end
+        if s.phase~="island" and s.phase~="avatar" and s.phase~="cooldown" and s.phase~="failed" then
+            delay=math.min(delay,s.deadline-CYCLE+ATTEMPT-os.time());
+        end
         if s.dust_end>0 then delay=math.min(delay,s.dust_end-os.time()); end
         if s.phase=="avatar" and s.paused==0 then delay=math.min(delay,s.remaining); end
         eq.set_timer(PULSE,math.max(1,delay*1000),controller);
@@ -361,6 +379,11 @@ function M.install(name, opts)
     end
     local function stage_death(e)
         load();
+        if s.phase~="island" and s.phase~="avatar" and s.phase~="cooldown" and s.phase~="failed" then
+            local expires=s.deadline-CYCLE+ATTEMPT;
+            if s.dust_end>0 then expires=math.min(expires,s.dust_end); end
+            if os.time()>=expires then ensure(); return; end
+        end
         if not tagged(e.self) then return; end
         local role=e.self:GetEntityVariable(tag.."_role");
         if s.dead[role] then return; end
