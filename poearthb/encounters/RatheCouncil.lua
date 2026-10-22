@@ -5,10 +5,11 @@ local ProjectionEligibility = require("projection_eligibility");
 local MEZABLE, UNMEZABLE, AVATAR, PROJECTION = 222003,222039,222040,222041;
 local POINTS = {369377,369380,369382,369384,369386,369387,369376,369378,369379,369381,369383,369385};
 local TYPES={};for i,id in ipairs(POINTS)do TYPES[id]=i<=6 and MEZABLE or UNMEZABLE;end
-local COUNCIL_RESPAWN, COUNCIL_WINDOW, AVATAR_IDLE, FAILURE, SUCCESS = 420,3600,2100,900,496800;
+local COUNCIL_RESPAWN, AVATAR_IDLE, FAILURE, SUCCESS = 420,3000,900,496800;
 local MISSING_GRACE, WATCHDOG_MS = 10,1000;
 local names={[0]="Ready","Council","Avatar","Retry","Success"};
 local phase,attempt,remaining,clockAt,paused,cooldownUntil,avatarID,nextWarning=0,0,AVATAR_IDLE,0,false,0,0,1;
+-- Retain the start-time field for compatibility with existing saved runs; it no longer sets a deadline.
 local councilStarted=0;
 local records,missing,notices={},{},{};
 local initialized,creatingAvatar,cooldownArmed,readyAnnounced=false,false,false,false;
@@ -58,7 +59,6 @@ local function Load()
     fallback=fallback or{phase=h[1],attempt=h[2],untilTime=h[6]};
     if (h[1]==3 or h[1]==4)and h[6]==0 then return false,"Missing terminal deadline";end
     if #fields~=10 then return false,"Invalid saved field count",fallback;end
-    if h[1]==1 and(h[9]==0 or h[9]>Now())then return false,"Invalid Council deadline",fallback;end
     local loaded={};local count=0;
     for part in fields[10]:gmatch("[^;]+")do
         local id,typ,entity,status,deathAt=part:match("^(%d+):(%d+):(%d+):(%d+):(%d+)$");
@@ -150,6 +150,14 @@ local function Clock()
     if phase~=2 then return;end
     local now=Now();if not paused then remaining=math.max(0,remaining-math.max(0,now-clockAt));end;clockAt=now;
 end
+local function SetAvatarCombat(engaged)
+    local wiped=paused and not engaged;
+    paused=engaged;
+    if wiped then
+        remaining=AVATAR_IDLE;clockAt=Now();nextWarning=1;Save(true);
+        Log("RESET","Avatar lost all aggro; a fresh fifty-minute idle budget started.");
+    end
+end
 local function ArmCombat(n)
     if n:GetNPCTypeID()==UNMEZABLE then eq.set_timer("checkhp",3000,n);end
     if n:IsEngaged()then
@@ -170,8 +178,8 @@ local function SpawnAvatar()
     creatingAvatar=true;local ok,n=pcall(eq.unique_spawn,AVATAR,0,0,2050,410,-210,0);creatingAvatar=false;
     if not ok or not Live(n)or n:GetNPCTypeID()~=AVATAR or not Tagged(n,0,n:GetID(),false)then Fail("Avatar spawn failed or returned an untracked NPC");return;end
     avatarID=n:GetID();Save(true);ArmSupervisor();
-    RP("The Rathe speak through the towering Avatar of Earth: \"We remain as one while battle is joined. We shall tolerate a half-hour of hesitation, and five minutes more. No more.\"");
-    Log("PHASE","All twelve current Council deaths confirmed; Avatar spawned. Its idle budget is 35 minutes, paused only during its combat.");
+    RP("The Rathe speak through the towering Avatar of Earth: \"We remain as one while battle is joined. We shall tolerate fifty minutes of hesitation. No more.\"");
+    Log("PHASE","All twelve current Council deaths confirmed; Avatar spawned. Its idle budget is 50 minutes, paused during combat and refreshed after disengagement.");
 end
 local function CouncilSpawn(e)
     ArmSupervisor();if not InInstance()then return;end
@@ -194,7 +202,7 @@ end
 local function CouncilCombat(e)
     ArmSupervisor();if not InInstance()then return;end;if not initialized then Initialize();end
     local id=e.self:GetSpawnPointID();local r=records[id];if not r or not Tagged(e.self,id,r.entity,false)then return;end
-    if phase==0 and e.joined and AllKnown()then phase=1;councilStarted=Now();nextWarning=1;Save(true);RP("The stone beneath Ragrax trembles as the Rathe Council speaks as one: \"We shall not remain divided beyond the passing of an hour. The balance must be restored.\"");Log("ENGAGE","Council round engaged; sixty-minute running deadline started. Confirmed deaths share one counter.");end
+    if phase==0 and e.joined and AllKnown()then phase=1;councilStarted=Now();nextWarning=1;Save(true);RP("The stone beneath Ragrax trembles as the Rathe Council speaks as one: \"We stand together against you, Norrathians. The balance must be restored.\"");Log("ENGAGE","Council round engaged; no overall time limit. Confirmed deaths share one counter.");end
 end
 local function CouncilDeath(e)
     ArmSupervisor();if not InInstance()then return;end;if not initialized then Initialize();end
@@ -202,8 +210,7 @@ local function CouncilDeath(e)
     if phase~=0 and phase~=1 then Notice("late-death","WARN","Ignored Council death outside the Council phase.");return;end
     if not r or r.status~=0 or not Tagged(e.self,id,r.entity,true)or e.self:GetNPCTypeID()~=TYPES[id]then Notice("stale-death","WARN","Ignored duplicate/stale/untracked Council death.");return;end
     if not AllKnown()then Fail("Council killed before all twelve members were admitted");return;end
-    if phase==1 and Now()>=councilStarted+COUNCIL_WINDOW then Fail("Council sixty-minute deadline expired before the confirmed death");return;end
-    if phase==0 then councilStarted=Now();nextWarning=1;Log("ENGAGE","Council sixty-minute deadline started by first confirmed death.");end
+    if phase==0 then councilStarted=Now();nextWarning=1;Log("ENGAGE","Council round started by first confirmed death; no overall time limit.");end
     phase=1;r.status=1;r.deathAt=Now();missing[id]=nil;Save(true);
     local p=Point(id);if p and not GuildOne()then eq.update_spawn_timer(id,COUNCIL_RESPAWN*1000);p:SetTimer(COUNCIL_RESPAWN*1000);p:Enable();end
     ReconcileCouncil();if phase~=1 then return;end
@@ -220,9 +227,9 @@ local function AvatarSpawn(e)
 end
 local function AvatarCombat(e)
     ArmSupervisor();if not initialized then Initialize();end
-    if phase~=2 or not Tagged(e.self,0,avatarID,false)then return;end
-    Clock();if remaining==0 then Fail("Avatar's 35-minute idle budget expired");return;end
-    paused=e.joined;Save(true);
+    if phase~=2 or not Live(e.self)or not Tagged(e.self,0,avatarID,false)then return;end
+    Clock();if remaining==0 then Fail("Avatar's 50-minute idle budget expired");return;end
+    SetAvatarCombat(e.joined);Save(true);
     Log(paused and"ENGAGE"or"DISENGAGE",string.format("Avatar idle clock %s; %.1f minutes remain.",paused and"paused"or"running",remaining/60));
     if paused then RP("The Avatar of Earth plants its feet upon the stone of Ragrax. The Rathe speak as one through its towering form: \"We stand as one, Norrathians. We cannot permit your ambition to unravel what we are sworn to preserve. Your advance ends here.\"");end
 end
@@ -274,30 +281,20 @@ Initialize=function()
             end
         end
     elseif phase==2 then
-        if not Avatar()then Fail("Reload found missing/replaced Avatar");else Clock();HoldCouncil();if remaining==0 then Fail("Avatar idle budget expired across reload");else paused=Avatar():IsEngaged();Save(true);end end
+        if not Avatar()then Fail("Reload found missing/replaced Avatar");else Clock();HoldCouncil();if remaining==0 then Fail("Avatar idle budget expired across reload");else SetAvatarCombat(Avatar():IsEngaged());Save(true);end end
     elseif phase==3 or phase==4 then Cleanup();ApplyCooldown();end
     ArmSupervisor();Log("LOAD","Shared Council deaths, Avatar idle clock and cooldowns persist; encounter supervision is independent of NPC timers.");
 end
 Watchdog=function()
     if not initialized then Initialize();end;if not InInstance()then return;end
     if phase==0 or phase==1 then
-        if phase==1 then
-            local elapsed=math.max(0,Now()-councilStarted);
-            if elapsed>=COUNCIL_WINDOW then Fail("Council sixty-minute running deadline expired");return;end
-            local thresholds={1800,2700,3300};local texts={
-                "The voices of the Rathe Council resound through Ragrax, \"Norrathians, this struggle shall not continue without end. We must preserve the balance. We shall soon stand together again; your opportunity is passing.\"",
-                "The voices of the Rathe Council resound through Ragrax, \"Your time grows short. We shall stand united again. We will not remain bound to this struggle forever, Norrathians.\"",
-                "The voices of the Rathe Council resound through Ragrax, \"We must stand together again. Your final moments are upon you, Norrathians. We shall soon stand together once more.\""
-            };
-            while thresholds[nextWarning]and elapsed>=thresholds[nextWarning]do RP(texts[nextWarning]);Log("WARNING","Council elapsed "..thresholds[nextWarning]/60 .." of sixty minutes.");nextWarning=nextWarning+1;Save(true);end
-        end
         ReconcileCouncil();if phase~=0 and phase~=1 then return;end
         if phase==0 and AllPresent()and not readyAnnounced then readyAnnounced=true;RP("The Rathe Council stands once more within Ragrax. Their voices rise as one: \"We stand united again. We shall not abandon what we are sworn to preserve. The balance of these planes shall be preserved.\"");Log("READY","All twelve native Council members are present; a fresh round can begin.");end
     elseif phase==2 then
-        Clock();if remaining==0 then Fail("Avatar's 35-minute idle budget expired");return;end
+        Clock();if remaining==0 then Fail("Avatar's 50-minute idle budget expired");return;end
         local n=Avatar();if not n then missing.avatar=missing.avatar or Now();if Now()-missing.avatar>=MISSING_GRACE then Fail("Avatar disappeared/replaced without a confirmed kill");return;end
-        else missing.avatar=nil;paused=n:IsEngaged();end
-        local thresholds={900,1500,1800};local texts={
+        else missing.avatar=nil;SetAvatarCombat(n:IsEngaged());end
+        local thresholds={1800,2400,2700};local texts={
             "Ragrax trembles as the Rathe Council speaks through the Avatar of Earth, \"Norrathians, you do not comprehend the power you seek. We must preserve the balance. We shall bring this advance to an end.\"",
             "Ragrax trembles as the Rathe Council speaks through the Avatar of Earth, \"Your time dwindles, Norrathians. We shall not leave this stronghold exposed to your ambition. Face what we have become.\"",
             "Ragrax trembles as the Rathe Council speaks through the Avatar of Earth, \"This must end now. We shall soon stand together once more. Your final chance is upon you, Norrathians. We will not yield.\""

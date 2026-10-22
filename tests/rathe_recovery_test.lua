@@ -95,7 +95,7 @@ local function world(options)
         InstallProjectionFixture(env, arg[1] or ".");local chunk=assert(loadstring(source));setfenv(chunk,env);chunk();self.env=env;self.owner=self.encounter;env.event_encounter_load({encounter=self.encounter});self.owner=nil;
     end
     function s:state()
-        local raw=self.saved["rathe-recovery-v1-"..self.guild]or"0|0|2100|0|0|0|0|1|0|";local fields={};for part in(raw.."|"):gmatch("(.-)|")do fields[#fields+1]=part;end;return fields;
+        local raw=self.saved["rathe-recovery-v1-"..self.guild]or"0|0|3000|0|0|0|0|1|0|";local fields={};for part in(raw.."|"):gmatch("(.-)|")do fields[#fields+1]=part;end;return fields;
     end
     function s:phase()return tonumber(self:state()[1]);end
     function s:countDeaths()local count=0;for part in self:state()[10]:gmatch("[^;]+")do if part:match("^%d+:%d+:%d+:1:%d+$")then count=count+1;end end;return count;end
@@ -140,8 +140,8 @@ s:dispatch("signal",s:council(POINTS[2]),{signal=POINTS[3]});check(s:countDeaths
 s:killCouncil();check(s:phase()==2 and s:avatar(),"all twelve confirmed current deaths spawn one Avatar");
 check(s:liveCouncil()==0,"Council remains absent during Avatar phase");
 for _,id in ipairs(POINTS)do check(not s.points[id].enabled,"Council held while Avatar is active");end
-local a=s:avatar();s:engage(a,true);s:jump(10000);check(s:phase()==2 and tonumber(s:state()[3])==2100,"Avatar combat alone pauses shared idle budget");
-s:engage(a,false);s:jump(120);check(tonumber(s:state()[3])==1980,"clock resumes on disengagement");
+local a=s:avatar();s:engage(a,true);s:jump(10000);check(s:phase()==2 and tonumber(s:state()[3])==3000,"Avatar combat alone pauses shared idle budget");
+s:engage(a,false);s:jump(120);check(tonumber(s:state()[3])==2880,"fresh fifty-minute clock counts down after disengagement");
 s:kill(a);check(s:phase()==4 and tonumber(s:state()[6])-s.now==496800,"confirmed Avatar death preserves138-hour success");
 local essence;for _,n in pairs(s.npcs)do if n.typ==222041 then essence=n;end;end;check(s.projection==1 and essence:GetEntityVariable("flagger_v1_ready")=="1" and essence:GetEntityVariable("flagger_v1_characters")=="|9001|","Essence binds directly to kill rights");
 local deadline=s:state()[6];s:load();s:advance(1);check(s:phase()==4 and s:state()[6]==deadline,"success deadline survives reload");
@@ -161,10 +161,10 @@ s=world();s:start();s.points[POINTS[1]]=nil;s:advance(1);check(s:phase()==3,"mis
 s.points[POINTS[1]]={valid=true,id=POINTS[1],enabled=false,seconds=420,deadline=s.now+420};local repaired=s.points[POINTS[1]];function repaired:GetNPC()return self.npc or{valid=false};end;function repaired:Enabled()return self.enabled;end;function repaired:Enable()self.enabled=true;end;function repaired:SetTimer(ms)self.deadline=s.now+ms/1000;end
 s:advance(1);check(repaired.enabled,"recovery retries a restored missing spawnpoint");
 
-s=world();s:start();s.timers={};s:killCouncil();s:jump(2101);check(s:phase()==3,"attempt start re-arms supervisor after forced repop clears timers");
+s=world();s:start();s.timers={};s:killCouncil();s:jump(3001);check(s:phase()==3,"attempt start re-arms supervisor after forced repop clears timers");
 check(s:liveCouncil()==0 and not s:avatar(),"expiry cleans Council/Avatar without NPC-owned timer");
 s=world();s:start();s:killCouncil();s:advance(1);s:avatar():Depop();s:advance(12);check(s:phase()==3,"Avatar depop triggers independent recovery");
-s=world();s:start();s:killCouncil();s:jump(15*60);check(s:state()[8]=="2","first Avatar warning at15 idle minutes");s:jump(10*60);check(s:state()[8]=="3","second warning at25 idle minutes");s:jump(5*60);check(s:state()[8]=="4","third warning at30 idle minutes");s:jump(5*60);check(s:phase()==3,"original idle deadline is35 minutes");
+s=world();s:start();s:killCouncil();s:jump(30*60);check(s:state()[8]=="2","first Avatar warning at30 idle minutes");s:jump(10*60);check(s:state()[8]=="3","second warning at40 idle minutes");s:jump(5*60);check(s:state()[8]=="4","third warning at45 idle minutes");s:jump(5*60);check(s:phase()==3,"Avatar idle deadline is50 minutes");
 s=world();s:start();s:killCouncil();s:jump(100);local before=s:state()[3];s:load();s:advance(1);check(s:phase()==2 and tonumber(s:state()[3])<=tonumber(before),"Avatar reload does not reset idle budget");
 s=world();s:start();s.failAvatar=true;s:killCouncil();check(s:phase()==3,"Avatar spawn failure rolls back to recovery");
 s=world();s:start();s:killCouncil();s.throwProjection=true;s:kill(s:avatar());check(s:phase()==4,"projection exception cannot downgrade a confirmed victory");
@@ -173,7 +173,7 @@ s=world();s:start();s:killCouncil();s:kill(s:avatar());deadline=s:state()[6];loc
 s=world();s:start();s:killCouncil();s:kill(s:avatar());deadline=s:state()[6];f=s:state();f[3]="999999";s.saved["rathe-recovery-v1-"..s.guild]=table.concat(f,"|");s:load();s:advance(1);check(s:phase()==4 and s:state()[6]==deadline,"damaged clock metadata cannot shorten a valid success header");
 
 s=world({guild=-1});s:start();s:killCouncil();check(not s:avatar()and s.saved["rathe-recovery-v1--1"]==nil,"open-world Council cannot produce Avatar or write guild progress");
-s=world({guild=1});s:start();s.quakeOpen=false;s:killCouncil();check(s:phase()==2,"native Guild1 Council can complete its admitted encounter");s:jump(2101);check(s:phase()==3 and #s.updates==0,"Guild1 failure never forces timed Council resurrection");s:jump(901);s:advance(1);check(s:liveCouncil()==0,"Guild1 remains absent until native quake admission");s.quakeOpen=true;for _,id in ipairs(POINTS)do s:spawnNative(id);end;s:advance(1);check(s:phase()==0 and s:liveCouncil()==12,"new native quake admits fresh Guild1 Council without losing its NPCs");
+s=world({guild=1});s:start();s.quakeOpen=false;s:killCouncil();check(s:phase()==2,"native Guild1 Council can complete its admitted encounter");s:jump(3001);check(s:phase()==3 and #s.updates==0,"Guild1 failure never forces timed Council resurrection");s:jump(901);s:advance(1);check(s:liveCouncil()==0,"Guild1 remains absent until native quake admission");s.quakeOpen=true;for _,id in ipairs(POINTS)do s:spawnNative(id);end;s:advance(1);check(s:phase()==0 and s:liveCouncil()==12,"new native quake admits fresh Guild1 Council without losing its NPCs");
 
 -- Forced repop must also recover in Ready and terminal cooldown states.
 s=world();s:start();s.timers={};for _,id in ipairs(POINTS)do s:council(id):Depop();end;for _,id in ipairs(POINTS)do s:spawnNative(id);end;s:advance(1);check(s:phase()==0 and s:liveCouncil()==12,"forced repop before engagement admits a full fresh Council");s:killCouncil();s:advance(1);check(s:phase()==2,"fresh round after forced repop retains scheduled supervision");
@@ -181,12 +181,33 @@ s=world();s:start();s:killCouncil();s:avatar():Depop();s:advance(12);deadline=s:
 s=world();s:start();s:killCouncil();s:kill(s:avatar());deadline=s:state()[6];s:jump(10);s:load();s:advance(1);check(s:state()[6]==deadline,"successful cooldown remains absolute after elapsed time and reload");
 s=world({guild=1});s:start();s.quakeOpen=false;s:killCouncil();s:kill(s:avatar());f=s:state();f[10]="damaged";s.saved["rathe-recovery-v1-1"]=table.concat(f,"|");s.quakeOpen=true;for _,id in ipairs(POINTS)do s:spawnNative(id);end;s:load();s:advance(1);check(s:phase()==0 and s:liveCouncil()==12 and #s.updates==0,"fresh Guild1 native Council survives damaged old cooldown records");
 
--- Council has its own hard sixty-minute window; mez/combat cannot pause it.
-s=world();s:start();local c=s:council(POINTS[1]);s:engage(c,true);check(s:phase()==1 and s:state()[9]==tostring(s.now),"Council first engagement starts an absolute sixty-minute deadline");
-s:jump(30*60);check(s:state()[8]=="2","Council warning at thirty minutes");s:jump(15*60);check(s:state()[8]=="3","Council warning at forty-five minutes");s:jump(10*60);check(s:state()[8]=="4","Council warning at fifty-five minutes");s:jump(5*60);check(s:phase()==3,"Council combat does not pause the sixty-minute deadline");
-s=world();s:start();s:engage(s:council(POINTS[1]),true);local started=s:state()[9];s:jump(1800);s:load();s:advance(1);check(s:state()[9]==started,"Council reload retains its original deadline");s:jump(1800);check(s:phase()==3,"reloaded Council expires at the original sixty-minute endpoint");
-s=world();s:start();s:engage(s:council(POINTS[1]),true);s:jump(3500);s:killCouncil();check(s:phase()==2 and s:state()[3]=="2100","late Council success gives Avatar its separate original thirty-five-minute budget");
-s=world();s:start();s:engage(s:council(POINTS[1]),true);s.now=s.now+3601;s:killCouncil();check(s:phase()==3 and not s:avatar(),"late Council kill cannot bypass the expired deadline between timer ticks");
+-- Avatar combat pauses; a transition out of combat starts a fresh fifty minutes.
+s=world();s:start();s:killCouncil();s:jump(2900);a=s:avatar();check(s:state()[3]=="100","only100 idle seconds remain before pull");
+s:engage(a,true);s:jump(10000);check(s:phase()==2 and s:state()[3]=="100","long combat preserves remaining idle time");
+s:engage(a,false);check(s:state()[3]=="3000" and s:state()[8]=="1","wipe refreshes full idle budget and warnings");
+s:jump(600);s:engage(a,false);check(s:state()[3]=="2400","duplicate disengage cannot refill idle timer");
+s:load();s:advance(1);check(tonumber(s:state()[3])<=2400 and tonumber(s:state()[3])>=2399,"idle reload preserves the countdown instead of refilling it");
+s:engage(a,true);s:load();s:advance(1);local preserved=s:state()[3];s:jump(7200);check(s:state()[3]==preserved,"engaged reload preserves the paused clock");
+s:engage(a,false);check(s:state()[3]=="3000","another genuine wipe grants another fifty minutes");s:jump(2999);check(s:phase()==2,"Avatar survives49m59s after wipe");s:jump(1);check(s:phase()==3,"Avatar expires at50 idle minutes after wipe");
+s=world();s:start();s:killCouncil();a=s:avatar();s:jump(120);s:engage(a,true);a.engaged=false;s:tick();check(s:state()[3]=="3000","watchdog observes a missed disengage and refreshes once");s:jump(60);check(s:state()[3]=="2940","idle watchdog does not continually refresh the timer");
+s=world();s:start();s:killCouncil();a=s:avatar();s:jump(120);s:engage(a,true);a.engaged=false;s:load();s:advance(1);check(s:phase()==2 and s:state()[3]=="3000","reload reconciles saved combat with a live disengaged Avatar");
+s=world();s:start();s:killCouncil();a=s:avatar();s:engage(a,true);local terminal=s:state();a.hp=0;a.corpse=true;s:dispatch("combat",a,{joined=false});check(s:state()[3]==terminal[3] and s:state()[5]==terminal[5],"dying Avatar disengage does not reset its clock");s:kill(a);check(s:phase()==4,"normal Avatar death still records success");
+
+-- Council has no overall attempt deadline; existing records remain compatible.
+for _,guild in ipairs({1,66})do
+ s=world({guild=guild});s:start();s:engage(s:council(POINTS[1]),true);local started=s:state()[9];local messages=#s.rp;
+ for _,seconds in ipairs({1800,900,600,300,7200,86400})do
+  s:jump(seconds);check(s:phase()==1 and s:liveCouncil()==12,"Council remains active without an elapsed-time cutoff");
+ end
+ check(#s.rp==messages,"Council no longer emits deadline warnings");
+ s:load();s:advance(1);check(s:phase()==1 and s:state()[9]==started,"old start-time metadata survives reload without expiring the round");
+ s:killCouncil();check(s:phase()==2 and s:avatar() and s:state()[3]=="3000","Council clears after more than a day; Avatar retains its separate idle budget");
+end
+s=world();s:start();s:engage(s:council(POINTS[1]),true);s.now=s.now+3601;s:killCouncil();check(s:phase()==2 and s:avatar(),"kills after the former deadline succeed between watchdog ticks");
+s=world();s:start();s:engage(s:council(POINTS[1]),true);s:jump(7200);s:kill(s:council(POINTS[1]));local deathCount=s:countDeaths();
+local legacy=s:state();legacy[8]="4";s.saved["rathe-recovery-v1-"..s.guild]=table.concat(legacy,"|");
+s:load();s:advance(1);check(s:phase()==1 and s:countDeaths()==deathCount,"old warning metadata and current deaths survive an overdue Council reload");
+s:advance(421);check(s:phase()==1 and s:countDeaths()==0 and s:liveCouncil()==12,"seven-minute Council respawn remains active after an extended attempt");
 
 -- Retained NPC mechanics: teleport bounds, weakening and mez hate wipe.
 s=world();s:start();local n=s:council(POINTS[7]);n.hp=n.maxhp*0.10;s:engage(n,true);s:advance(12);check(n.stats.min_hit==185 and n.stats.max_hit==850 and n.stats.accuracy==0 and n.stats.atk==0,"unmezable weakening thresholds remain intact");
