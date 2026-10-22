@@ -1,11 +1,20 @@
 function event_say(e)
 	if(e.message:findi("hail")) then
 		e.self:Say("What is it? What do you wan. . . Oh bloody underfoot, do forgive me, traveler. I'm not used to all this bickering and flittering about -- you know, the bustle of the 'living' city. The racket, the noise, and the wails of the children. Bah! I came here to escape it, not to relive it. But if I survived it once, I sure as Brell's holy bottom will do it again! In hopes of getting you all out of here as soon as possible and the peace and quiet being resurrected out of your blessed absence, I've agreed to lend some of my knowledge of the more inferior levels of tinkering to those who have an interest in this art. If you don't intend on purchasing any materials, then be off with you and leave me in peace. However, if you have coin in your pocket and you plan on spending, then do so quickly. I have more pressing things to do with my time than wait while you leisurely browse my wares.");
+		if(e.other:IsSelfFound() >= 1) then
+			e.self:Say("Hmm. You've the look of one who's sworn to rely on no one's craft but their own. If it's a [crab cracker] you're needing, I might be persuaded to assemble one -- ask me about it, if you must.");
+		end
 	elseif(e.message:findi("ready to write down")) then
 		if(e.other:HasItem(17278)) then -- Item: Small Parts Container  he replies to this if I have small parts container.
 			e.self:Say("Very well. You'll need to gather up a dense hammered casing for the outer shell; a crystalline carapace will act to protect the face of the device; and it requires a fiery power source to propel the rotor mechanism. The device is then attached around the neck, much like the one you are wearing. The only difference will be the strands of living chain that will keep it from slipping from around your neck. Place those four items and your talisman in that box and return it to me. We should be able to get this thing built for you without much fuss at all, should all things go well on your end of the task, of course.");
 		else
 			e.self:Say("Ready for what?");
+		end
+	elseif(e.message:findi("crab cracker")) then
+		if(e.other:IsSelfFound() >= 1) then
+			e.self:Say("A crab cracker? Hmph. A simple enough device -- two metal rods, a knuckle joint for the hinge, and a diamond for the biting edge, or those regrua shells will dull it inside a week. The rods and joints I keep on my own shelves, but diamonds I do not give away. Bring me a diamond and one hundred platinum pieces for my time and I will assemble one for you on the spot. It is a tool, not a toy -- it should serve you indefinitely, so do try not to lose it.");
+		else
+			e.self:Say("A crab cracker? No. There are gnome tinkerers aplenty in this city who would gladly take your coin -- go and bother one of them. The little service I offer here is only for those who have sworn to rely on no one's craft but their own, and you are not one of them.");
 		end
 	end
 end
@@ -28,6 +37,10 @@ function event_trade(e)
 		e.self:Say("Please take the schematic to Elder Clinka. I'm afraid that I don't have the courage to spend any more time working on this for you. I wish I had a more adventurous spirit, but I don't. I like it here because it's peaceful. I don't need anyone changing that for you. Take care and be cautious on your way to see her. There's no telling who or what may be after you! When you show her the schematic, you may want to mention that most of that writing wasn't on there when we got it.");
 		e.self:Say("It's seems that words are beginning to write themselves onto that schematic of yours. Maybe she'll be able to understand them. I sure don't want to. Take care.");
 		e.other:QuestReward(e.self,{items = {28291,28290}}); -- Item: The Talisman Schematic, Powered Clockwork Talisman
+	end
+	if(e.other:IsSelfFound() >= 1 and item_lib.check_turn_in(e.self, e.trade, {item1 = 10037, platinum = 100})) then -- Diamond and 100 platinum, self found only
+		e.self:Emote("pockets the platinum and sets the diamond into the cracker's jaw with a series of sharp clicks. 'There. Mind your fingers -- the edge is diamond, and it does not much care what it bites.'");
+		e.other:SummonCursorItem(29778); -- Item: Crab Cracker
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
