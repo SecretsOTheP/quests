@@ -1,8 +1,13 @@
 --Magician PoP Spells/Songs
 function event_say(e)
+	local imbue_gems_lib = require("self_found_imbue_gems");
+	local imbue_gems_subject = "The Elements";
 	if e.message:findi("hail") then require("pop_spell_turnins").Claim(e) end
 	if(e.message:findi("hail")) then
 		e.self:Say("Greetings, traveler! I am Somat, Elementalist extraordinaire and one of several of my trade here in New Tanaan. We have all spent much time preparing for your arrival and hope that our time is not in vain. If you are a wielder of the elemental forces, then come and browse my inventory, friend! I may hold a spell or two that might pique your interest. Also, if you perhaps hold a seemingly mundane item of arcane relation that you found in your travels upon the planes, then do not hesitate to let me have a look at it. Don't worry -- we are not thieves here! Rather, we wish to aid you and I so love dabbling in the chaos of planar magic!");
+		imbue_gems_lib.hail_dialog(e.self, e.other, e.message, imbue_gems_subject);
+	end
+	if (imbue_gems_lib.check_dialog(e.self, e.other, e.message, imbue_gems_subject)) then
 	end
 end
 
@@ -11,6 +16,12 @@ function event_trade(e)
 
 	local spell_turnins = require([[pop_spell_turnins]]);
 	if ( spell_turnins.RejectMultipleTurnIns(e) ) then
+		item_lib.return_items(e.self, e.other, e.trade);
+		return;
+	end
+	local imbue_gems_lib = require("self_found_imbue_gems");
+	local imbue_gems_subject = "The Elements";
+	if (imbue_gems_lib.check_turn_in(item_lib, e.self, e.other, e.trade, imbue_gems_subject)) then
 		item_lib.return_items(e.self, e.other, e.trade);
 		return;
 	end
