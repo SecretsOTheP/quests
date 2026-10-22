@@ -1,6 +1,8 @@
 function event_say(e)
 	local qglobals = eq.get_qglobals(e.other);
 	local thelinFlag = tonumber(qglobals.thelin) or 0;
+	local imbue_gems_lib = require("self_found_imbue_gems");
+	local imbue_gems_subject = "Terris-Thule";
 
 	if ( e.message:findi("hail") ) then
 		if ( thelinFlag >= 3 ) then
@@ -13,5 +15,17 @@ function event_say(e)
 			e.other:Message(0, "Adroha gives a soft sigh of woe, 'You won't be getting any response from Thelin.  Ever since his injury he has been in a deep [coma] with no sign of ever recovering.'");
 			e.other:Message(0, "Thelin tosses and turns violently on the floor, then is still.");
 		end
+		imbue_gems_lib.hail_dialog(e.self, e.other, e.message, imbue_gems_subject);
+	elseif ( imbue_gems_lib.check_dialog(e.self, e.other, e.message, imbue_gems_subject) ) then
 	end
+end
+
+function event_trade(e)
+	local item_lib = require("items");
+	local imbue_gems_lib = require("self_found_imbue_gems");
+	local imbue_gems_subject = "Terris-Thule";
+
+	if ( imbue_gems_lib.check_turn_in(item_lib, e.self, e.other, e.trade, imbue_gems_subject) ) then
+	end
+	item_lib.return_items(e.self, e.other, e.trade)
 end
