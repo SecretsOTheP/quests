@@ -50,8 +50,99 @@ local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
 local blueKills, runners, lurkerState = 0, 0, 0;
 local runX, runY, runZ;
 local reds = {};
+local active, terminal, initialized = false, false, false;
+local redKills, unlockAt, missingSince = 0, nil, nil;
+local encounter;
+local generation = 0;
+local session = tostring({});
+local RUNNER_GRACE = 30; -- Animation may not block a completed red wave forever.
+local FailRing;
+
+local function Live(n)
+	return n and n.valid and n:GetHP() > 0 and not n:IsCorpse();
+end
+
+local function SpawnRequired(typ, x, y, z, h)
+	local ok, mob = pcall(eq.spawn2, typ, 0, 0, x, y, z, h);
+	if ok and Live(mob) then return mob; end
+end
+
+local function Cleanup()
+	for _, typ in ipairs({BLUE_MUDWALKER_TYPE, RED_MUDWALKER_TYPE, RUNNER_TYPE,
+		SLUDGE_LURKER_TYPE, MUCK_MUDLET_TYPE, MUDDITE_MUDLING_TYPE,
+		FILTH_GORGER_TYPE, MONSTEROUS_MUDWALKER_TYPE, MERCILESS_MUDSLINGER_TYPE, MUDESPAWN_TYPE}) do
+		eq.depop_all(typ);
+	end
+	reds = {}; blueKills, runners, lurkerState, redKills = 0, 0, 0, 0;
+	unlockAt, missingSince = nil, nil;
+end
+
+FailRing = function(reason)
+	if terminal then return; end
+	terminal, active = true, false;
+	Cleanup();
+	local elist = eq.get_entity_list();
+	for _, id in ipairs(BLUE_SPAWNIDS) do
+		eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
+		local point = elist:GetSpawnByID(id);
+		if point and point.valid ~= false then point:Enable(); end
+	end
+	eq.debug("Mud Ring failed: "..reason.."; cleaned up for a 15-minute retry.");
+end;
+
+local function TryUnlock()
+	if not active or not unlockAt or redKills ~= 16 then return; end
+	local elist = eq.get_entity_list();
+	if elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) or elist:IsMobSpawnedByNpcTypeID(RED_MUDWALKER_TYPE) then return; end
+	if runners < 64 and os.time() < unlockAt then return; end
+	local lurker = elist:GetNPCByNPCTypeID(SLUDGE_LURKER_TYPE);
+	if not Live(lurker) then FailRing("Sludge Lurker missing after the red wave"); return; end
+	-- Use the normal activation handler directly; do not depend on a queued signal.
+	LurkerSignal({self=lurker, signal=1});
+	eq.debug("Mud Ring unlocked Sludge Lurker after 16 confirmed red kills; runners arrived: "..runners);
+	unlockAt = nil;
+	eq.depop_all(RUNNER_TYPE);
+end
+
+function event_timer(e)
+	if e.timer ~= "mud_watchdog" then return; end
+	local elist = eq.get_entity_list();
+	if not initialized then
+		initialized = true;
+		-- A reload cannot reconstruct kill credit safely. Recover instead of granting a clear.
+		if not active and blueKills == 0 then
+			for _, typ in ipairs({MUDESPAWN_TYPE, SLUDGE_LURKER_TYPE, RED_MUDWALKER_TYPE, RUNNER_TYPE,
+				MUCK_MUDLET_TYPE, FILTH_GORGER_TYPE, MONSTEROUS_MUDWALKER_TYPE, MERCILESS_MUDSLINGER_TYPE}) do
+				if elist:IsMobSpawnedByNpcTypeID(typ) then FailRing("orphaned event after script load"); return; end
+			end
+		end
+	end
+	if not active then return; end
+	local missing = not elist:IsMobSpawnedByNpcTypeID(MUDESPAWN_TYPE);
+	if unlockAt or redKills < 16 then
+		missing = missing or not elist:IsMobSpawnedByNpcTypeID(SLUDGE_LURKER_TYPE);
+		for _, id in pairs(reds) do
+			if not Live(elist:GetMob(id)) then missing = true; end
+		end
+	end
+	if missing then
+		missingSince = missingSince or os.time();
+		if os.time() - missingSince >= RUNNER_GRACE then FailRing("required event NPC disappeared without a kill"); end
+		return;
+	end
+	missingSince = nil;
+	TryUnlock();
+end
 
 function BlueDeath(e)
+	eq.set_timer("mud_watchdog", 5000, encounter);
+	if active or e.self:GetEntityVariable("mud_blue_counted") == "1" then return; end
+	e.self:SetEntityVariable("mud_blue_counted", "1");
+	if blueKills == 0 then
+		terminal = false; generation = generation + 1;
+		redKills, runners, lurkerState = 0, 0, 0;
+		unlockAt, missingSince = nil, nil;
+	end
 	blueKills = blueKills + 1;
 	
 	local elist = eq.get_entity_list();
@@ -60,18 +151,28 @@ function BlueDeath(e)
 	for i = 1, 16 do
 		if ( not reds[i] ) then
 			loc = RED_LOCS[i];
-			reds[i] = eq.spawn2(RED_MUDWALKER_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]):GetID();
+			mob = SpawnRequired(RED_MUDWALKER_TYPE, loc[1], loc[2], loc[3], loc[4]);
+			if not Live(mob) then FailRing("red mudwalker failed to spawn"); return; end
+			reds[i] = mob:GetID();
+			mob:SetEntityVariable("mud_red_id", tostring(reds[i]));
+			mob:SetEntityVariable("mud_generation", session..":"..generation);
 			break;
 		end
 	end
 	
 	if ( blueKills >= 16 and not elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) ) then
 	
-		-- start event
+		-- Every required red must exist; disappearance never counts as a kill.
+		for i = 1, 16 do
+			if not reds[i] or not Live(elist:GetMob(reds[i])) then FailRing("incomplete red wave"); return; end
+		end
+		active = true;
 		blueKills, runners, lurkerState = 0, 0, 0;
-		eq.spawn2(MUDESPAWN_TYPE, 0, 0, 338, 88, 68.625, 0);
-		
-		mob = eq.spawn2(SLUDGE_LURKER_TYPE, 0, 0, 339, 92, 81.751, 0);
+		mob = SpawnRequired(MUDESPAWN_TYPE, 338, 88, 68.625, 0);
+		if not Live(mob) then FailRing("timeout controller failed to spawn"); return; end
+
+		mob = SpawnRequired(SLUDGE_LURKER_TYPE, 339, 92, 81.751, 0);
+		if not Live(mob) then FailRing("Sludge Lurker failed to spawn"); return; end
 		mob:SetSpecialAbility(24, 1); -- Will Not Aggro
 		mob:SetSpecialAbility(25, 1); -- Immune to Aggro
 		mob:SetSpecialAbility(35, 1); -- No Harm from Players
@@ -100,8 +201,10 @@ function RemoveFromReds(id)
 	for i = 1, 16 do
 		if ( reds[i] and reds[i] == id ) then
 			reds[i] = nil;
+			return true;
 		end
 	end
+	return false;
 end
 
 function RedSpawn(e)
@@ -110,32 +213,40 @@ end
 
 function RedTimer(e)
 	if ( e.timer == "depop" ) then
+		if active then FailRing("red mudwalker expired without a kill"); return; end
 		RemoveFromReds(e.self:GetID());
 		eq.depop();
 	end
 end
 
 function RedDeath(e)
+	if not active or e.self:GetEntityVariable("mud_generation") ~= session..":"..generation then return; end
+	local id = tonumber(e.self:GetEntityVariable("mud_red_id"));
+	if not id or not RemoveFromReds(id) then return; end
+	redKills = redKills + 1;
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
-	
 	for i = 1, 4 do
-		eq.spawn2(RUNNER_TYPE, 0, 0, runX + math.random(-10, 10), runY + math.random(-10, 10), runZ, 0);
+		local ok = pcall(eq.spawn2, RUNNER_TYPE, 0, 0, runX + math.random(-10, 10), runY + math.random(-10, 10), runZ, 0);
+		if not ok then eq.debug("Mud Ring runner spawn failed; confirmed red kill retained."); end
 	end
-	RemoveFromReds(e.self:GetID());
+	if redKills == 16 then unlockAt = os.time() + RUNNER_GRACE; end
+	TryUnlock();
 end
 
 function RunnerSpawn(e)
+	if not active then e.self:Depop(); return; end
+	e.self:SetEntityVariable("mud_generation", session..":"..generation);
 	e.self:SetRunning(true);
 	e.self:MoveTo(339, 92, 81.751, -1, true);
 end
 
 function RunnerWaypointArrive(e)
+	if not active or e.self:GetEntityVariable("mud_generation") ~= session..":"..generation
+		or e.self:GetEntityVariable("mud_arrived") == "1" then return; end
+	e.self:SetEntityVariable("mud_arrived", "1");
 	runners = runners + 1;
-	
-	if ( runners == 64 ) then
-		eq.signal(SLUDGE_LURKER_TYPE, 1);
-	end
-	eq.depop();
+	e.self:Depop();
+	TryUnlock();
 end
 
 function LurkerSpawn(e)
@@ -172,6 +283,7 @@ function LurkerSignal(e)
 end
 
 function LurkerHpEvent(e)
+	if not active then return; end
 	local x, y, z = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local xt = { 25, 25, 25, 0, 0, 0, 0, -25, -25, -25 };
 	local yt = { 25, 0, -25, 25, 10, -10, -25, 25, 0, -25 };
@@ -203,6 +315,7 @@ function MudletTimer(e)
 end
 
 function MudletDeath(e)
+	if not active then return; end
 	if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(MUCK_MUDLET_TYPE) ) then
 		lurkerState = lurkerState + 1;
 		eq.spawn2(SLUDGE_LURKER_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ() + 10, 0);
@@ -210,6 +323,7 @@ function MudletDeath(e)
 end
 
 function LurkerDeath(e)
+	if not active then return; end
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local mob;
 
@@ -223,6 +337,7 @@ function LurkerDeath(e)
 end
 
 function GorgerDeath(e)
+	if not active then return; end
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local elist = eq.get_entity_list();
 
@@ -292,6 +407,9 @@ function MonsterousTimer(e)
 end
 
 function EventSuccess(e)
+	if not active or terminal then return; end
+	active, terminal = false, true;
+	Cleanup();
 	eq.debug("Mud Ring completed");
 	
 	eq.depop_all(MUDESPAWN_TYPE);
@@ -318,35 +436,15 @@ function DespawnSpawn(e)
 end
 
 function DespawnTimer(e)
-
-	if ( e.timer == "depop" ) then
-		-- ring timeout fail
-		eq.depop_all(RED_MUDWALKER_TYPE);
-		eq.depop_all(RUNNER_TYPE);
-		eq.depop_all(SLUDGE_LURKER_TYPE);
-		eq.depop_all(MUCK_MUDLET_TYPE);
-		eq.depop_all(MUDDITE_MUDLING_TYPE);
-		eq.depop_all(FILTH_GORGER_TYPE);
-		eq.depop_all(MONSTEROUS_MUDWALKER_TYPE);
-		eq.depop_all(MERCILESS_MUDSLINGER_TYPE);
-		
-
-		local elist = eq.get_entity_list();
-		for _, id in ipairs(BLUE_SPAWNIDS) do
-			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
-			elist:GetSpawnByID(id):Enable();
-		end
-
-		for i = 1, 16 do
-			reds[i] = nil;
-		end
-		
-		eq.debug("Mud Ring failed and reset");
+	if e.timer == "depop" then
+		FailRing("98-minute event timeout");
 		eq.depop();
 	end
 end
 
 function event_encounter_load(e)
+	encounter = e.encounter;
+	eq.set_timer("mud_watchdog", 5000, encounter);
 
 	eq.register_npc_event("MudRing", Event.death_complete, BLUE_MUDWALKER_TYPE, BlueDeath);
 	
