@@ -69,6 +69,7 @@ local function Load()
     end
     if count~=#POINTS then return false,"Incomplete saved Council",fallback;end
     phase,attempt,remaining,clockAt,paused,cooldownUntil,avatarID,nextWarning=h[1],h[2],h[3],h[4],h[5]==1,h[6],h[7],h[8];records=loaded;councilStarted=h[9];
+    -- Keep the remaining saved idle budget; reloads never grant extra time.
     return true;
 end
 local function ArmSupervisor()eq.set_timer("watchdog",WATCHDOG_MS,encounter);end
@@ -151,12 +152,7 @@ local function Clock()
     local now=Now();if not paused then remaining=math.max(0,remaining-math.max(0,now-clockAt));end;clockAt=now;
 end
 local function SetAvatarCombat(engaged)
-    local wiped=paused and not engaged;
-    paused=engaged;
-    if wiped then
-        remaining=AVATAR_IDLE;clockAt=Now();nextWarning=1;Save(true);
-        Log("RESET","Avatar lost all aggro; a fresh fifty-minute idle budget started.");
-    end
+    paused=engaged; -- Resume the remaining idle budget after a wipe; never refill it.
 end
 local function ArmCombat(n)
     if n:GetNPCTypeID()==UNMEZABLE then eq.set_timer("checkhp",3000,n);end
@@ -179,7 +175,7 @@ local function SpawnAvatar()
     if not ok or not Live(n)or n:GetNPCTypeID()~=AVATAR or not Tagged(n,0,n:GetID(),false)then Fail("Avatar spawn failed or returned an untracked NPC");return;end
     avatarID=n:GetID();Save(true);ArmSupervisor();
     RP("The Rathe speak through the towering Avatar of Earth: \"We remain as one while battle is joined. We shall tolerate fifty minutes of hesitation. No more.\"");
-    Log("PHASE","All twelve current Council deaths confirmed; Avatar spawned. Its idle budget is 50 minutes, paused during combat and refreshed after disengagement.");
+    Log("PHASE","All twelve current Council deaths confirmed; Avatar spawned. Its idle budget is 50 minutes, paused during combat and resumed without refilling after disengagement.");
 end
 local function CouncilSpawn(e)
     ArmSupervisor();if not InInstance()then return;end

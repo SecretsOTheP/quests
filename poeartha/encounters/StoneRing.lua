@@ -94,20 +94,49 @@ local HEAP_LOCS = {
 
 local fortKills, heapKills = 0, 0;
 local runX, runY, runZ;
-local rubbleIds;
+local rubbleIds = {};
+local triggered, weakened = {}, {};
+local rubbleDone, reformAt = false, nil;
+
+local FailRing;
+local terminal = false;
+local guard = require("earth_ring_guard").new("StoneRing", {FORTIFICATION_TYPE, MOUND_OF_RUBBLE_TYPE, ROCK_MONSTROSITY_TYPE, STONE_HEAP_TYPE, ENCRUSTED_DIRT_CLOUD_TYPE, PEREGRIN_ROCKSKULL_TYPE, STONEDESPAWN_TYPE}, function(reason) FailRing(reason); end);
+FailRing = function(reason)
+    if terminal then return; end
+    terminal = true; guard:stop();
+    for _,typ in ipairs({FORTIFICATION_TYPE, MOUND_OF_RUBBLE_TYPE, ROCK_MONSTROSITY_TYPE, STONE_HEAP_TYPE, ENCRUSTED_DIRT_CLOUD_TYPE, PEREGRIN_ROCKSKULL_TYPE, STONEDESPAWN_TYPE, ROCK_CREATION_TYPE, CRUMBLING_STONE_MASS_TYPE, PILE_OF_BOULDERS_TYPE, BOULDER_THROWER_TYPE}) do eq.depop_all(typ); end
+    fortKills, heapKills = 0, 0; rubbleIds = {}; triggered = {}; weakened = {}; rubbleDone = false; reformAt = nil;
+    local elist = eq.get_entity_list();
+    for _,id in ipairs(TRIGGER_SPAWNIDS) do
+        eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
+        elist:GetSpawnByID(id):Enable();
+    end
+    eq.update_spawn_timer(FAKE_MONSTROSITY_SPAWNID, FAILURE_RESPAWN_TIME);
+    elist:GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Enable();
+    eq.debug("Stone Ring failed; 15-minute retry: "..tostring(reason));
+end
+
+function event_timer(e)
+    if e.timer == "earth_guard" then guard:wrap(RubbleWaypointArrive)({}); end
+    guard:tick(e);
+end
 
 function TriggerDeath(e)
+	if not guard:once(e.self) then return; end
 	local myType = e.self:GetNPCTypeID();
+	if triggered[myType] then return; end
 	local elist = eq.get_entity_list();
 
 	if ( not elist:IsMobSpawnedByNpcTypeID(myType) ) then	-- note: this will fail if you #kill the NPCs; use #damage instead to test
 
-		if ( not elist:IsMobSpawnedByNpcTypeID(STONEDESPAWN_TYPE) ) then
+		if ( not guard.active ) then
 
+			terminal = false; triggered = {}; weakened = {}; rubbleDone = false; reformAt = nil;
+			guard:start({ROCK_CREATION_TYPE, CRUMBLING_STONE_MASS_TYPE, PILE_OF_BOULDERS_TYPE, BOULDER_THROWER_TYPE});
 			-- start event
 			fortKills, heapKills = 0, 0;
 			rubbleIds = {};
-			eq.spawn2(STONEDESPAWN_TYPE, 0, 0, -587, -206, 82.627, 0);
+			guard:spawn(STONEDESPAWN_TYPE, 0, 0, -587, -206, 82.627, 0);
 			for _, id in ipairs(TRIGGER_SPAWNIDS) do
 				elist:GetSpawnByID(id):Disable(false);
 			end
@@ -115,16 +144,18 @@ function TriggerDeath(e)
 			eq.debug("Stone Ring started");
 		end
 		
+		triggered[myType] = true;
 		local locs = FORT_LOCS[TRIGGER_TYPES[myType]];
 		
 		eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(STONETXT_TYPE), true, 200, 0, "The ground shudders as stone fortifications are summoned forth.");
 		for _, loc in ipairs(locs) do
-			eq.spawn2(FORTIFICATION_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
+			guard:spawn(FORTIFICATION_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
 		end
 	end
 end
 
 function FortDeath(e)
+	if not guard:dead(e.self) then return; end
 	fortKills = fortKills + 1;
 
 	if ( fortKills == 43 ) then
@@ -132,7 +163,7 @@ function FortDeath(e)
 		eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(STONETXT_TYPE), true, 200, 0, "The Rock Monstrosity crumbles into mounds of rubble.");
 		
 		for i, loc in ipairs(RUBBLE_LOCS) do
-			rubbleIds[eq.spawn2(MOUND_OF_RUBBLE_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]):GetID()] = i;
+			rubbleIds[guard:spawn(MOUND_OF_RUBBLE_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]):GetID()] = i;
 		end
 		eq.get_entity_list():GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Disable();
 	end
@@ -143,7 +174,10 @@ function RubbleSpawnEvent(e)
 end
 
 function RubbleHpEvent(e)
-	if ( e.hp_event == 20 ) then
+	if ( e.hp_event == 20 and guard:owns(e.self) and rubbleIds[e.self:GetID()] and not weakened[e.self:GetID()] ) then
+		weakened[e.self:GetID()] = true;
+		local count = 0; for _ in pairs(weakened) do count = count + 1; end
+		if count == 4 then reformAt = os.time() + 30; end
 		e.self:Heal();
 		e.self:SetSpecialAbility(24, 1); -- Will Not Aggro
 		e.self:SetSpecialAbility(25, 1); -- Immune to Aggro
@@ -169,35 +203,26 @@ function RubbleTimerEvent(e)
 end
 
 function RubbleWaypointArrive(e)
-	local mob;
-	local n = 0;
-	
-	for id, i in pairs(rubbleIds) do
-	
-		mob = eq.get_entity_list():GetMob(id);
-		if ( mob and mob.valid ) then
-			if ( mob:GetX() == RUBBLE_LOCS[i][1] and mob:GetY() == RUBBLE_LOCS[i][2] and mob:GetSpecialAbility(35) == 1 ) then
-				n = n + 1;
-			end
-		else
-			eq.debug("Stone Ring critical error: invalid A_Mound_of_Rubble entity ID. (NPC may have been killed, which should not happen in normal gameplay)");
-		end
-	end
-	
-	if ( n == 4 ) then
-		-- all 4 rubbles are untargetable and back at spawn points
-		eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(STONETXT_TYPE), true, 200, 0, "The mounds of rubble reform back into the Rock Monstrosity.");
-
-		mob = eq.spawn2(ROCK_MONSTROSITY_TYPE, 0, 0, -614, -261, 95.375, 64);
-		mob:SetRunning(true);
-		if ( runX and runY and runZ ) then
-			mob:CastToNPC():MoveTo(runX, runY, runZ, -1, false);
-		end
-		eq.depop_all(MOUND_OF_RUBBLE_TYPE);
-	end
+    if not guard.active or rubbleDone or not reformAt then return; end
+    local home = 0;
+    for id,i in pairs(rubbleIds) do
+        local n = eq.get_entity_list():GetMob(id);
+        if n and n.valid and math.abs(n:GetX()-RUBBLE_LOCS[i][1]) <= 1
+            and math.abs(n:GetY()-RUBBLE_LOCS[i][2]) <= 1 then home = home + 1; end
+    end
+    -- All four were weakened in combat. Their return path is cosmetic now.
+    if home < 4 and os.time() < reformAt then return; end
+    rubbleDone = true;
+    local mob = guard:spawn(ROCK_MONSTROSITY_TYPE, 0, 0, -614, -261, 95.375, 64);
+    mob:SetRunning(true);
+    if runX and runY and runZ then mob:CastToNPC():MoveTo(runX, runY, runZ, -1, false); end
+    guard:forget(MOUND_OF_RUBBLE_TYPE);
+    eq.depop_all(MOUND_OF_RUBBLE_TYPE);
+    eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(STONETXT_TYPE), true, 200, 0, "The mounds of rubble reform back into the Rock Monstrosity.");
 end
 
 function MonstrosityDeath(e)
+	if not guard:dead(e.self) then return; end
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ() - 4.38;
 	SpawnHeaps(e);
 end
@@ -207,7 +232,7 @@ function SpawnHeaps(e)
 	
 	for i, loc in ipairs(HEAP_LOCS) do
 	
-		mob = eq.spawn2(STONE_HEAP_TYPE, 0, 0, loc[1], loc[2], loc[3], 0);
+		mob = guard:spawn(STONE_HEAP_TYPE, 0, 0, loc[1], loc[2], loc[3], 0);
 		mob:SetRunning(true);
 		if ( runX and runY and runZ ) then
 			mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
@@ -215,7 +240,7 @@ function SpawnHeaps(e)
 	end
 	
 	if ( heapKills == 0 ) then
-		mob = eq.spawn2(PEREGRIN_ROCKSKULL_TYPE, 0, 0, -616, -261, 95.375, 64);
+		mob = guard:spawn(PEREGRIN_ROCKSKULL_TYPE, 0, 0, -616, -261, 95.375, 64);
 		local npc = mob:CastToNPC();
 		npc:SetSpecialAbility(24, 1); -- Will Not Aggro
 		npc:SetSpecialAbility(25, 1); -- Immune to Aggro
@@ -231,6 +256,7 @@ function SpawnHeaps(e)
 end
 
 function HeapDeath(e)
+	if not guard:dead(e.self) then return; end
 	heapKills = heapKills + 1;
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	
@@ -241,6 +267,7 @@ function HeapDeath(e)
 	
 		eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(STONETXT_TYPE), true, 200, 0, "As the last of the stone heaps collapses, the gigantic formation of rocks slowly rises to its feet. A gravelly voice echoes in your mind, 'Fools! Invaders! It's been ages since this plane was fouled with the stench of your kind. Prepare to meet your end.' The large rock man then readies itself for attack.");
 		
+		guard:forget(PEREGRIN_ROCKSKULL_TYPE);
 		eq.depop_all(PEREGRIN_ROCKSKULL_TYPE);
 		
 		local t = PEREGRIN_ROCKSKULL_TYPE;
@@ -249,7 +276,7 @@ function HeapDeath(e)
 			t = ENCRUSTED_DIRT_CLOUD_TYPE;
 		end
 		
-		local mob = eq.spawn2(t, 0, 0, -614, -261, 95.375, 64);
+		local mob = guard:spawn(t, 0, 0, -614, -261, 95.375, 64);
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, false);
 	end
@@ -295,6 +322,8 @@ function BossTimer(e)
 end
 
 function EventSuccess(e)
+	if heapKills ~= 24 or not guard:dead(e.self) then return; end
+	terminal = true; guard:stop();
 	eq.debug("Stone Ring completed");
 	
 	eq.depop_all(STONEDESPAWN_TYPE);
@@ -318,54 +347,37 @@ function DespawnSpawn(e)
 end
 
 function DespawnTimer(e)
-
-	if ( e.timer == "depop" ) then
-		-- ring timeout fail
-		eq.depop_all(FORTIFICATION_TYPE);
-		eq.depop_all(MOUND_OF_RUBBLE_TYPE);
-		eq.depop_all(ROCK_MONSTROSITY_TYPE);
-		eq.depop_all(STONE_HEAP_TYPE);
-		eq.depop_all(ENCRUSTED_DIRT_CLOUD_TYPE);
-		eq.depop_all(PEREGRIN_ROCKSKULL_TYPE);
-		
-		local elist = eq.get_entity_list();
-		for _, id in ipairs(TRIGGER_SPAWNIDS) do
-			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
-			elist:GetSpawnByID(id):Enable();
-		end
-		eq.update_spawn_timer(FAKE_MONSTROSITY_SPAWNID, FAILURE_RESPAWN_TIME);
-		elist:GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Enable();
-		
-		eq.debug("Stone Ring failed and reset");
-		eq.depop();
-	end
+    if e.timer == "depop" and (not guard.active or guard:owns(e.self)) then
+        FailRing("98-minute controller timeout"); eq.depop();
+    end
 end
 
 function event_encounter_load(e)
+	guard:arm(e.encounter);
 
 	for id in pairs(TRIGGER_TYPES) do
-		eq.register_npc_event("StoneRing", Event.death_complete, id, TriggerDeath);
+		eq.register_npc_event("StoneRing", Event.death_complete, id, guard:wrap(TriggerDeath));
 	end
-	
-	eq.register_npc_event("StoneRing", Event.death_complete, FORTIFICATION_TYPE, FortDeath);
-	
-	eq.register_npc_event("StoneRing", Event.spawn, MOUND_OF_RUBBLE_TYPE, RubbleSpawnEvent);
-	eq.register_npc_event("StoneRing", Event.hp, MOUND_OF_RUBBLE_TYPE, RubbleHpEvent);
-	eq.register_npc_event("StoneRing", Event.timer, MOUND_OF_RUBBLE_TYPE, RubbleTimerEvent);
-	eq.register_npc_event("StoneRing", Event.waypoint_arrive, MOUND_OF_RUBBLE_TYPE, RubbleWaypointArrive);
-	
-	eq.register_npc_event("StoneRing", Event.spawn, STONEDESPAWN_TYPE, DespawnSpawn);
-	eq.register_npc_event("StoneRing", Event.timer, STONEDESPAWN_TYPE, DespawnTimer);
-	
-	eq.register_npc_event("StoneRing", Event.death_complete, ROCK_MONSTROSITY_TYPE, MonstrosityDeath);
-	
-	eq.register_npc_event("StoneRing", Event.death_complete, STONE_HEAP_TYPE, HeapDeath);
-	
-	eq.register_npc_event("StoneRing", Event.death_complete, ENCRUSTED_DIRT_CLOUD_TYPE, EventSuccess);
-	eq.register_npc_event("StoneRing", Event.death_complete, PEREGRIN_ROCKSKULL_TYPE, EventSuccess);
-	eq.register_npc_event("StoneRing", Event.combat, ENCRUSTED_DIRT_CLOUD_TYPE, BossCombat);
-	eq.register_npc_event("StoneRing", Event.combat, PEREGRIN_ROCKSKULL_TYPE, BossCombat);
-	eq.register_npc_event("StoneRing", Event.timer, ENCRUSTED_DIRT_CLOUD_TYPE, BossTimer);
-	eq.register_npc_event("StoneRing", Event.timer, PEREGRIN_ROCKSKULL_TYPE, BossTimer);
-	
+
+	eq.register_npc_event("StoneRing", Event.death_complete, FORTIFICATION_TYPE, guard:wrap(FortDeath));
+
+	eq.register_npc_event("StoneRing", Event.spawn, MOUND_OF_RUBBLE_TYPE, guard:wrap(RubbleSpawnEvent));
+	eq.register_npc_event("StoneRing", Event.hp, MOUND_OF_RUBBLE_TYPE, guard:wrap(RubbleHpEvent));
+	eq.register_npc_event("StoneRing", Event.timer, MOUND_OF_RUBBLE_TYPE, guard:wrap(RubbleTimerEvent));
+	eq.register_npc_event("StoneRing", Event.waypoint_arrive, MOUND_OF_RUBBLE_TYPE, guard:wrap(RubbleWaypointArrive));
+
+	eq.register_npc_event("StoneRing", Event.spawn, STONEDESPAWN_TYPE, guard:wrap(DespawnSpawn));
+	eq.register_npc_event("StoneRing", Event.timer, STONEDESPAWN_TYPE, guard:wrap(DespawnTimer));
+
+	eq.register_npc_event("StoneRing", Event.death_complete, ROCK_MONSTROSITY_TYPE, guard:wrap(MonstrosityDeath));
+
+	eq.register_npc_event("StoneRing", Event.death_complete, STONE_HEAP_TYPE, guard:wrap(HeapDeath));
+
+	eq.register_npc_event("StoneRing", Event.death_complete, ENCRUSTED_DIRT_CLOUD_TYPE, guard:wrap(EventSuccess));
+	eq.register_npc_event("StoneRing", Event.death_complete, PEREGRIN_ROCKSKULL_TYPE, guard:wrap(EventSuccess));
+	eq.register_npc_event("StoneRing", Event.combat, ENCRUSTED_DIRT_CLOUD_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("StoneRing", Event.combat, PEREGRIN_ROCKSKULL_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("StoneRing", Event.timer, ENCRUSTED_DIRT_CLOUD_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("StoneRing", Event.timer, PEREGRIN_ROCKSKULL_TYPE, guard:wrap(BossTimer));
+
 end

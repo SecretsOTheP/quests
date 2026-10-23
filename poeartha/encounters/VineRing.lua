@@ -31,17 +31,39 @@ local BLOODTHIRSTY_LOCS = {
 
 local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
 local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
-local taintedKills = 0;
+local taintedKills, bloodKills = 0, 0;
 local addWave = 0;
+
+local FailRing;
+local terminal = false;
+local guard = require("earth_ring_guard").new("VineRing", {BLOODTHIRSTY_TYPE, BOSS_TYPE, FAKE_BOSS_TYPE, MANGLED_TYPE, VEGDESPAWN_TYPE}, function(reason) FailRing(reason); end);
+FailRing = function(reason)
+    if terminal then return; end
+    terminal = true; guard:stop();
+    for _,typ in ipairs({BLOODTHIRSTY_TYPE, BOSS_TYPE, FAKE_BOSS_TYPE, MANGLED_TYPE, VEGDESPAWN_TYPE, TAINTED_TYPE}) do eq.depop_all(typ); end
+    taintedKills, bloodKills, addWave = 0, 0, 0;
+    local elist = eq.get_entity_list();
+    for _,id in ipairs(TAINTED_SPAWNIDS) do
+        eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
+        elist:GetSpawnByID(id):Enable();
+    end
+    eq.debug("Vine Ring failed; 15-minute retry: "..tostring(reason));
+end
+
+function event_timer(e)
+    guard:tick(e);
+end
 
 function TaintedDeath(e)
 
+	if not guard:once(e.self) then return; end
 	taintedKills = taintedKills + 1;
 	local elist = eq.get_entity_list();
 	
 	if ( taintedKills == 3 ) then
+		terminal = false; bloodKills = 0; guard:start({TAINTED_TYPE});
 		addWave = 0;
-		eq.spawn2(VEGDESPAWN_TYPE, 0, 0, 485, -835, 33.752, 0);
+		guard:spawn(VEGDESPAWN_TYPE, 0, 0, 485, -835, 33.752, 0);
 
 		for _, id in ipairs(TAINTED_SPAWNIDS) do
 			elist:GetSpawnByID(id):Disable(false);
@@ -50,7 +72,7 @@ function TaintedDeath(e)
 	
 	if ( taintedKills >= 3 and taintedKills <= 30 and taintedKills % 3 == 0 ) then
 		local loc = BLOODTHIRSTY_LOCS[taintedKills / 3];
-		eq.spawn2(BLOODTHIRSTY_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
+		guard:spawn(BLOODTHIRSTY_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
 		if ( taintedKills < 30 ) then
 			elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "A creature rises from the dead bodies of three tainted rock beasts.");
 		end
@@ -77,10 +99,12 @@ function TaintedDeath(e)
 end
 
 function BloodthirstyDeath(e)
+	if taintedKills ~= 30 or not guard:dead(e.self) then return; end
+	bloodKills = bloodKills + 1;
 
 	local elist = eq.get_entity_list();
 	
-	if ( not elist:IsMobSpawnedByNpcTypeID(BLOODTHIRSTY_TYPE) ) then
+	if ( bloodKills == 10 ) then
 	
 		local runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 		local t = BOSS_TYPE;
@@ -88,7 +112,7 @@ function BloodthirstyDeath(e)
 		if ( not elist:IsMobSpawnedByNpcTypeID(VEGEROG_GUY_TYPE) ) then
 			t = FAKE_BOSS_TYPE;
 		end
-		mob = eq.spawn2(t, 0, 0, 483, -832, 39.376, 128);
+		mob = guard:spawn(t, 0, 0, 483, -832, 39.376, 128);
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 		
@@ -165,6 +189,8 @@ function BossTimer(e)
 end
 
 function EventSuccess(e)
+	if bloodKills ~= 10 or not guard:dead(e.self) then return; end
+	terminal = true; guard:stop();
 	eq.debug("Vine ring completed");
 
 	eq.depop_all(MANGLED_TYPE);
@@ -206,48 +232,33 @@ function DespawnSpawn(e)
 end
 
 function DespawnTimer(e)
-
-	if ( e.timer == "depop" ) then
-		-- ring timeout fail
-		eq.depop_all(BLOODTHIRSTY_TYPE);
-		eq.depop_all(BOSS_TYPE);
-		eq.depop_all(FAKE_BOSS_TYPE);
-		eq.depop_all(MANGLED_TYPE);
-
-		taintedKills = 0;
-		
-		local elist = eq.get_entity_list();
-		for _, id in ipairs(TAINTED_SPAWNIDS) do
-			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
-			elist:GetSpawnByID(id):Enable();
-		end
-
-		eq.debug("Vine Ring failed and reset");
-		eq.depop();
-	end
+    if e.timer == "depop" and (not guard.active or guard:owns(e.self)) then
+        FailRing("98-minute controller timeout"); eq.depop();
+    end
 end
 
 function event_encounter_load(e)
+	guard:arm(e.encounter);
 
-	eq.register_npc_event("VineRing", Event.death_complete, TAINTED_TYPE, TaintedDeath);
-	
-	eq.register_npc_event("VineRing", Event.death_complete, BLOODTHIRSTY_TYPE, BloodthirstyDeath);
-	
-	eq.register_npc_event("VineRing", Event.spawn, BOSS_TYPE, BossSpawn);
-	eq.register_npc_event("VineRing", Event.combat, BOSS_TYPE, BossCombat);
-	eq.register_npc_event("VineRing", Event.timer, BOSS_TYPE, BossTimer);
-	eq.register_npc_event("VineRing", Event.death_complete, BOSS_TYPE, EventSuccess);
-	eq.register_npc_event("VineRing", Event.spawn, FAKE_BOSS_TYPE, BossSpawn);
-	eq.register_npc_event("VineRing", Event.combat, FAKE_BOSS_TYPE, BossCombat);
-	eq.register_npc_event("VineRing", Event.timer, FAKE_BOSS_TYPE, BossTimer);
-	eq.register_npc_event("VineRing", Event.death_complete, FAKE_BOSS_TYPE, EventSuccess);
-	
-	eq.register_npc_event("VineRing", Event.spawn, MANGLED_TYPE, MangledSpawn);
-	eq.register_npc_event("VineRing", Event.combat, MANGLED_TYPE, MangledCombat);
-	eq.register_npc_event("VineRing", Event.timer, MANGLED_TYPE, MangledTimer);
+	eq.register_npc_event("VineRing", Event.death_complete, TAINTED_TYPE, guard:wrap(TaintedDeath));
 
-	eq.register_npc_event("VineRing", Event.spawn, VEGDESPAWN_TYPE, DespawnSpawn);
-	eq.register_npc_event("VineRing", Event.timer, VEGDESPAWN_TYPE, DespawnTimer);
+	eq.register_npc_event("VineRing", Event.death_complete, BLOODTHIRSTY_TYPE, guard:wrap(BloodthirstyDeath));
+
+	eq.register_npc_event("VineRing", Event.spawn, BOSS_TYPE, guard:wrap(BossSpawn));
+	eq.register_npc_event("VineRing", Event.combat, BOSS_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("VineRing", Event.timer, BOSS_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("VineRing", Event.death_complete, BOSS_TYPE, guard:wrap(EventSuccess));
+	eq.register_npc_event("VineRing", Event.spawn, FAKE_BOSS_TYPE, guard:wrap(BossSpawn));
+	eq.register_npc_event("VineRing", Event.combat, FAKE_BOSS_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("VineRing", Event.timer, FAKE_BOSS_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("VineRing", Event.death_complete, FAKE_BOSS_TYPE, guard:wrap(EventSuccess));
+
+	eq.register_npc_event("VineRing", Event.spawn, MANGLED_TYPE, guard:wrap(MangledSpawn));
+	eq.register_npc_event("VineRing", Event.combat, MANGLED_TYPE, guard:wrap(MangledCombat));
+	eq.register_npc_event("VineRing", Event.timer, MANGLED_TYPE, guard:wrap(MangledTimer));
+
+	eq.register_npc_event("VineRing", Event.spawn, VEGDESPAWN_TYPE, guard:wrap(DespawnSpawn));
+	eq.register_npc_event("VineRing", Event.timer, VEGDESPAWN_TYPE, guard:wrap(DespawnTimer));
 
 
 end

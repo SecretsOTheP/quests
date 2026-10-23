@@ -57,12 +57,34 @@ local TRIUMVIRATE_LOCS = {
 	{ 28, -560, 35.5, 189 },
 };
 
-local triKills, bossWave = 0, 0;
+local triKills, bossWave, devoteeKills = 0, 0, 0;
 local bossTimer;
+
+local FailRing;
+local terminal = false;
+local guard = require("earth_ring_guard").new("DustRing", {DEVOTEE_TYPE, TRIUMVIRATE_TYPE, TRIUMVIRATE2_TYPE, PERFECTED_TYPE, PROTECTOR_TYPE, FOLLOWER_TYPE, ELEMDESPAWN_TYPE}, function(reason) FailRing(reason); end);
+FailRing = function(reason)
+    if terminal then return; end
+    terminal = true; guard:stop();
+    for _,typ in ipairs({DEVOTEE_TYPE, TRIUMVIRATE_TYPE, TRIUMVIRATE2_TYPE, PERFECTED_TYPE, PROTECTOR_TYPE, FOLLOWER_TYPE, ELEMDESPAWN_TYPE}) do eq.depop_all(typ); end
+    triKills, devoteeKills, bossWave = 0, 0, 0;
+    local elist = eq.get_entity_list();
+    for _,id in ipairs({WARDER_SPAWNID}) do
+        eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
+        elist:GetSpawnByID(id):Enable();
+    end
+    eq.debug("Dust Ring failed; 15-minute retry: "..tostring(reason));
+end
+
+function event_timer(e)
+    guard:tick(e);
+end
 
 function WarderDeath(e)
 
-	triKills = 0;
+	if guard.active or not guard:once(e.self) then return; end
+	terminal = false; guard:start();
+	triKills, devoteeKills = 0, 0;
 	
 	local x, y, z = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local xOffset = { 60, -60, 60, -60, -60 };
@@ -71,29 +93,31 @@ function WarderDeath(e)
 	local moveY = { -1319, -1330, -1348, -1354, -1328 };
 	
 	for i = 1, 5 do
-		eq.spawn2(DEVOTEE_TYPE, 0, 0, x + xOffset[i], y + yOffset[i], z+5, 0):CastToNPC():MoveTo(moveX[i], moveY[i], -33, 0, true);
+		guard:spawn(DEVOTEE_TYPE, 0, 0, x + xOffset[i], y + yOffset[i], z+5, 0):CastToNPC():MoveTo(moveX[i], moveY[i], -33, 0, true);
 	end
 	
 	for i, loc in ipairs(DEVOTEE_LOCS) do
-		eq.spawn2(DEVOTEE_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
+		guard:spawn(DEVOTEE_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
 	end
 	
 	local mob;
 	for i, loc in ipairs(TRIUMVIRATE_LOCS) do
-		mob = eq.spawn2(TRIUMVIRATE_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
+		mob = guard:spawn(TRIUMVIRATE_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
 		mob:SetSpecialAbility(24, 1); -- Will Not Aggro
 		mob:SetSpecialAbility(25, 1); -- Immune to Aggro
 		mob:SetSpecialAbility(35, 1); -- No Harm from Players
 		mob:SetBodyType(11, false);	-- NoTarget
 	end
 	
-	eq.spawn2(ELEMDESPAWN_TYPE, 0, 0, 28, -560, 28.625, 0);
+	guard:spawn(ELEMDESPAWN_TYPE, 0, 0, 28, -560, 28.625, 0);
 	eq.zone_emote(0, "The creature explodes into a maelstrom of dirt and dust.  Suddenly from the whirling cloud of dust three different streams of dirt come form heading to the elemental temple and then the remainder of the maelstrom bursts apart forming into numerous dust devotees.");
 	eq.debug("Dust ring active");
 end
 
 function DevoteeDeath(e)
-	if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(DEVOTEE_TYPE) ) then
+	if not guard:dead(e.self) then return; end
+	devoteeKills = devoteeKills + 1;
+	if ( devoteeKills == 37 ) then
 
 		local x, y, z = e.self:GetX(), e.self:GetY(), e.self:GetZ();		
 		local npcList = eq.get_entity_list():GetNPCList();
@@ -116,6 +140,7 @@ function DevoteeDeath(e)
 end
 
 function TriumvirateDeath(e)
+	if devoteeKills ~= 37 or not guard:dead(e.self) then return; end
 	triKills = triKills + 1;
 	
 	if ( triKills == 3 ) then
@@ -126,7 +151,7 @@ function TriumvirateDeath(e)
 		if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(POEELEM3DAY_TYPE) ) then
 			t = FOLLOWER_TYPE;
 		end
-		mob = eq.unique_spawn(t, 0, 0, 6, -560, 37.376, 128);
+		local mob = guard:spawn(t, 0, 0, 6, -560, 37.376, 128);
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(x, y, z, -1, true);
 		
@@ -280,7 +305,11 @@ function BossTimer(e)
 end
 
 function EventSuccess(e)
+	if triKills ~= 3 or not guard:dead(e.self) then return; end
+	terminal = true; guard:stop();
 	eq.debug("Dust ring completed");
+	eq.depop_all(PROTECTOR_TYPE);
+	eq.depop_all(TRIUMVIRATE2_TYPE);
 
 	eq.depop_all(ELEMDESPAWN_TYPE);
 	-- The warder's saved respawn is the ring cooldown, including after a restart.
@@ -297,45 +326,33 @@ function DespawnSpawn(e)
 end
 
 function DespawnTimer(e)
-
-	if ( e.timer == "depop" ) then
-		-- ring timeout fail
-		eq.depop_all(DEVOTEE_TYPE);
-		eq.depop_all(TRIUMVIRATE_TYPE);
-		eq.depop_all(TRIUMVIRATE2_TYPE);
-		eq.depop_all(PERFECTED_TYPE);
-		eq.depop_all(PROTECTOR_TYPE);
-		eq.depop_all(FOLLOWER_TYPE);
-
-		eq.update_spawn_timer(WARDER_SPAWNID, FAILURE_RESPAWN_TIME);
-		eq.get_entity_list():GetSpawnByID(WARDER_SPAWNID):Enable();
-
-		eq.debug("Dust Ring failed and reset");
-		eq.depop();
-	end
+    if e.timer == "depop" and (not guard.active or guard:owns(e.self)) then
+        FailRing("98-minute controller timeout"); eq.depop();
+    end
 end
 
 function event_encounter_load(e)
+	guard:arm(e.encounter);
 
-	eq.register_npc_event("DustRing", Event.death_complete, WARDER_TYPE, WarderDeath);
+	eq.register_npc_event("DustRing", Event.death_complete, WARDER_TYPE, guard:wrap(WarderDeath));
 
-	eq.register_npc_event("DustRing", Event.death_complete, DEVOTEE_TYPE, DevoteeDeath);
+	eq.register_npc_event("DustRing", Event.death_complete, DEVOTEE_TYPE, guard:wrap(DevoteeDeath));
 
-	eq.register_npc_event("DustRing", Event.death_complete, TRIUMVIRATE_TYPE, TriumvirateDeath);
-	eq.register_npc_event("DustRing", Event.spawn, TRIUMVIRATE_TYPE, TriumvirateSpawn);
-	eq.register_npc_event("DustRing", Event.combat, TRIUMVIRATE_TYPE, TriumvirateCombat);
-	eq.register_npc_event("DustRing", Event.timer, TRIUMVIRATE_TYPE, TriumvirateTimer);
+	eq.register_npc_event("DustRing", Event.death_complete, TRIUMVIRATE_TYPE, guard:wrap(TriumvirateDeath));
+	eq.register_npc_event("DustRing", Event.spawn, TRIUMVIRATE_TYPE, guard:wrap(TriumvirateSpawn));
+	eq.register_npc_event("DustRing", Event.combat, TRIUMVIRATE_TYPE, guard:wrap(TriumvirateCombat));
+	eq.register_npc_event("DustRing", Event.timer, TRIUMVIRATE_TYPE, guard:wrap(TriumvirateTimer));
 
-	eq.register_npc_event("DustRing", Event.spawn, PERFECTED_TYPE, BossSpawn);
-	eq.register_npc_event("DustRing", Event.combat, PERFECTED_TYPE, BossCombat);
-	eq.register_npc_event("DustRing", Event.timer, PERFECTED_TYPE, BossTimer);
-	eq.register_npc_event("DustRing", Event.death_complete, PERFECTED_TYPE, EventSuccess);
-	eq.register_npc_event("DustRing", Event.spawn, FOLLOWER_TYPE, BossSpawn);
-	eq.register_npc_event("DustRing", Event.combat, FOLLOWER_TYPE, BossCombat);
-	eq.register_npc_event("DustRing", Event.timer, FOLLOWER_TYPE, BossTimer);
-	eq.register_npc_event("DustRing", Event.death_complete, FOLLOWER_TYPE, EventSuccess);
+	eq.register_npc_event("DustRing", Event.spawn, PERFECTED_TYPE, guard:wrap(BossSpawn));
+	eq.register_npc_event("DustRing", Event.combat, PERFECTED_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("DustRing", Event.timer, PERFECTED_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("DustRing", Event.death_complete, PERFECTED_TYPE, guard:wrap(EventSuccess));
+	eq.register_npc_event("DustRing", Event.spawn, FOLLOWER_TYPE, guard:wrap(BossSpawn));
+	eq.register_npc_event("DustRing", Event.combat, FOLLOWER_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("DustRing", Event.timer, FOLLOWER_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("DustRing", Event.death_complete, FOLLOWER_TYPE, guard:wrap(EventSuccess));
 
-	eq.register_npc_event("DustRing", Event.spawn, ELEMDESPAWN_TYPE, DespawnSpawn);
-	eq.register_npc_event("DustRing", Event.timer, ELEMDESPAWN_TYPE, DespawnTimer);
+	eq.register_npc_event("DustRing", Event.spawn, ELEMDESPAWN_TYPE, guard:wrap(DespawnSpawn));
+	eq.register_npc_event("DustRing", Event.timer, ELEMDESPAWN_TYPE, guard:wrap(DespawnTimer));
 
 end
