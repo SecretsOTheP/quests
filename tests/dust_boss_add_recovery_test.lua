@@ -7,7 +7,7 @@ local function source(path)
 end
 local ADD, BOSS, FOLLOWER, CONTROLLER = 218421, 218413, 218415, 218397;
 local function world(realBoss)
-    local w = {now=1000000, nextid=1, npcs={}, handlers={}, writes={}, logs={}, messages={}, signals={}, addAttempts=0};
+    local w = {now=1000000, nextid=1, npcs={}, handlers={}, writes={}, logs={}, messages={}, signals={}, addAttempts=0, rp={}};
     local owner, env;
     local function live(n) return n and n.valid and n.hp > 0 and not n.corpse; end
     function w:list(typ)
@@ -74,11 +74,11 @@ local function world(realBoss)
         depop=function() if owner then owner:Depop(); end end,
         update_spawn_timer=function(id,ms) w.writes[#w.writes+1]={id=id,ms=ms}; end,
         debug=function(message) w.logs[#w.logs+1]=message; end,
-        zone_emote=function(color,message) if color==15 then w.messages[#w.messages+1]=message; end end,
+        zone_emote=function(color,message) assert(color==13,"ring RP must be red"); if message:find("Ring has reset;",1,true) then w.messages[#w.messages+1]=message; else w.rp[#w.rp+1]={text=message,writes=#w.writes,signals=#w.signals}; end end,
         signal=function(typ,value) w.signals[#w.signals+1]={typ=typ,value=value}; end,
     };
     env=setmetatable({eq=eq, os={time=function() return w.now; end}, Event={spawn="spawn",death_complete="death",combat="combat",timer="timer"}}, {__index=_G});
-    env.require=function(name) assert(name=="earth_ring_guard"); return setfenv(assert(loadstring(source("lua_modules/earth_ring_guard.lua"))),env)(); end;
+    env.require=function(name) assert(name=="earth_ring_guard" or name=="earth_ring_progress"); return setfenv(assert(loadstring(source("lua_modules/"..name..".lua"))),env)(); end;
     setfenv(assert(loadstring(source("poeartha/encounters/DustRing.lua"))),env)(); env.event_encounter_load({encounter={}});
     function w:tick(seconds) self.now=self.now+(seconds or 5); env.event_timer({timer="earth_guard"}); end
     function w:begin()
@@ -87,6 +87,9 @@ local function world(realBoss)
         self.boss=assert(self:one(realBoss and BOSS or FOLLOWER));
     end
     function w:spawnAdds() self:dispatch("timer",self.boss,{timer="triumvirates"}); end
+    function w:rpCount(text)
+        local found=0;for _,message in ipairs(self.rp)do if message.text:find(text,1,true)then found=found+1;end end;return found;
+    end
     function w:failed()
         check(#self.writes==1 and self.writes[1].id==366233 and self.writes[1].ms==900000 and self.enabled,"failure saves only 15-minute warder retry");
         check(#self.signals==0,"failure grants no Arbitor credit");
@@ -99,6 +102,8 @@ local function world(realBoss)
         check(#self.writes==1 and self.writes[1].ms==237600000,"success retains 66-hour cooldown");
         check(#self.signals==1 and self.signals[1].typ==218393 and self.signals[1].value==4,"success grants exactly one Dust credit");
         check(#self.messages==0,"success emits no failure RP");
+        local last=self.rp[#self.rp];
+        check(last and last.text:find("trial of the Dust Ring is complete",1,true) and last.writes==1 and last.signals==1,"victory RP follows successful cooldown and credit");
     end
     w:begin(); return w;
 end
@@ -107,27 +112,34 @@ for _,realBoss in ipairs({true,false}) do
     for _,mode in ipairs({"invalid","nil","throw"}) do
         for failAt=1,3 do
             local w=world(realBoss); w.failAt=failAt; w.failMode=mode; w:spawnAdds(); w:failed();
+            check(w:rpCount("Three earthen forms rise")==0 and w:rpCount("The last earthen guardian crumbles")==0,"partial boss add spawn cannot announce a successful wave or its completion");
             w:dispatch("timer",w.boss,{timer="triumvirates"}); w:dispatch("combat",w.boss,{joined=true}); w:kill(w.boss); w:tick(6000);
             check(w.addAttempts==failAt and #w.writes==1 and #w.messages==1,"late boss callbacks cannot spawn adds or grant success after failure");
         end
     end
     local w=world(realBoss); w:spawnAdds(); check(#w:list(ADD)==3,"normal boss wave spawns all three required adds");
+    check(w:rpCount("Three earthen forms rise")==1,"required boss add wave announced after all three spawns");
     local lost=w:one(ADD); lost:Depop(); w:killAll(ADD);
     w:dispatch("combat",w.boss,{joined=true}); w:spawnAdds();
     check(w.addAttempts==3,"re-engaging cannot replace an unconfirmed missing add");
     w.boss.hp=40; w:dispatch("timer",w.boss,{timer="drophate"});
     check(w.boss.hp==50,"boss remains HP-gated while a missing add lacks a confirmed death");
     w:tick(); check(#w.writes==0,"missing add gets normal watchdog grace"); w:tick(30); w:failed();
+    check(w:rpCount("Two of the three earthen guardians break apart")==1 and w:rpCount("The last earthen guardian crumbles")==0,"missing add allows only earned midpoint RP and never completion");
 
     w=world(realBoss); w:spawnAdds(); lost=w:one(ADD); lost:Depop(); w:killAll(ADD); w:kill(w.boss); w:failed();
     check(w.logs[#w.logs]:find("required boss Triumvirate kills missing",1,true),"boss kill during missing-add grace cannot grant free progress");
 
     w=world(realBoss); w:spawnAdds(); local adds=w:list(ADD);
-    w:kill(adds[1]); w:dispatch("death",adds[1]); w:kill(adds[2]);
+    w:kill(adds[1]); w:dispatch("death",adds[1]);
+    check(w:rpCount("Two of the three earthen guardians break apart")==0,"one unique boss add kill is below midpoint");
+    w:kill(adds[2]);w:dispatch("death",adds[2]);
+    check(w:rpCount("Two of the three earthen guardians break apart")==1 and w:rpCount("The last earthen guardian crumbles")==0,"second unique boss add kill announces midpoint once");
     w.boss.hp=40; w:dispatch("timer",w.boss,{timer="drophate"});
     check(w.boss.hp==50,"duplicate add death cannot satisfy last required kill");
-    w:kill(adds[3]); w.boss.hp=40; w:dispatch("timer",w.boss,{timer="drophate"});
+    w:kill(adds[3]);w:dispatch("death",adds[3]); w.boss.hp=40; w:dispatch("timer",w.boss,{timer="drophate"});
     check(w.boss.hp==40,"three confirmed deaths release boss HP gate");
+    check(w:rpCount("Two of the three earthen guardians break apart")==1 and w:rpCount("The last earthen guardian crumbles")==1,"third unique kill emits completion without duplicate 90-percent RP");
     w:kill(w.boss); w:dispatch("death",w.boss); w:succeeded(); w:tick(6000);
     check(#w.writes==1,"completed wave cannot fail later");
 
@@ -138,8 +150,10 @@ for _,realBoss in ipairs({true,false}) do
     w.boss.hp=40; w:dispatch("timer",w.boss,{timer="drophate"});
     check(w.boss.hp==50,"previous-wave death callbacks cannot clear fresh wave");
     w:killAll(ADD); w:kill(w.boss); w:succeeded();
+    check(w:rpCount("Three earthen forms rise")==2 and w:rpCount("Two of the three earthen guardians break apart")==2 and w:rpCount("The last earthen guardian crumbles")==2,"fresh required add waves each receive their own phase and checkpoint RP");
 
-    w=world(realBoss); w:dispatch("timer",w.boss,{timer="protectors"});
+    w=world(realBoss);local before=#w.rp; w:dispatch("timer",w.boss,{timer="protectors"});
+    check(#w.rp==before,"optional protector spawns do not announce a required progress wave");
     check(#w:list(218414)==3,"optional protector behavior unchanged"); w:kill(w.boss); w:succeeded();
 end
 print("PASS: "..checks.." Dust boss add recovery checks");

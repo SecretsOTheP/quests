@@ -1,5 +1,7 @@
 -- note: when testing this script, using #kill on undamaged NPCs could break the event or crash the zone; #damage them instead or cast Destroy
 
+local progress = require("earth_ring_progress");
+
 local BLUE_MUDWALKER_TYPE = 218317;
 local RED_MUDWALKER_TYPE = 218418;
 local RUNNER_TYPE = 218419; -- '_'; the little untargetable golems that run to the temple after red mudwalkers die
@@ -67,7 +69,13 @@ local function Live(n)
 end
 
 local function SpawnRequired(typ, x, y, z, h)
+	if terminal or (not active and phase ~= "blue") then return; end
 	local ok, mob = pcall(eq.spawn2, typ, 0, 0, x, y, z, h);
+	-- A nested spawn callback may have failed and cleaned the trial already.
+	if terminal or (not active and phase ~= "blue") then
+		if ok and mob and mob.valid then mob:Depop(); end
+		return;
+	end
 	if ok and Live(mob) then return mob; end
 end
 
@@ -120,21 +128,21 @@ local function FailureMessage(reason)
     local text = tostring(reason);
     local message;
     if text:find("98-minute", 1, true) then
-        message = "The allotted time has passed. The muddite temple's guardians return to the earth, ending the trial.";
+        message = "The allotted time has passed. The muck binding the temple's guardians loosens, and their bodies slump into motionless pools of filth.";
     elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
-        message = "The temple's interrupted trial cannot be resumed. Its remaining guardians withdraw so the trial may begin anew.";
+        message = "The muddite temple's interrupted trial cannot be resumed. Its guardians lose their shape and drain into the mire.";
     elseif text:find("timeout controller", 1, true) or text:find("type=218394", 1, true) then
-        message = "The power sustaining the temple's trial has faded. Its guardians withdraw so the trial may begin anew.";
+        message = "The power sustaining the muddite temple's trial has faded. Its guardians sag into heaps of muck and grime.";
     elseif text == "required mudlet expired without a kill" then
-        message = "The scattered mudlets have remained unchallenged for too long and sink back into the earth. The muddite temple's trial has ended.";
+        message = "The scattered mudlets have remained unchallenged for too long. Their writhing bodies slacken into lifeless muck, ending the muddite temple's trial.";
     elseif text == "lurker died before required split waves" then
-        message = "The Sludge Lurker falls before its transformations are complete. The muddite temple rejects the unfinished trial.";
+        message = "The Sludge Lurker falls before its transformations are complete. Its scattered muck lies still, and the muddite temple rejects the unfinished trial.";
     elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
-        message = "The muddite temple trembles, but the guardian summoned to defend it does not rise. The trial cannot continue.";
+        message = "Muck bubbles and churns around the muddite temple, but its summoned guardian fails to take shape. The trial cannot continue.";
     elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
-        message = "A guardian of the muddite temple sinks beneath the earth before its defeat. The trial cannot continue.";
+        message = "A guardian of the muddite temple loses its shape before its defeat, draining away as a foul slick. The trial cannot continue.";
     else
-        message = "The power sustaining the temple's trial falters unexpectedly. Its guardians withdraw so the trial may begin anew.";
+        message = "The power binding the temple's muck falters unexpectedly. Its guardians collapse into heaps of grime, ending the trial.";
     end
     return message.." The Mud Ring has reset; you may attempt it again in 15 minutes.";
 end
@@ -151,7 +159,7 @@ FailRing = function(reason)
 		local point = elist:GetSpawnByID(id);
 		if point and point.valid ~= false then point:Enable(); end
 	end
-    eq.zone_emote(15, FailureMessage(reason));
+    eq.zone_emote(13, FailureMessage(reason));
     eq.debug("[EarthRing:Mud] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
 end;
 
@@ -169,6 +177,7 @@ local function TryUnlock()
 	eq.debug("Mud Ring unlocked Sludge Lurker after 16 confirmed red kills; runners arrived: "..runners);
 	unlockAt = nil;
 	eq.depop_all(RUNNER_TYPE);
+	eq.zone_emote(13, "The final mudwalker bursts in a spray of filth. The Sludge Lurker heaves free, dragging its bulk through the mire as ropes of sludge drip from its body.");
 end
 
 function event_timer(e)
@@ -267,6 +276,10 @@ function BlueDeath(e)
 		end
 	end
 	
+	progress.announce(blueKills, 16,
+		"Mudwalkers burst beneath your blows, plastering the ground with muck and grime. Those still standing churn through the filth, their sodden bodies heaving.",
+		"One mudwalker remains, dragging its dripping bulk through pools of churned muck and the splattered remains of its kin.");
+
 	if ( blueKills == 16 and not incompleteBlueWave and next(required) == nil
 		and not elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) ) then
 	
@@ -301,7 +314,7 @@ function BlueDeath(e)
 			mob:SetBodyType(24, false);	-- Summoned
 		end
 		
-		eq.zone_emote(0, "The last of the mud walkers has been slain. A loud roar is heard from the center of the muddite temple as the Sludge Lurker comes into being.");
+		eq.zone_emote(13, "The last mudwalker bursts in a spray of wet clay. Within the temple, a great mound of sludge swells into the hulking Sludge Lurker. The mudwalkers surrounding it stir.");
 		eq.debug("Mud Ring started");
 	end
 end
@@ -335,9 +348,17 @@ function RedDeath(e)
 	local id = tonumber(e.self:GetEntityVariable("mud_red_id"));
 	if not id or not RemoveFromReds(id) then return; end
 	redKills = redKills + 1;
+	progress.announce(redKills, 16,
+		"The muck and grime of the Sludge Lurker ripple and shudder as each mudwalker explodes in a spray of filth.",
+		"The last mudwalker lurches through the mire. Behind it, the Sludge Lurker's sodden bulk swells and shudders, shedding thick clots of grime.");
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	for i = 1, 4 do
-		local ok = pcall(eq.spawn2, RUNNER_TYPE, 0, 0, runX + math.random(-10, 10), runY + math.random(-10, 10), runZ, 0);
+		local ok, mob = pcall(eq.spawn2, RUNNER_TYPE, 0, 0, runX + math.random(-10, 10), runY + math.random(-10, 10), runZ, 0);
+		-- The spawn callback can fail before this runner enters the entity list.
+		if not active then
+			if ok and mob and mob.valid then mob:Depop(); end
+			return;
+		end
 		if not ok then eq.debug("Mud Ring runner spawn failed; confirmed red kill retained."); end
 	end
 	if redKills == 16 then unlockAt = os.time() + RUNNER_GRACE; end
@@ -404,7 +425,7 @@ function LurkerHpEvent(e)
 		if not SpawnTracked(MUCK_MUDLET_TYPE, x + xt[i], y + yt[i], z, 0) then return; end
 	end
 
-	eq.get_entity_list():MessageClose(e.self, true, 200, 0, "Massive gobs of mud fly everywhere as the huge creature of mud explodes. The gobs of mud coalesce into smaller mud creatures.");
+	eq.zone_emote(13, "The Sludge Lurker ruptures in a heavy splash, spraying muck and grime across the ground. Quivering clots of sludge pull themselves upright as grasping mudlets.");
 	eq.depop();
 end
 
@@ -428,10 +449,16 @@ end
 
 function MudletDeath(e)
 	if phase ~= "mudlets" or not Consume(e.self) then return; end
+	local defeated = 10;
+	for _ in pairs(required) do defeated = defeated - 1; end
+	progress.announce(defeated, 10,
+		"Mudlets splatter beneath your blows, smearing the ground with slick filth. The surviving clumps squirm through the mire, trailing strings of sludge.",
+		"A lone mudlet writhes in a pool of grime. Around it, scattered clots of muck begin to creep together.");
 	if next(required) == nil then
 		lurkerState = lurkerState + 1;
 		BeginPhase("lurker");
-		SpawnTracked(SLUDGE_LURKER_TYPE, e.self:GetX(), e.self:GetY(), e.self:GetZ() + 10, 0);
+		if not SpawnTracked(SLUDGE_LURKER_TYPE, e.self:GetX(), e.self:GetY(), e.self:GetZ() + 10, 0) then return; end
+		eq.zone_emote(13, "The final mudlet splatters across the ground. Pools of muck and grime flow together and bulge upward, restoring the Sludge Lurker's hulking shape.");
 	end
 end
 
@@ -442,18 +469,21 @@ function LurkerDeath(e)
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local mob;
 
-	eq.get_entity_list():MessageClose(e.self, true, 200, 0, "More mud flies everywhere, coalescing into mud creatures gorged with filth.");
-
 	for i, loc in ipairs(GORGER_LOCS) do
 		mob = SpawnTracked(FILTH_GORGER_TYPE, loc[1], loc[2], loc[3], 0);
 		if not mob then return; end
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 	end
+	eq.zone_emote(13, "The Sludge Lurker collapses into a churning pool of filth. Four bloated gorgers heave themselves from the muck, dripping grime as they lumber toward you.");
 end
 
 function GorgerDeath(e)
 	if phase ~= "gorgers" or not Consume(e.self) then return; end
+	local defeated = 4;
+	for _ in pairs(required) do defeated = defeated - 1; end
+	progress.announce(defeated, 4,
+		"Ruptured gorgers spill foul slurry across the stones. The survivors wade through the reeking muck, their swollen bodies sloughing clots of grime.");
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local elist = eq.get_entity_list();
 
@@ -471,7 +501,7 @@ function GorgerDeath(e)
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 		
-		elist:MessageClose(elist:GetMobByNpcTypeID(THE_LAST_TYPE), true, 400, 0, "The last of the filthy mud men fall to the ground motionless.  Suddenly a monstrous creature of mud forms from the remains of all the other mud men!");
+		eq.zone_emote(13, "The last filth gorger bursts, drenching the stones in greasy sludge. The scattered muck swells into a towering, misshapen guardian, its body seeping filth.");
 	end
 end
 
@@ -481,6 +511,7 @@ function MonsterousSpawn(e)
 end
 
 function MonsterousCombat(e)
+	if phase ~= "final" or not Owns(e.self) then return; end
 	if ( e.joined ) then
 		eq.resume_timer("adds");
 		eq.set_timer("drophate", 1000);
@@ -501,6 +532,8 @@ function MonsterousCombat(e)
 end
 
 function MonsterousTimer(e)
+	-- Depop is deferred by the server; a due callback can outlive Cleanup().
+	if phase ~= "final" or not Owns(e.self) then return; end
 	if ( e.timer == "drophate") then
 	
 		if ( math.random() < 0.03333 ) then -- averages to once per 30 seconds
@@ -547,6 +580,7 @@ function EventSuccess(e)
 	end
 	
 	eq.signal(ARBITOR_GUY_TYPE, 2);
+	eq.zone_emote(13, "The towering guardian ruptures in a thunderous splash, leaving only heaps of muck and motionless pools of grime. The trial of the Mud Ring is complete.");
 end
 
 function DespawnSpawn(e)

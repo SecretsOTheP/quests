@@ -1,3 +1,5 @@
+local progress = require("earth_ring_progress");
+
 local TAINTED_TYPE = 218019;
 local BLOODTHIRSTY_TYPE = 218362;
 local BOSS_TYPE = 218363; -- Derugoak_Bloodwalker
@@ -42,17 +44,17 @@ local function FailureMessage(reason)
     local text = tostring(reason);
     local message;
     if text:find("98-minute", 1, true) then
-        message = "The allotted time has passed. The vine temple's guardians retreat beneath the roots, ending the trial.";
+        message = "The allotted time has passed. Living vines coil back beneath the temple, drawing its guardians into the roots.";
     elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
-        message = "The temple's interrupted trial cannot be resumed. Its remaining guardians withdraw so the trial may begin anew.";
+        message = "The temple's interrupted trial cannot be resumed. Writhing vines pull its remaining guardians beneath the roots.";
     elseif text:find("timeout controller", 1, true) or text:find("type=218396", 1, true) then
-        message = "The power sustaining the temple's trial has faded. Its guardians withdraw so the trial may begin anew.";
+        message = "The power sustaining the temple's trial has faded. Its living vines loosen and draw the guardians beneath the earth.";
     elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
-        message = "Roots stir beneath the vine temple, but its summoned guardian does not emerge. The trial cannot continue.";
+        message = "Living vines twist and strain beneath the temple, but no guardian rises from their coils. The trial cannot continue.";
     elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
-        message = "A guardian of the vine temple withdraws beneath the roots before its defeat. The trial cannot continue.";
+        message = "A guardian of the vine temple is drawn beneath a tangle of roots before its defeat. The trial cannot continue.";
     else
-        message = "The power sustaining the temple's trial falters unexpectedly. Its guardians withdraw so the trial may begin anew.";
+        message = "The power sustaining the temple's trial falters unexpectedly. Coiling vines drag its guardians beneath the roots and fall still.";
     end
     return message.." The Vine Ring has reset; you may attempt it again in 15 minutes.";
 end
@@ -69,7 +71,7 @@ FailRing = function(reason)
         eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
         elist:GetSpawnByID(id):Enable();
     end
-    eq.zone_emote(15, FailureMessage(reason));
+    eq.zone_emote(13, FailureMessage(reason));
     eq.debug("[EarthRing:Vine] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
 end
 
@@ -97,9 +99,12 @@ function TaintedDeath(e)
 		local loc = BLOODTHIRSTY_LOCS[taintedKills / 3];
 		guard:spawn(BLOODTHIRSTY_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
 		if ( taintedKills < 30 ) then
-			elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "A creature rises from the dead bodies of three tainted rock beasts.");
+			elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 13, "Living vines twist through the remains of three tainted rock beasts, knotting into a bloodthirsty creature that lashes its tendrils.");
 		end
 	end
+	progress.announce(taintedKills, 30,
+		"Living vines snake through the shattered rock beasts, weaving their remains into new bodies. Coiled tendrils tighten around the temple's stonework.",
+		"Only a few tainted rock beasts remain. Atop the temple, bloodthirsty creatures writhe within coils of living vine.");
 	
 	if ( taintedKills >= 30 and not elist:IsMobSpawnedByNpcTypeID(TAINTED_TYPE) ) then
 	
@@ -116,7 +121,7 @@ function TaintedDeath(e)
 			end
 		end
 		
-		elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "The last of the tainted rock beasts crashes to the ground and yet another creature rises at the top of the temple.");
+		eq.zone_emote(13, "The last tainted rock beast crashes down. Living vines wrench its remains upright as the bloodthirsty creatures uncoil and lash out from the temple.");
 		eq.debug("Vine ring phase 2");
 	end
 end
@@ -124,6 +129,9 @@ end
 function BloodthirstyDeath(e)
 	if taintedKills ~= 30 or not guard:dead(e.self) then return; end
 	bloodKills = bloodKills + 1;
+	progress.announce(bloodKills, 10,
+		"Severed vines writhe across the stones as the bloodthirsty creatures fall. Those still standing twist their tendrils into grasping limbs.",
+		"The last bloodthirsty creature thrashes among the torn vines of its kin, its tendrils knotting and lashing at the air.");
 
 	local elist = eq.get_entity_list();
 	
@@ -135,11 +143,11 @@ function BloodthirstyDeath(e)
 		if ( not elist:IsMobSpawnedByNpcTypeID(VEGEROG_GUY_TYPE) ) then
 			t = FAKE_BOSS_TYPE;
 		end
-		mob = guard:spawn(t, 0, 0, 483, -832, 39.376, 128);
+		local mob = guard:spawn(t, 0, 0, 483, -832, 39.376, 128);
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 		
-		elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "The ground shakes and trembles as Derugoak Bloodwalker rises to defend his temple.");
+		eq.zone_emote(13, "The last bloodthirsty creature collapses in a tangle of severed vines. Thick roots split the earth as the temple's final defender emerges, trailing coils of living growth.");
 		eq.debug("Vine ring boss spawned");
 	end
 end
@@ -173,6 +181,8 @@ function BossCombat(e)
 end
 
 function BossTimer(e)
+	-- Depop is deferred; an already-due adds timer may still arrive after cleanup.
+	if not guard:owns(e.self) then eq.stop_timer(e.timer); return; end
 	if ( e.timer == "drophate") then
 
 		if ( math.random() < 0.05 ) then -- averages to once every 20 seconds
@@ -199,11 +209,16 @@ function BossTimer(e)
 			while (yOffset > -30 and yOffset < 30) do
 				yOffset = math.random(-40, 40);
 			end
-			eq.spawn2(MANGLED_TYPE, 0, 0, x + xOffset, y + yOffset, z+5, 0);
+			local add = eq.spawn2(MANGLED_TYPE, 0, 0, x + xOffset, y + yOffset, z+5, 0);
+			-- Optional adds stay untracked, but an inner callback can fail the ring.
+			if not guard.active then
+				if add and add.valid then add:Depop(); end
+				return;
+			end
 			xOffset = 0;
 			yOffset = 0;
 		end
-		eq.get_entity_list():MessageClose(e.self, true, 200, 0, "Derugoak summons minions to his side.");
+		eq.get_entity_list():MessageClose(e.self, true, 200, 13, "The temple's defender drives its roots into the earth. Mangled creatures claw free amid a thrashing mass of vines.");
 		
 	elseif ( e.timer == "depop_adds" ) then
 		eq.stop_timer(e.timer);
@@ -230,6 +245,7 @@ function EventSuccess(e)
 	end
 	
 	eq.signal(ARBITOR_GUY_TYPE, 3);
+	eq.zone_emote(13, "The temple's final defender falls, its vines twisting in a final spasm before loosening across the stones. The trial of the Vine Ring is complete.");
 end
 
 function MangledSpawn(e)

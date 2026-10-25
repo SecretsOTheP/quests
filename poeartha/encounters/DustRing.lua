@@ -1,3 +1,5 @@
+local progress = require("earth_ring_progress");
+
 local WARDER_TYPE = 218022;
 local DEVOTEE_TYPE = 218366;
 local TRIUMVIRATE_TYPE = 218367;
@@ -69,17 +71,17 @@ local function FailureMessage(reason)
     local text = tostring(reason);
     local message;
     if text:find("98-minute", 1, true) then
-        message = "The allotted time has passed. The elemental temple's guardians dissolve into dust, ending the trial.";
+        message = "The allotted time has passed. The Rathe's summons is withdrawn, and the temple's guardians unravel into dust.";
     elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
-        message = "The temple's interrupted trial cannot be resumed. Its remaining guardians withdraw so the trial may begin anew.";
+        message = "The temple's interrupted trial cannot be resumed. The ancient will binding its guardians releases them into drifting dust.";
     elseif text:find("timeout controller", 1, true) or text:find("type=218397", 1, true) then
-        message = "The power sustaining the temple's trial has faded. Its guardians withdraw so the trial may begin anew.";
+        message = "The ancient command sustaining the temple's trial has faded. Its guardians lose their earthen shapes and settle into dust.";
     elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
-        message = "Dust swirls through the elemental temple, but its summoned guardian does not take form. The trial cannot continue.";
+        message = "The temple's ancient summons stirs the dust, but a guardian fails to take form. The trial cannot continue.";
     elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
-        message = "A guardian of the elemental temple scatters into dust before its defeat. The trial cannot continue.";
+        message = "A temple guardian loses its shape before its defeat, scattering into dust. The trial cannot continue.";
     else
-        message = "The power sustaining the temple's trial falters unexpectedly. Its guardians withdraw so the trial may begin anew.";
+        message = "The ancient will sustaining the temple's trial falters unexpectedly. Its guardians loosen into soil and grit as the summons falls silent.";
     end
     return message.." The Dust Ring has reset; you may attempt it again in 15 minutes.";
 end
@@ -97,7 +99,7 @@ FailRing = function(reason)
         eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
         elist:GetSpawnByID(id):Enable();
     end
-    eq.zone_emote(15, FailureMessage(reason));
+    eq.zone_emote(13, FailureMessage(reason));
     eq.debug("[EarthRing:Dust] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
 end
 
@@ -136,13 +138,16 @@ function WarderDeath(e)
 	end
 	
 	guard:spawn(ELEMDESPAWN_TYPE, 0, 0, 28, -560, 28.625, 0);
-	eq.zone_emote(0, "The creature explodes into a maelstrom of dirt and dust.  Suddenly from the whirling cloud of dust three different streams of dirt come form heading to the elemental temple and then the remainder of the maelstrom bursts apart forming into numerous dust devotees.");
+	eq.zone_emote(13, "An ancient command rolls through the temple as the dusty warder bursts into grit. Three streams of earth sweep toward its halls, and the remaining dust rises as devotees of the Rathe.");
 	eq.debug("Dust ring active");
 end
 
 function DevoteeDeath(e)
 	if not guard:dead(e.self) then return; end
 	devoteeKills = devoteeKills + 1;
+	progress.announce(devoteeKills, 37,
+		"The devotees' earthen forms break beneath your blows, spilling grit across the temple. Those still standing hold their shapes beneath the Rathe's unyielding will.",
+		"Only a few dust devotees remain before the temple, their forms scoured thin. The Triumvirate waits in silence beyond the drifting ruin.");
 	if ( devoteeKills == 37 ) then
 
 		local x, y, z = e.self:GetX(), e.self:GetY(), e.self:GetZ();		
@@ -161,13 +166,15 @@ function DevoteeDeath(e)
 			end
 		end
 		
-		eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(THE_CREATURE_TYPE), true, 200, 0, "A deafening roar is heard coming from the Triumvirate of Soil.");
+		eq.zone_emote(13, "The last dust devotee breaks apart. Bound by the Rathe's will, the Triumvirate of Soil advances to pass judgment.");
 	end
 end
 
 function TriumvirateDeath(e)
 	if devoteeKills ~= 37 or not guard:dead(e.self) then return; end
 	triKills = triKills + 1;
+	progress.announce(triKills, 3,
+		"Two of the Triumvirate crumble beneath your assault. The last stands firm, soil and grit bound by the Rathe's unyielding will.");
 	
 	if ( triKills == 3 ) then
 		local x, y, z = e.self:GetX(), e.self:GetY(), e.self:GetZ();
@@ -181,7 +188,7 @@ function TriumvirateDeath(e)
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(x, y, z, -1, true);
 		
-		eq.get_entity_list():MessageClose(eq.get_entity_list():GetMobByNpcTypeID(THE_CREATURE_TYPE), true, 200, 0, "Within the earthen temple a warder of earth forms, perfect in every way.");
+		eq.zone_emote(13, "The last of the Triumvirate sinks into loose earth. The temple trembles beneath an ancient command as its final defender takes form.");
 	end
 end
 
@@ -319,6 +326,7 @@ function BossTimer(e)
 				bossTriumvirates = bossTriumvirates + 1;
 				mob:CastToNPC():MoveTo(x, y, z, -1, true);
 			end
+			eq.zone_emote(13, "Three earthen forms rise at the temple's summons, their bodies bound by an ancient command. They advance to uphold the defender's judgment.");
 		
 		else
 		
@@ -337,6 +345,11 @@ end
 function BossTriumvirateDeath(e)
 	if not guard:dead(e.self) then return; end
 	bossTriumvirates = bossTriumvirates - 1;
+	progress.announce(3 - bossTriumvirates, 3,
+		"Two of the three earthen guardians break apart, their binding strength spent. One remains to uphold the temple's judgment.");
+	if bossTriumvirates == 0 then
+		eq.zone_emote(13, "The last earthen guardian crumbles into loose earth. The strength they lent the temple's defender falls away with the settling grit.");
+	end
 end
 
 function EventSuccess(e)
@@ -358,6 +371,7 @@ function EventSuccess(e)
 	end
 	
 	eq.signal(ARBITOR_GUY_TYPE, 4);
+	eq.zone_emote(13, "The temple's final defender breaks apart, and the ancient force binding its earthen body falls silent. The trial of the Dust Ring is complete.");
 end
 
 function DespawnSpawn(e)

@@ -3,8 +3,25 @@ local root=arg[1] or ".";
 local checks=0;
 local function check(ok,msg) assert(ok,msg);checks=checks+1;end
 local function source(path)local f=assert(io.open(root.."/"..path));local s=f:read("*a");f:close();return s;end
+
+-- Rounding must not invent a 90% checkpoint for waves too small to reach it
+-- before completion, or turn the completion kill into two announcements.
+do
+ local messages={};local env=setmetatable({eq={zone_emote=function(color,text)messages[#messages+1]={color=color,text=text};end}},{__index=_G});
+ local progress=setfenv(assert(loadstring(source("lua_modules/earth_ring_progress.lua"))),env)();
+ for _,case in ipairs({{3,2},{4,2},{10,5,9},{16,8,15},{30,15,27},{37,19,34},{43,22,39}})do
+  local total,half,near=unpack(case);
+  for count=0,total do
+   messages={};progress.announce(count,total,"midpoint","near completion");
+   local expected=count==half and "midpoint" or (count==near and "near completion" or nil);
+   check(#messages==(expected and 1 or 0),"checkpoint emits only at the intended whole-kill threshold for total "..total.." count "..count);
+   if expected then check(messages[1].color==13 and messages[1].text==expected,"checkpoint is red RP in zone chat");end
+  end
+ end
+end
+
 local function world(ring)
- local w={now=1000000,nextid=1,npcs={},writes={},points={},handlers={},signals={},logs={},timers={},announcements={}};
+ local w={now=1000000,nextid=1,npcs={},writes={},points={},handlers={},signals={},logs={},timers={},announcements={},rp={},checkpoints={}};
  local env,owner;
  local function live(n)return n and n.valid and n.hp>0 and not n.corpse;end
  function w:list(typ)local r={};for _,n in pairs(self.npcs)do if live(n)and n.typ==typ then r[#r+1]=n;end end;return r;end
@@ -37,7 +54,7 @@ local function world(ring)
  function el:GetMob(id)return w.npcs[id]or{valid=false};end
  function el:GetMobByNpcTypeID(typ)return w:one(typ)or{valid=false};end
  function el:IsMobSpawnedByNpcTypeID(typ)return w:one(typ)~=nil;end
- function el:MessageClose()end
+ function el:MessageClose(sender,skip,distance,color,message)assert(color==13,"nearby ring RP must be red");end
  function el:GetNPCList()
   local values={};for _,n in pairs(w.npcs)do if live(n)then values[#values+1]=n;end end;local i=0;
   return{entries=function()i=i+1;return values[i];end};
@@ -55,12 +72,23 @@ local function world(ring)
   depop=function()if owner then owner:Depop();end end,
   depop_with_timer=function(typ)for _,n in ipairs(w:list(typ))do n:Depop();end end,
   update_spawn_timer=function(id,ms)w.writes[#w.writes+1]={id=id,ms=ms};end,
-  debug=function(msg)w.logs[#w.logs+1]=msg;end,zone_emote=function(color,msg)if color==15 then w.announcements[#w.announcements+1]=msg;end end,
+  debug=function(msg)w.logs[#w.logs+1]=msg;end,zone_emote=function(color,msg)assert(color==13,"ring RP must be red");if msg:find("Ring has reset;",1,true) then w.announcements[#w.announcements+1]=msg;else w.rp[#w.rp+1]={text=msg,writes=#w.writes,signals=#w.signals};end end,
   signal=function(typ,value)w.signals[#w.signals+1]={typ,value};end};
  function w:load()
   self.handlers={};self.timers={};self.encounter={};
   env=setmetatable({eq=eq,os={time=function()return w.now;end},Event={spawn="spawn",death_complete="death",combat="combat",timer="timer",waypoint_arrive="arrive",hp="hp"}},{__index=_G});
-  env.require=function(name)assert(name=="earth_ring_guard");return setfenv(assert(loadstring(source("lua_modules/earth_ring_guard.lua"))),env)();end;
+  env.require=function(name)
+   assert(name=="earth_ring_guard" or name=="earth_ring_progress");
+   local module=setfenv(assert(loadstring(source("lua_modules/"..name..".lua"))),env)();
+   if name=="earth_ring_progress" then
+    local announce=module.announce;
+    module.announce=function(count,total,halfText,nearText)
+     local before=#w.rp;announce(count,total,halfText,nearText);
+     if #w.rp>before then w.checkpoints[#w.checkpoints+1]={count=count,total=total};end
+    end;
+   end
+   return module;
+  end;
   setfenv(assert(loadstring(source("poeartha/encounters/"..ring.."Ring.lua"))),env)();self.env=env;env.event_encounter_load({encounter=self.encounter});
  end
  function w:tick(seconds)self.now=self.now+(seconds or 5);env.event_timer({timer="earth_guard"});end
@@ -81,6 +109,12 @@ local function world(ring)
   for _,r in ipairs(self.writes)do check(r.ms==900000 and self.points[r.id].enabled,"15-minute retry saved and enabled");end
   check(#self.signals==0,"failure never grants Arbitor credit");
  end
+ function w:checkpointCount(count,total)
+  local found=0;for _,p in ipairs(self.checkpoints)do if p.count==count and p.total==total then found=found+1;end end;return found;
+ end
+ function w:rpCount(text)
+  local found=0;for _,message in ipairs(self.rp)do if message.text:find(text,1,true)then found=found+1;end end;return found;
+ end
  w:load();return w;
 end
 
@@ -88,43 +122,85 @@ end
 local w=world("Dust");w:spawn(218412);w:begin();check(#w:list(218366)==37 and #w:list(218367)==3,"Dust initial waves unchanged");
 local d=w:kill(w:one(218366));w:dispatch("death",d);w:killAll(218366);
 check(w:one(218367).body==24,"all 37 devotee deaths unlock Triumvirates");
+check(w:checkpointCount(19,37)==1 and w:checkpointCount(34,37)==1,"Dust devotee wave reaches both rounded checkpoints once");
+check(w:rpCount("The last dust devotee breaks apart.")==1,"Dust devotee completion reaches zone chat once");
 local tri=w:kill(w:one(218367));w:dispatch("death",tri);check(not w:one(218413),"duplicate Triumvirate kill cannot advance");
 w:killAll(218367);check(w:one(218413),"three real Triumvirate deaths spawn real boss");
+check(w:checkpointCount(2,3)==1 and w:checkpointCount(3,3)==0,"three-mob initial Triumvirate uses midpoint and one completion");
 w:spawn(218414);w:spawn(218421);local boss=w:kill(w:one(218413));w:dispatch("death",boss);
 check(#w.signals==1 and w.writes[1].ms==237600000,"Dust success exactly once with 66-hour lockout");
 check(not w:one(218414)and not w:one(218421)and not w:one(218397),"Dust success cleans leftover adds and controller");
+check(w:rpCount("trial of the Dust Ring is complete")==1 and w.rp[#w.rp].writes==1 and w.rp[#w.rp].signals==1,"Dust victory RP follows one saved cooldown and credit");
 w:tick(6000);check(#w.writes==1,"completed run cannot later fail");
 w=world("Dust");w:begin();w:one(218366):Depop();w:killAll(218366);check(w:one(218367).body==11,"missing devotee does not count as kill");w:tick();w:tick(30);w:failed();
+check(w:rpCount("The last dust devotee breaks apart.")==0,"missing devotee cannot announce completed wave");
 w=world("Dust");w:begin();w:killAll(218366);w:one(218367):Depop();w:killAll(218367);check(not w:one(218415),"missing Triumvirate cannot grant boss");w:tick();w:tick(30);w:failed();
+check(w:rpCount("its final defender takes form")==0,"missing initial Triumvirate cannot announce boss emergence");
+w=world("Dust");w:begin();w:killAll(218366);w.fail=218415;w:killAll(218367);w:failed();
+check(w:rpCount("its final defender takes form")==0,"failed Dust boss spawn never announces completed transition");
+
+-- Exact threshold callbacks, including duplicate deaths at each milestone.
+w=world("Dust");w:begin();
+for i=1,37 do
+ d=w:kill(w:one(218366));w:dispatch("death",d);
+ check(w:checkpointCount(19,37)==(i>=19 and 1 or 0),"Dust midpoint waits for nineteenth distinct death");
+ check(w:checkpointCount(34,37)==(i>=34 and 1 or 0),"Dust near-completion waits for thirty-fourth distinct death");
+end
+check(w:rpCount("The last dust devotee breaks apart.")==1,"duplicate final devotee death cannot repeat completion");
 
 -- Vine: all 30 tainted and all 10 bloodthirsty kills remain required.
 w=world("Vine");w:spawn(218392);w:begin();check(#w:list(218362)==10 and w:one(218362).body==25,"Vine spawns and unlocks ten Bloodthirsties");
+check(w:checkpointCount(15,30)==1 and w:checkpointCount(27,30)==1,"Vine tainted wave announces both checkpoints");
 d=w:kill(w:one(218362));w:dispatch("death",d);w:killAll(218362);check(w:one(218363),"ten confirmed kills spawn Derugoak");
 w:spawn(218420);boss=w:kill(w:one(218363));w:dispatch("death",boss);check(#w.signals==1 and #w.writes==30,"Vine success occurs once");
 for _,r in ipairs(w.writes)do check(r.ms==237600000,"Vine success remains 66 hours");end
 check(not w:one(218420)and not w:one(218396),"Vine success cleans adds and controller");
+check(w:checkpointCount(5,10)==1 and w:checkpointCount(9,10)==1,"Vine bloodthirsty wave announces both checkpoints once");
+check(w:rpCount("trial of the Vine Ring is complete")==1 and w.rp[#w.rp].writes==30 and w.rp[#w.rp].signals==1,"Vine victory RP follows saved cooldowns and credit");
 w=world("Vine");w:begin();w:one(218362):Depop();w:killAll(218362);check(not w:one(218364),"missing Bloodthirsty cannot count as kill");w:tick();w:tick(30);w:failed();
+check(w:rpCount("final defender emerges")==0,"missing Bloodthirsty cannot announce completed wave");
 w=world("Vine");for i=1,30 do w:spawn(218019);end;for i=1,3 do d=w:kill(w:one(218019));w:dispatch("death",d);end
 check(#w:list(218362)==1,"duplicate tainted deaths cannot spawn extra waves");w:one(218019):Depop();w:killAll(218019);check(w:one(218362).body==11,"missing native trigger cannot unlock wave");w:tick();w:tick(30);w:failed();
+check(w:rpCount("The last tainted rock beast crashes down.")==0,"missing tainted mob cannot announce completed wave");
+w=world("Vine");w:begin();w.fail=218364;w:killAll(218362);w:failed();
+check(w:rpCount("final defender emerges")==0,"failed Vine boss spawn never announces completed transition");
+w=world("Vine");for i=1,30 do w:spawn(218019);end;
+for i=1,30 do
+ d=w:kill(w:one(218019));w:dispatch("death",d);
+ check(w:checkpointCount(15,30)==(i>=15 and 1 or 0),"Vine tainted midpoint counts only distinct deaths");
+ check(w:checkpointCount(27,30)==(i>=27 and 1 or 0),"Vine tainted near-completion counts only distinct deaths");
+end
+for i=1,10 do
+ d=w:kill(w:one(218362));w:dispatch("death",d);
+ check(w:checkpointCount(5,10)==(i>=5 and 1 or 0),"Vine bloodthirsty midpoint counts only distinct deaths");
+ check(w:checkpointCount(9,10)==(i>=9 and 1 or 0),"Vine bloodthirsty near-completion counts only distinct deaths");
+end
+check(w:rpCount("final defender emerges")==1,"Vine boss emergence announced exactly once");
 
 -- Stone: four confirmed weakenings, then allow 30 seconds for cosmetic travel.
 local function rubbleWorld()
  local s=world("Stone");s:begin();check(#s:list(218369)==43,"all 43 fortifications required");
- local first=s:kill(s:one(218369));s:dispatch("death",first);s:killAll(218369);
- check(#s:list(218370)==4,"43 unique deaths spawn four rubbles");return s;
+ for _,n in ipairs(s:list(218369))do s:kill(n);s:dispatch("death",n);end
+ check(#s:list(218370)==4,"43 unique deaths spawn four rubbles");
+ check(s:checkpointCount(22,43)==1 and s:checkpointCount(39,43)==1,"Stone fortification checkpoints count distinct kills once");return s;
 end
 w=rubbleWorld();local rubbles=w:list(218370);
 for i=1,3 do w:dispatch("hp",rubbles[i],{hp_event=20});end
 w:tick(40);check(not w:one(218371),"three weakened rubbles never advance");
 w:dispatch("hp",rubbles[4],{hp_event=20});w:dispatch("hp",rubbles[4],{hp_event=20});
+check(w:checkpointCount(2,4)==1,"four rubble weakenings announce midpoint without duplicate HP credit");
 for _,n in ipairs(rubbles)do n.x=n.x+100;n.y=n.y+100;end
 w:tick(29);check(not w:one(218371),"return path gets full grace");w:tick(1);check(#w:list(218371)==1 and #w:list(218370)==0,"stuck returns recover after all four weakenings");
 w:dispatch("arrive",rubbles[4]);w:tick();check(#w:list(218371)==1,"late arrivals cannot duplicate Monstrosity");
 w:killAll(218371);check(#w:list(218372)==4,"Monstrosity death starts heaps");
-for i=1,6 do local heaps=w:list(218372);for _,n in ipairs(heaps)do w:kill(n);w:dispatch("death",n);end end
+for i=1,6 do
+ local heaps=w:list(218372);for _,n in ipairs(heaps)do w:kill(n);w:dispatch("death",n);end
+ check(w:checkpointCount(2,4)==i+1,"each four-heap wave resets its midpoint without duplicate death announcements");
+end
 check(w:one(218373) and not w:one(218374),"24 unique heap deaths replace placeholder with nonloot boss when marker absent");
 boss=w:kill(w:one(218373));w:dispatch("death",boss);check(#w.signals==1 and #w.writes==9,"Stone success saved once for all native points");
 for _,r in ipairs(w.writes)do check(r.ms==237600000,"Stone success remains 66 hours");end
+check(w:rpCount("trial of the Stone Ring is complete")==1 and w.rp[#w.rp].writes==9 and w.rp[#w.rp].signals==1,"Stone victory RP follows saved cooldowns and credit");
 w=rubbleWorld();rubbles=w:list(218370);for i=1,4 do w:dispatch("hp",rubbles[i],{hp_event=20});end
 w:dispatch("arrive",rubbles[1]);check(w:one(218371),"normal home arrival advances immediately");
 w=rubbleWorld();rubbles=w:list(218370);for i=1,3 do w:dispatch("hp",rubbles[i],{hp_event=20});end;rubbles[4]:Depop();w:tick();w:tick(30);w:failed();

@@ -4,6 +4,10 @@ local checks = 0;
 local function check(ok, message) assert(ok, message); checks = checks + 1; end
 local function loadScript(path, env)
 	setmetatable(env, {__index = _G});
+	env.require = function(name)
+		assert(name == "earth_ring_progress");
+		return setfenv(assert(loadfile(root.."/lua_modules/"..name..".lua")), env)();
+	end;
 	setfenv(assert(loadfile(root.."/"..path)), env)();
 end
 

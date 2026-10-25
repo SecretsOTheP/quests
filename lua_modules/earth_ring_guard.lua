@@ -36,7 +36,14 @@ function M.new(name, orphanTypes, fail)
         end
     end
     function g:spawn(...)
-        return self:track(eq.spawn2(...));
+        assert(self.active, "required NPC spawn after encounter stopped");
+        local n = eq.spawn2(...);
+        -- A nested spawn callback may fail the ring before spawn2 returns.
+        if not self.active then
+            if n and n.valid then n:Depop(); end
+            error("encounter stopped during required NPC spawn");
+        end
+        return self:track(n);
     end
     function g:dead(n)
         if not self.active or not n or not n.valid then return false; end
@@ -54,6 +61,12 @@ function M.new(name, orphanTypes, fail)
     function g:once(n)
         -- Native trigger deaths can precede the start of the timed encounter.
         if not n or not n.valid or n:GetEntityVariable(key.."_dead")=="1" then return false; end
+        local token = n:GetEntityVariable(key);
+        if token ~= "" then
+            local r = self.records[token];
+            -- A corpse can have ID zero, so compare its saved token/type.
+            if not self.active or not r or r.typ ~= n:GetNPCTypeID() then return false; end
+        end
         n:SetEntityVariable(key.."_dead", "1");
         self:dead(n);
         return true;
