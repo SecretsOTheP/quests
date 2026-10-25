@@ -134,4 +134,62 @@ check(#w:list(CONTROL)==0 and #w:list(218361)==0,"success cleans controller and 
 writes=#w.writes;w:dispatch("death",final);check(#w.writes==writes,"duplicate final death cannot extend success cooldown");
 check(#w.signals==1 and w.signals[1][1]==218393 and w.signals[1][2]==2,"only normal victory signals Arbitor");
 w=world();local blue=w:spawn(BLUE);w:kill(blue);w:dispatch("death",blue);check(#w:list(RED)==1 and not w:one(LURKER),"duplicate blue death cannot create another required red");
+
+-- Later phases require every tracked kill; disappearance is never completion.
+local function unlocked()
+ local w=world();local boss=w:start();w:reds();w:arrive();return w,boss;
+end
+local function split(w,boss)
+ w:dispatch("hp",boss);return w:list(218358);
+end
+local function gorgers()
+ local w,boss=unlocked();
+ for i=1,4 do for _,n in ipairs(split(w,boss))do w:kill(n);end;boss=w:one(LURKER);end
+ w:kill(boss);return w,w:list(218359);
+end
+local function missing_retry(w)
+ w:tick(1);w:tick(30);w:cooldown(900000);
+ check(not w:one(CONTROL) and not w:one(LURKER),"missing required mob cleans encounter");
+ check(#w.signals==0,"failure never awards Arbitor progression");
+end
+w,boss=unlocked();boss:Depop();missing_retry(w);
+w,boss=unlocked();local mudlets=split(w,boss);mudlets[1]:Depop();
+for i=2,10 do w:kill(mudlets[i]);end
+check(not w:one(LURKER),"nine kills plus missing mudlet cannot advance");missing_retry(w);
+w,boss=unlocked();mudlets=split(w,boss);for _,n in ipairs(mudlets)do w:kill(n);end
+check(#w:list(LURKER)==1,"all ten confirmed kills produce one lurker");
+w:dispatch("death",mudlets[10]);check(#w:list(LURKER)==1,"duplicate mudlet death cannot duplicate lurker");
+-- Old HP callbacks cannot split a subsequent phase.
+w:dispatch("hp",boss);check(#w:list(218358)==0,"stale lurker HP event ignored");
+w,boss=unlocked();mudlets=split(w,boss);w:dispatch("combat",mudlets[1],{joined=true});
+local paused=false;for _,t in pairs(w.timers)do if t.owner==mudlets[1] and t.name=="depop"then paused=t.paused;end end
+check(paused,"mudlet combat handler is registered and pauses its idle timer");
+w:dispatch("timer",mudlets[2],{timer="depop"});w:cooldown(900000);
+check(not w:one(218358),"expired required mudlet cleans entire wave for retry");
+for _,fault in ipairs({"fail","throw"})do
+ w,boss=unlocked();w[fault]=218358;w:dispatch("hp",boss);w:cooldown(900000);
+ check(not w:one(LURKER) and not w:one(218358),"failed mudlet spawn cleanly retries");
+ w,boss=unlocked();mudlets=split(w,boss);w[fault]=LURKER;
+ for _,n in ipairs(mudlets)do w:kill(n);end;w:cooldown(900000);
+ check(not w:one(LURKER),"failed reformed lurker cleanly retries");
+end
+w,mudlets=gorgers();mudlets[1]:Depop();for i=2,4 do w:kill(mudlets[i]);end
+check(not w:one(218365),"three kills plus missing gorger cannot advance");missing_retry(w);
+w,mudlets=gorgers();for _,n in ipairs(mudlets)do w:kill(n);end
+check(#w:list(218365)==1,"four confirmed gorgers produce one final boss");
+w:dispatch("death",mudlets[4]);check(#w:list(218365)==1,"duplicate gorger death cannot duplicate final boss");
+w:one(218365):Depop();missing_retry(w);
+for _,fault in ipairs({"fail","throw"})do
+ w,boss=unlocked();for i=1,4 do for _,n in ipairs(split(w,boss))do w:kill(n);end;boss=w:one(LURKER);end
+ w[fault]=218359;w:kill(boss);w:cooldown(900000);
+ check(not w:one(218359),"failed gorger spawn cleanly retries");
+ w,mudlets=gorgers();w[fault]=218365;for _,n in ipairs(mudlets)do w:kill(n);end;w:cooldown(900000);
+ check(not w:one(218365),"failed final spawn cleanly retries");
+end
+w,boss=unlocked();w:kill(boss);w:cooldown(900000);
+check(not w:one(218359),"premature lurker death cannot bypass split waves");
+-- A foreign same-type final boss cannot award this attempt's success.
+w,boss=unlocked();local foreign=w:spawn(218360);w:kill(foreign);
+check(#w.writes==0 and #w.signals==0,"untracked final death cannot award progression");
+
 print("PASS: "..checks.." Mud Ring recovery checks");

@@ -57,6 +57,7 @@ local generation = 0;
 local session = tostring({});
 local RUNNER_GRACE = 30; -- Animation may not block a completed red wave forever.
 local FailRing;
+local phase, required, phaseSerial = nil, {}, 0;
 
 local function Live(n)
 	return n and n.valid and n:GetHP() > 0 and not n:IsCorpse();
@@ -67,12 +68,45 @@ local function SpawnRequired(typ, x, y, z, h)
 	if ok and Live(mob) then return mob; end
 end
 
+local function BeginPhase(name)
+	phase, required, phaseSerial = name, {}, phaseSerial + 1;
+end
+
+local function Track(mob)
+	if not Live(mob) then FailRing("required "..tostring(phase).." spawn failed"); return nil; end
+	local id = mob:GetID();
+	local token = session..":"..generation..":"..phaseSerial;
+	required[id] = {typ=mob:GetNPCTypeID(), token=token};
+	mob:SetEntityVariable("mud_required_id", tostring(id));
+	mob:SetEntityVariable("mud_required_token", token);
+	return mob;
+end
+
+local function Owns(mob)
+	if not active then return false; end
+	local id = tonumber(mob:GetEntityVariable("mud_required_id"));
+	local record = id and required[id];
+	return record and record.typ == mob:GetNPCTypeID()
+		and record.token == mob:GetEntityVariable("mud_required_token");
+end
+
+local function Consume(mob)
+	if not Owns(mob) then return false; end
+	required[tonumber(mob:GetEntityVariable("mud_required_id"))] = nil;
+	return true;
+end
+
+local function SpawnTracked(typ, x, y, z, h)
+	return Track(SpawnRequired(typ, x, y, z, h));
+end
+
 local function Cleanup()
 	for _, typ in ipairs({BLUE_MUDWALKER_TYPE, RED_MUDWALKER_TYPE, RUNNER_TYPE,
 		SLUDGE_LURKER_TYPE, MUCK_MUDLET_TYPE, MUDDITE_MUDLING_TYPE,
 		FILTH_GORGER_TYPE, MONSTEROUS_MUDWALKER_TYPE, MERCILESS_MUDSLINGER_TYPE, MUDESPAWN_TYPE}) do
 		eq.depop_all(typ);
 	end
+	phase, required = nil, {};
 	reds = {}; blueKills, runners, lurkerState, redKills = 0, 0, 0, 0;
 	unlockAt, missingSince = nil, nil;
 end
@@ -98,6 +132,8 @@ local function TryUnlock()
 	local lurker = elist:GetNPCByNPCTypeID(SLUDGE_LURKER_TYPE);
 	if not Live(lurker) then FailRing("Sludge Lurker missing after the red wave"); return; end
 	-- Use the normal activation handler directly; do not depend on a queued signal.
+	BeginPhase("lurker");
+	Track(lurker);
 	LurkerSignal({self=lurker, signal=1});
 	eq.debug("Mud Ring unlocked Sludge Lurker after 16 confirmed red kills; runners arrived: "..runners);
 	unlockAt = nil;
@@ -124,6 +160,11 @@ function event_timer(e)
 		for _, id in pairs(reds) do
 			if not Live(elist:GetMob(id)) then missing = true; end
 		end
+	end
+	for id, record in pairs(required) do
+		local mob = elist:GetMob(id);
+		if not Live(mob) or mob:GetNPCTypeID() ~= record.typ
+			or mob:GetEntityVariable("mud_required_token") ~= record.token then missing = true; end
 	end
 	if missing then
 		missingSince = missingSince or os.time();
@@ -271,7 +312,7 @@ function LurkerSpawn(e)
 end
 
 function LurkerSignal(e)
-	if ( e.signal == 1 ) then
+	if ( e.signal == 1 and phase == "lurker" and Owns(e.self) ) then
 		e.self:SetSpecialAbility(24, 0); -- Will Not Aggro off
 		e.self:SetSpecialAbility(25, 0); -- Immune to Aggro off
 		e.self:SetSpecialAbility(35, 0); -- No Harm from Players off
@@ -283,13 +324,14 @@ function LurkerSignal(e)
 end
 
 function LurkerHpEvent(e)
-	if not active then return; end
+	if phase ~= "lurker" or not Owns(e.self) or lurkerState >= 4 then return; end;
 	local x, y, z = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local xt = { 25, 25, 25, 0, 0, 0, 0, -25, -25, -25 };
 	local yt = { 25, 0, -25, 25, 10, -10, -25, 25, 0, -25 };
 	
+	BeginPhase("mudlets");
 	for i = 1, 10 do
-		eq.spawn2(MUCK_MUDLET_TYPE, 0, 0, x + xt[i], y + yt[i], z, 0);
+		if not SpawnTracked(MUCK_MUDLET_TYPE, x + xt[i], y + yt[i], z, 0) then return; end
 	end
 
 	eq.get_entity_list():MessageClose(e.self, true, 200, 0, "Massive gobs of mud fly everywhere as the huge creature of mud explodes. The gobs of mud coalesce into smaller mud creatures.");
@@ -309,39 +351,43 @@ function MudletCombat(e)
 end
 
 function MudletTimer(e)
-	if ( e.timer == "depop" ) then
-		eq.depop_all(MUCK_MUDLET_TYPE);
+	if e.timer == "depop" and phase == "mudlets" and Owns(e.self) then
+		FailRing("required mudlet expired without a kill");
 	end
 end
 
 function MudletDeath(e)
-	if not active then return; end
-	if ( not eq.get_entity_list():IsMobSpawnedByNpcTypeID(MUCK_MUDLET_TYPE) ) then
+	if phase ~= "mudlets" or not Consume(e.self) then return; end
+	if next(required) == nil then
 		lurkerState = lurkerState + 1;
-		eq.spawn2(SLUDGE_LURKER_TYPE, 0, 0, e.self:GetX(), e.self:GetY(), e.self:GetZ() + 10, 0);
+		BeginPhase("lurker");
+		SpawnTracked(SLUDGE_LURKER_TYPE, e.self:GetX(), e.self:GetY(), e.self:GetZ() + 10, 0);
 	end
 end
 
 function LurkerDeath(e)
-	if not active then return; end
+	if phase ~= "lurker" or not Consume(e.self) then return; end
+	if lurkerState ~= 4 then FailRing("lurker died before required split waves"); return; end
+	BeginPhase("gorgers");
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local mob;
 
 	eq.get_entity_list():MessageClose(e.self, true, 200, 0, "More mud flies everywhere, coalescing into mud creatures gorged with filth.");
 
 	for i, loc in ipairs(GORGER_LOCS) do
-		mob = eq.spawn2(FILTH_GORGER_TYPE, 0, 0, loc[1], loc[2], loc[3], 0);
+		mob = SpawnTracked(FILTH_GORGER_TYPE, loc[1], loc[2], loc[3], 0);
+		if not mob then return; end
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 	end
 end
 
 function GorgerDeath(e)
-	if not active then return; end
+	if phase ~= "gorgers" or not Consume(e.self) then return; end
 	runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 	local elist = eq.get_entity_list();
 
-	if ( not elist:IsMobSpawnedByNpcTypeID(FILTH_GORGER_TYPE) ) then
+	if next(required) == nil then
 	
 		local mob;
 		local t = MONSTEROUS_MUDWALKER_TYPE;
@@ -349,7 +395,9 @@ function GorgerDeath(e)
 		if ( not elist:IsMobSpawnedByNpcTypeID(MUDDITE_GUY_TYPE) ) then
 			t = MERCILESS_MUDSLINGER_TYPE;
 		end
-		mob = eq.spawn2(t, 0, 0, 339, 92, 77, 0);
+		BeginPhase("final");
+		mob = SpawnTracked(t, 339, 92, 77, 0);
+		if not mob then return; end
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 		
@@ -407,7 +455,7 @@ function MonsterousTimer(e)
 end
 
 function EventSuccess(e)
-	if not active or terminal then return; end
+	if terminal or phase ~= "final" or not Consume(e.self) then return; end
 	active, terminal = false, true;
 	Cleanup();
 	eq.debug("Mud Ring completed");
@@ -442,40 +490,48 @@ function DespawnTimer(e)
 	end
 end
 
+local function Safe(callback)
+	return function(e)
+		local ok, err = pcall(callback, e);
+		if not ok then FailRing("callback error: "..tostring(err)); end
+	end;
+end
+
 function event_encounter_load(e)
 	encounter = e.encounter;
 	eq.set_timer("mud_watchdog", 5000, encounter);
 
-	eq.register_npc_event("MudRing", Event.death_complete, BLUE_MUDWALKER_TYPE, BlueDeath);
+	eq.register_npc_event("MudRing", Event.death_complete, BLUE_MUDWALKER_TYPE, Safe(BlueDeath));
 	
-	eq.register_npc_event("MudRing", Event.spawn, RED_MUDWALKER_TYPE, RedSpawn);
-	eq.register_npc_event("MudRing", Event.timer, RED_MUDWALKER_TYPE, RedTimer);
-	eq.register_npc_event("MudRing", Event.death_complete, RED_MUDWALKER_TYPE, RedDeath);
+	eq.register_npc_event("MudRing", Event.spawn, RED_MUDWALKER_TYPE, Safe(RedSpawn));
+	eq.register_npc_event("MudRing", Event.timer, RED_MUDWALKER_TYPE, Safe(RedTimer));
+	eq.register_npc_event("MudRing", Event.death_complete, RED_MUDWALKER_TYPE, Safe(RedDeath));
 
-	eq.register_npc_event("MudRing", Event.spawn, RUNNER_TYPE, RunnerSpawn);
-	eq.register_npc_event("MudRing", Event.waypoint_arrive, RUNNER_TYPE, RunnerWaypointArrive);
+	eq.register_npc_event("MudRing", Event.spawn, RUNNER_TYPE, Safe(RunnerSpawn));
+	eq.register_npc_event("MudRing", Event.waypoint_arrive, RUNNER_TYPE, Safe(RunnerWaypointArrive));
 	
-	eq.register_npc_event("MudRing", Event.spawn, SLUDGE_LURKER_TYPE, LurkerSpawn);
-	eq.register_npc_event("MudRing", Event.signal, SLUDGE_LURKER_TYPE, LurkerSignal);
-	eq.register_npc_event("MudRing", Event.hp, SLUDGE_LURKER_TYPE, LurkerHpEvent);
-	eq.register_npc_event("MudRing", Event.death_complete, SLUDGE_LURKER_TYPE, LurkerDeath);
+	eq.register_npc_event("MudRing", Event.spawn, SLUDGE_LURKER_TYPE, Safe(LurkerSpawn));
+	eq.register_npc_event("MudRing", Event.signal, SLUDGE_LURKER_TYPE, Safe(LurkerSignal));
+	eq.register_npc_event("MudRing", Event.hp, SLUDGE_LURKER_TYPE, Safe(LurkerHpEvent));
+	eq.register_npc_event("MudRing", Event.death_complete, SLUDGE_LURKER_TYPE, Safe(LurkerDeath));
 	
-	eq.register_npc_event("MudRing", Event.spawn, MUCK_MUDLET_TYPE, MudletSpawn);
-	eq.register_npc_event("MudRing", Event.timer, MUCK_MUDLET_TYPE, MudletTimer);
-	eq.register_npc_event("MudRing", Event.death_complete, MUCK_MUDLET_TYPE, MudletDeath);
+	eq.register_npc_event("MudRing", Event.spawn, MUCK_MUDLET_TYPE, Safe(MudletSpawn));
+	eq.register_npc_event("MudRing", Event.timer, MUCK_MUDLET_TYPE, Safe(MudletTimer));
+	eq.register_npc_event("MudRing", Event.combat, MUCK_MUDLET_TYPE, Safe(MudletCombat));
+	eq.register_npc_event("MudRing", Event.death_complete, MUCK_MUDLET_TYPE, Safe(MudletDeath));
 	
-	eq.register_npc_event("MudRing", Event.death_complete, FILTH_GORGER_TYPE, GorgerDeath);
+	eq.register_npc_event("MudRing", Event.death_complete, FILTH_GORGER_TYPE, Safe(GorgerDeath));
 	
-	eq.register_npc_event("MudRing", Event.spawn, MONSTEROUS_MUDWALKER_TYPE, MonsterousSpawn);
-	eq.register_npc_event("MudRing", Event.combat, MONSTEROUS_MUDWALKER_TYPE, MonsterousCombat);
-	eq.register_npc_event("MudRing", Event.timer, MONSTEROUS_MUDWALKER_TYPE, MonsterousTimer);
-	eq.register_npc_event("MudRing", Event.death_complete, MONSTEROUS_MUDWALKER_TYPE, EventSuccess);
-	eq.register_npc_event("MudRing", Event.spawn, MERCILESS_MUDSLINGER_TYPE, MonsterousSpawn);
-	eq.register_npc_event("MudRing", Event.combat, MERCILESS_MUDSLINGER_TYPE, MonsterousCombat);
-	eq.register_npc_event("MudRing", Event.timer, MERCILESS_MUDSLINGER_TYPE, MonsterousTimer);
-	eq.register_npc_event("MudRing", Event.death_complete, MERCILESS_MUDSLINGER_TYPE, EventSuccess);
+	eq.register_npc_event("MudRing", Event.spawn, MONSTEROUS_MUDWALKER_TYPE, Safe(MonsterousSpawn));
+	eq.register_npc_event("MudRing", Event.combat, MONSTEROUS_MUDWALKER_TYPE, Safe(MonsterousCombat));
+	eq.register_npc_event("MudRing", Event.timer, MONSTEROUS_MUDWALKER_TYPE, Safe(MonsterousTimer));
+	eq.register_npc_event("MudRing", Event.death_complete, MONSTEROUS_MUDWALKER_TYPE, Safe(EventSuccess));
+	eq.register_npc_event("MudRing", Event.spawn, MERCILESS_MUDSLINGER_TYPE, Safe(MonsterousSpawn));
+	eq.register_npc_event("MudRing", Event.combat, MERCILESS_MUDSLINGER_TYPE, Safe(MonsterousCombat));
+	eq.register_npc_event("MudRing", Event.timer, MERCILESS_MUDSLINGER_TYPE, Safe(MonsterousTimer));
+	eq.register_npc_event("MudRing", Event.death_complete, MERCILESS_MUDSLINGER_TYPE, Safe(EventSuccess));
 	
-	eq.register_npc_event("MudRing", Event.spawn, MUDESPAWN_TYPE, DespawnSpawn);
-	eq.register_npc_event("MudRing", Event.timer, MUDESPAWN_TYPE, DespawnTimer);
+	eq.register_npc_event("MudRing", Event.spawn, MUDESPAWN_TYPE, Safe(DespawnSpawn));
+	eq.register_npc_event("MudRing", Event.timer, MUDESPAWN_TYPE, Safe(DespawnTimer));
 
 end
