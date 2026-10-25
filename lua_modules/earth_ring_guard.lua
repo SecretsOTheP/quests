@@ -83,7 +83,7 @@ function M.new(name, orphanTypes, fail)
             else
                 r.missing=r.missing or os.time();
                 if os.time()-r.missing>=30 then
-                    fail("required NPC "..r.typ.." missing without a confirmed kill"); return;
+                    fail("required NPC type="..r.typ.." entity="..r.id.." missing without a confirmed kill"); return;
                 end
             end
         end

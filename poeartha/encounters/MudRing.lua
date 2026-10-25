@@ -19,6 +19,8 @@ local VEGEROG_GUY_TYPE = 218392;
 
 local BLUE_SPAWNIDS = { 365291, 365399, 365409, 365587, 365808, 366045, 366470, 366646, 
 						366691,	366737, 366743, 366840, 366891, 366929, 367013, 367097 };
+local blueSpawnPoints = {};
+for _, id in ipairs(BLUE_SPAWNIDS) do blueSpawnPoints[id] = true; end
 
 local RED_LOCS = {
 	{ 400, 126, 71, 192 },
@@ -58,6 +60,7 @@ local session = tostring({});
 local RUNNER_GRACE = 30; -- Animation may not block a completed red wave forever.
 local FailRing;
 local phase, required, phaseSerial = nil, {}, 0;
+local incompleteBlueWave = false;
 
 local function Live(n)
 	return n and n.valid and n:GetHP() > 0 and not n:IsCorpse();
@@ -83,7 +86,7 @@ local function Track(mob)
 end
 
 local function Owns(mob)
-	if not active then return false; end
+	if not active and phase ~= "blue" then return false; end
 	local id = tonumber(mob:GetEntityVariable("mud_required_id"));
 	local record = id and required[id];
 	return record and record.typ == mob:GetNPCTypeID()
@@ -107,12 +110,39 @@ local function Cleanup()
 		eq.depop_all(typ);
 	end
 	phase, required = nil, {};
+	incompleteBlueWave = false;
 	reds = {}; blueKills, runners, lurkerState, redKills = 0, 0, 0, 0;
 	unlockAt, missingSince = nil, nil;
 end
 
+-- Public failure text deliberately excludes raw errors, IDs and progress counters.
+local function FailureMessage(reason)
+    local text = tostring(reason);
+    local message;
+    if text:find("98-minute", 1, true) then
+        message = "The allotted time has passed. The muddite temple's guardians return to the earth, ending the trial.";
+    elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
+        message = "The temple's interrupted trial cannot be resumed. Its remaining guardians withdraw so the trial may begin anew.";
+    elseif text:find("timeout controller", 1, true) or text:find("type=218394", 1, true) then
+        message = "The power sustaining the temple's trial has faded. Its guardians withdraw so the trial may begin anew.";
+    elseif text == "required mudlet expired without a kill" then
+        message = "The scattered mudlets have remained unchallenged for too long and sink back into the earth. The muddite temple's trial has ended.";
+    elseif text == "lurker died before required split waves" then
+        message = "The Sludge Lurker falls before its transformations are complete. The muddite temple rejects the unfinished trial.";
+    elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
+        message = "The muddite temple trembles, but the guardian summoned to defend it does not rise. The trial cannot continue.";
+    elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
+        message = "A guardian of the muddite temple sinks beneath the earth before its defeat. The trial cannot continue.";
+    else
+        message = "The power sustaining the temple's trial falters unexpectedly. Its guardians withdraw so the trial may begin anew.";
+    end
+    return message.." The Mud Ring has reset; you may attempt it again in 15 minutes.";
+end
+
 FailRing = function(reason)
 	if terminal then return; end
+    local phaseName = ({blue="Opening blue mudwalkers", lurker="Sludge Lurker", mudlets="Muck Mudlets", gorgers="Filth Gorgers", final="Final guardian"})[phase] or (active and "Red mudwalkers" or "Opening wave / reload recovery");
+    local context = string.format("Phase: %s | Blue kills: %d/16 | Red kills: %d/16 | Runners arrived: %d/64 | Lurker stage: %d", phaseName, blueKills, redKills, runners, lurkerState);
 	terminal, active = true, false;
 	Cleanup();
 	local elist = eq.get_entity_list();
@@ -121,7 +151,8 @@ FailRing = function(reason)
 		local point = elist:GetSpawnByID(id);
 		if point and point.valid ~= false then point:Enable(); end
 	end
-	eq.debug("Mud Ring failed: "..reason.."; cleaned up for a 15-minute retry.");
+    eq.zone_emote(15, FailureMessage(reason));
+    eq.debug("[EarthRing:Mud] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
 end;
 
 local function TryUnlock()
@@ -151,24 +182,40 @@ function event_timer(e)
 				MUCK_MUDLET_TYPE, FILTH_GORGER_TYPE, MONSTEROUS_MUDWALKER_TYPE, MERCILESS_MUDSLINGER_TYPE}) do
 				if elist:IsMobSpawnedByNpcTypeID(typ) then FailRing("orphaned event after script load"); return; end
 			end
+			local list = elist:GetNPCList();
+			for mob in list.entries do
+				if Live(mob) and mob:GetNPCTypeID() == BLUE_MUDWALKER_TYPE
+					and mob:GetEntityVariable("mud_required_token") ~= "" then
+					FailRing("orphaned opening wave after script load"); return;
+				end
+			end
 		end
 	end
-	if not active then return; end
-	local missing = not elist:IsMobSpawnedByNpcTypeID(MUDESPAWN_TYPE);
-	if unlockAt or redKills < 16 then
-		missing = missing or not elist:IsMobSpawnedByNpcTypeID(SLUDGE_LURKER_TYPE);
+	if not active and phase ~= "blue" then return; end
+	local missing = incompleteBlueWave or (active and not elist:IsMobSpawnedByNpcTypeID(MUDESPAWN_TYPE));
+	local missingDetail = incompleteBlueWave and "opening blue wave type="..BLUE_MUDWALKER_TYPE or (missing and "timeout controller type="..MUDESPAWN_TYPE or nil);
+	if phase == "blue" or unlockAt or redKills < 16 then
+		if active and not elist:IsMobSpawnedByNpcTypeID(SLUDGE_LURKER_TYPE) then
+			missing = true; missingDetail = missingDetail or "lurker type="..SLUDGE_LURKER_TYPE;
+		end
 		for _, id in pairs(reds) do
-			if not Live(elist:GetMob(id)) then missing = true; end
+			local red = elist:GetMob(id);
+			if not Live(red) or red:GetNPCTypeID() ~= RED_MUDWALKER_TYPE
+				or red:GetEntityVariable("mud_generation") ~= session..":"..generation then
+				missing = true; missingDetail = missingDetail or "red type="..RED_MUDWALKER_TYPE.." entity="..id;
+			end
 		end
 	end
 	for id, record in pairs(required) do
 		local mob = elist:GetMob(id);
 		if not Live(mob) or mob:GetNPCTypeID() ~= record.typ
-			or mob:GetEntityVariable("mud_required_token") ~= record.token then missing = true; end
+			or mob:GetEntityVariable("mud_required_token") ~= record.token then
+			missing = true; missingDetail = missingDetail or "required type="..record.typ.." entity="..id;
+		end
 	end
 	if missing then
 		missingSince = missingSince or os.time();
-		if os.time() - missingSince >= RUNNER_GRACE then FailRing("required event NPC disappeared without a kill"); end
+		if os.time() - missingSince >= RUNNER_GRACE then FailRing("NPC missing without confirmed kill: "..tostring(missingDetail)); end
 		return;
 	end
 	missingSince = nil;
@@ -177,13 +224,32 @@ end
 
 function BlueDeath(e)
 	eq.set_timer("mud_watchdog", 5000, encounter);
-	if active or e.self:GetEntityVariable("mud_blue_counted") == "1" then return; end
-	e.self:SetEntityVariable("mud_blue_counted", "1");
+	if active or not blueSpawnPoints[e.self:GetSpawnPointID()]
+		or e.self:GetEntityVariable("mud_blue_counted") == "1" then return; end
 	if blueKills == 0 then
+		-- A late death from the cleaned-up attempt must not start another trial.
+		if e.self:GetEntityVariable("mud_required_token") ~= "" then return; end
 		terminal = false; generation = generation + 1;
 		redKills, runners, lurkerState = 0, 0, 0;
 		unlockAt, missingSince = nil, nil;
+		BeginPhase("blue");
+		local count = 0;
+		local seen = {[e.self:GetSpawnPointID()] = true};
+		local list = eq.get_entity_list():GetNPCList();
+		for mob in list.entries do
+			if Live(mob) and mob:GetID() ~= 0 and mob:GetNPCTypeID() == BLUE_MUDWALKER_TYPE then
+				local spawnID = mob:GetSpawnPointID();
+				if blueSpawnPoints[spawnID] and not seen[spawnID] then
+					seen[spawnID] = true; Track(mob); count = count + 1;
+				end
+			end
+		end
+		-- The first death plus fifteen tracked survivors is the complete opening wave.
+		incompleteBlueWave = count ~= 15;
+	elseif phase ~= "blue" or not Consume(e.self) then
+		return;
 	end
+	e.self:SetEntityVariable("mud_blue_counted", "1");
 	blueKills = blueKills + 1;
 	
 	local elist = eq.get_entity_list();
@@ -201,14 +267,16 @@ function BlueDeath(e)
 		end
 	end
 	
-	if ( blueKills >= 16 and not elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) ) then
+	if ( blueKills == 16 and not incompleteBlueWave and next(required) == nil
+		and not elist:IsMobSpawnedByNpcTypeID(BLUE_MUDWALKER_TYPE) ) then
 	
 		-- Every required red must exist; disappearance never counts as a kill.
 		for i = 1, 16 do
 			if not reds[i] or not Live(elist:GetMob(reds[i])) then FailRing("incomplete red wave"); return; end
 		end
 		active = true;
-		blueKills, runners, lurkerState = 0, 0, 0;
+		phase = nil;
+		runners, lurkerState = 0, 0;
 		mob = SpawnRequired(MUDESPAWN_TYPE, 338, 88, 68.625, 0);
 		if not Live(mob) then FailRing("timeout controller failed to spawn"); return; end
 
@@ -254,7 +322,9 @@ end
 
 function RedTimer(e)
 	if ( e.timer == "depop" ) then
-		if active then FailRing("red mudwalker expired without a kill"); return; end
+		if (active or phase == "blue") and e.self:GetEntityVariable("mud_generation") == session..":"..generation then
+			FailRing("red mudwalker expired without a kill"); return;
+		end
 		RemoveFromReds(e.self:GetID());
 		eq.depop();
 	end

@@ -37,8 +37,30 @@ local addWave = 0;
 local FailRing;
 local terminal = false;
 local guard = require("earth_ring_guard").new("VineRing", {BLOODTHIRSTY_TYPE, BOSS_TYPE, FAKE_BOSS_TYPE, MANGLED_TYPE, VEGDESPAWN_TYPE}, function(reason) FailRing(reason); end);
+-- Public failure text deliberately excludes raw errors, IDs and progress counters.
+local function FailureMessage(reason)
+    local text = tostring(reason);
+    local message;
+    if text:find("98-minute", 1, true) then
+        message = "The allotted time has passed. The vine temple's guardians retreat beneath the roots, ending the trial.";
+    elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
+        message = "The temple's interrupted trial cannot be resumed. Its remaining guardians withdraw so the trial may begin anew.";
+    elseif text:find("timeout controller", 1, true) or text:find("type=218396", 1, true) then
+        message = "The power sustaining the temple's trial has faded. Its guardians withdraw so the trial may begin anew.";
+    elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
+        message = "Roots stir beneath the vine temple, but its summoned guardian does not emerge. The trial cannot continue.";
+    elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
+        message = "A guardian of the vine temple withdraws beneath the roots before its defeat. The trial cannot continue.";
+    else
+        message = "The power sustaining the temple's trial falters unexpectedly. Its guardians withdraw so the trial may begin anew.";
+    end
+    return message.." The Vine Ring has reset; you may attempt it again in 15 minutes.";
+end
+
 FailRing = function(reason)
     if terminal then return; end
+    local phaseName = taintedKills < 30 and "Tainted guardians" or (bloodKills < 10 and "Bloodthirsty guardians" or "Final guardian");
+    local context = string.format("Phase: %s | Tainted kills: %d/30 | Bloodthirsty kills: %d/10 | Add wave: %d", phaseName, taintedKills, bloodKills, addWave);
     terminal = true; guard:stop();
     for _,typ in ipairs({BLOODTHIRSTY_TYPE, BOSS_TYPE, FAKE_BOSS_TYPE, MANGLED_TYPE, VEGDESPAWN_TYPE, TAINTED_TYPE}) do eq.depop_all(typ); end
     taintedKills, bloodKills, addWave = 0, 0, 0;
@@ -47,7 +69,8 @@ FailRing = function(reason)
         eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
         elist:GetSpawnByID(id):Enable();
     end
-    eq.debug("Vine Ring failed; 15-minute retry: "..tostring(reason));
+    eq.zone_emote(15, FailureMessage(reason));
+    eq.debug("[EarthRing:Vine] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
 end
 
 function event_timer(e)

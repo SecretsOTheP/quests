@@ -101,8 +101,30 @@ local rubbleDone, reformAt = false, nil;
 local FailRing;
 local terminal = false;
 local guard = require("earth_ring_guard").new("StoneRing", {FORTIFICATION_TYPE, MOUND_OF_RUBBLE_TYPE, ROCK_MONSTROSITY_TYPE, STONE_HEAP_TYPE, ENCRUSTED_DIRT_CLOUD_TYPE, PEREGRIN_ROCKSKULL_TYPE, STONEDESPAWN_TYPE}, function(reason) FailRing(reason); end);
+-- Public failure text deliberately excludes raw errors, IDs and progress counters.
+local function FailureMessage(reason)
+    local text = tostring(reason);
+    local message;
+    if text:find("98-minute", 1, true) then
+        message = "The allotted time has passed. The stone temple's guardians return to lifeless rock, ending the trial.";
+    elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
+        message = "The temple's interrupted trial cannot be resumed. Its remaining guardians withdraw so the trial may begin anew.";
+    elseif text:find("timeout controller", 1, true) or text:find("type=218395", 1, true) then
+        message = "The power sustaining the temple's trial has faded. Its guardians withdraw so the trial may begin anew.";
+    elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
+        message = "The stone temple rumbles, but the guardian summoned to defend it does not take form. The trial cannot continue.";
+    elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
+        message = "A guardian of the stone temple crumbles before its defeat. The trial cannot continue.";
+    else
+        message = "The power sustaining the temple's trial falters unexpectedly. Its guardians withdraw so the trial may begin anew.";
+    end
+    return message.." The Stone Ring has reset; you may attempt it again in 15 minutes.";
+end
+
 FailRing = function(reason)
     if terminal then return; end
+    local phaseName = fortKills < 43 and "Stone fortifications" or (not rubbleDone and "Rubble reformation" or (heapKills < 24 and "Rock monstrosities / stone heaps" or "Final guardian"));
+    local context = string.format("Phase: %s | Fortification kills: %d/43 | Rubble reformed: %s | Heap kills: %d/24", phaseName, fortKills, rubbleDone and "yes" or "no", heapKills);
     terminal = true; guard:stop();
     for _,typ in ipairs({FORTIFICATION_TYPE, MOUND_OF_RUBBLE_TYPE, ROCK_MONSTROSITY_TYPE, STONE_HEAP_TYPE, ENCRUSTED_DIRT_CLOUD_TYPE, PEREGRIN_ROCKSKULL_TYPE, STONEDESPAWN_TYPE, ROCK_CREATION_TYPE, CRUMBLING_STONE_MASS_TYPE, PILE_OF_BOULDERS_TYPE, BOULDER_THROWER_TYPE}) do eq.depop_all(typ); end
     fortKills, heapKills = 0, 0; rubbleIds = {}; triggered = {}; weakened = {}; rubbleDone = false; reformAt = nil;
@@ -113,7 +135,8 @@ FailRing = function(reason)
     end
     eq.update_spawn_timer(FAKE_MONSTROSITY_SPAWNID, FAILURE_RESPAWN_TIME);
     elist:GetSpawnByID(FAKE_MONSTROSITY_SPAWNID):Enable();
-    eq.debug("Stone Ring failed; 15-minute retry: "..tostring(reason));
+    eq.zone_emote(15, FailureMessage(reason));
+    eq.debug("[EarthRing:Stone] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
 end
 
 function event_timer(e)

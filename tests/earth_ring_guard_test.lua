@@ -4,7 +4,7 @@ local checks=0;
 local function check(ok,msg) assert(ok,msg);checks=checks+1;end
 local function source(path)local f=assert(io.open(root.."/"..path));local s=f:read("*a");f:close();return s;end
 local function world(ring)
- local w={now=1000000,nextid=1,npcs={},writes={},points={},handlers={},signals={},logs={},timers={}};
+ local w={now=1000000,nextid=1,npcs={},writes={},points={},handlers={},signals={},logs={},timers={},announcements={}};
  local env,owner;
  local function live(n)return n and n.valid and n.hp>0 and not n.corpse;end
  function w:list(typ)local r={};for _,n in pairs(self.npcs)do if live(n)and n.typ==typ then r[#r+1]=n;end end;return r;end
@@ -55,7 +55,7 @@ local function world(ring)
   depop=function()if owner then owner:Depop();end end,
   depop_with_timer=function(typ)for _,n in ipairs(w:list(typ))do n:Depop();end end,
   update_spawn_timer=function(id,ms)w.writes[#w.writes+1]={id=id,ms=ms};end,
-  debug=function(msg)w.logs[#w.logs+1]=msg;end,zone_emote=function()end,
+  debug=function(msg)w.logs[#w.logs+1]=msg;end,zone_emote=function(color,msg)if color==15 then w.announcements[#w.announcements+1]=msg;end end,
   signal=function(typ,value)w.signals[#w.signals+1]={typ,value};end};
  function w:load()
   self.handlers={};self.timers={};self.encounter={};
@@ -72,6 +72,11 @@ local function world(ring)
   else for i=1,30 do self:spawn(218019);end;self:killAll(218019);end
  end
  function w:failed()
+  check(#self.announcements==1,"failure emits one RP message");
+  check(self.announcements[1]:find("15 minutes"),"public message preserves retry duration");
+  check(not self.announcements[1]:find("Phase:") and not self.announcements[1]:find("type="),"public RP excludes diagnostics");
+  self:tick(30);
+  check(#self.announcements==1,"later watchdog ticks do not repeat failure messages");
   check(#self.writes>0,"failure writes retry timers");
   for _,r in ipairs(self.writes)do check(r.ms==900000 and self.points[r.id].enabled,"15-minute retry saved and enabled");end
   check(#self.signals==0,"failure never grants Arbitor credit");

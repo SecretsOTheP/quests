@@ -4,6 +4,7 @@ local f=assert(io.open(root.."/poeartha/encounters/MudRing.lua"));local source=f
 local checks=0;
 local function check(ok,msg) assert(ok,msg);checks=checks+1;end
 local BLUE,RED,RUNNER,LURKER,CONTROL=218317,218418,218419,218357,218394;
+local BLUE_POINTS={365291,365399,365409,365587,365808,366045,366470,366646,366691,366737,366743,366840,366891,366929,367013,367097};
 local function world()
  local w={now=1000000,nextid=1,npcs={},timers={},writes={},points={},logs={},handlers={},signals={}};
  local env,owner;
@@ -19,7 +20,9 @@ local function world()
   if self.throw==typ then error("injected spawn exception");end
   if self.fail==typ then return{valid=false};end
   local n={id=self.nextid,typ=typ,valid=true,hp=100,vars={},abilities={},body=11,x=x or 340,y=y or 90,z=z or 71};self.nextid=self.nextid+1;self.npcs[n.id]=n;
+  if typ==BLUE then self.blueSpawns=(self.blueSpawns or 0)+1;n.spawnid=BLUE_POINTS[(self.blueSpawns-1)%16+1];end
   function n:GetID()return self.corpse and 0 or self.id;end
+  function n:GetSpawnPointID()return self.spawnid or 0;end
   function n:GetNPCTypeID()return self.typ;end
   function n:GetHP()return self.hp;end
   function n:GetMaxHP()return 100;end
@@ -39,6 +42,10 @@ local function world()
  function el:GetNPCByNPCTypeID(typ)return w:one(typ)or{valid=false};end
  function el:GetMobByNpcTypeID(typ)return self:GetNPCByNPCTypeID(typ);end
  function el:IsMobSpawnedByNpcTypeID(typ)return w:one(typ)~=nil;end
+ function el:GetNPCList()
+  local values={};for _,n in pairs(w.npcs)do if live(n)then values[#values+1]=n;end end;local i=0;
+  return{entries=function()i=i+1;return values[i];end};
+ end
  function el:MessageClose()end
  function el:GetSpawnByID(id)
   if not w.points[id]then
@@ -191,5 +198,41 @@ check(not w:one(218359),"premature lurker death cannot bypass split waves");
 -- A foreign same-type final boss cannot award this attempt's success.
 w,boss=unlocked();local foreign=w:spawn(218360);w:kill(foreign);
 check(#w.writes==0 and #w.signals==0,"untracked final death cannot award progression");
+
+-- Opening native mudwalkers are required even before the red-wave controller exists.
+local function opening(count)
+ local w=world();local blues={};for i=1,(count or 16)do blues[i]=w:spawn(BLUE);end
+ return w,blues;
+end
+w=world();w:tick(6000);check(#w.writes==0,"idle zone does not start a retry or shorten a saved lockout");
+w,blues=opening(15);w:kill(blues[1]);w:tick(1);check(#w.writes==0,"incomplete opening wave gets disappearance grace");
+for i=2,15 do w:kill(blues[i]);end
+check(not w:one(LURKER),"fifteen native kills cannot start Lurker");w:tick(30);w:cooldown(900000);
+check(#w.signals==0,"incomplete opening wave grants no completion");
+w,blues=opening();w:kill(blues[1]);blues[2]:Depop();
+for i=3,16 do w:kill(blues[i]);end
+check(not w:one(CONTROL),"missing native blue never starts encounter controller");missing_retry(w);
+w,blues=opening();w:kill(blues[1]);local oldBlue=blues[2];oldBlue:Depop();
+local replacement=w:spawn(BLUE);replacement.spawnid=oldBlue.spawnid;w:kill(replacement);
+for i=3,16 do w:kill(blues[i]);end
+check(not w:one(LURKER),"replacement at same spawn point cannot substitute for missing kill");missing_retry(w);
+local saved=#w.writes;w:dispatch("death",oldBlue);w:tick(60);
+check(#w.writes==saved and not w:one(RED),"late cleaned blue callback cannot restart or extend retry");
+w,blues=opening(15);local foreign=w:spawn(BLUE);foreign.spawnid=0;
+w:kill(foreign);check(#w:list(RED)==0,"foreign blue cannot start the ring");w:kill(blues[1]);missing_retry(w);
+w,blues=opening();w:kill(blues[1]);w:one(RED):Depop();missing_retry(w);
+w,blues=opening();w:kill(blues[1]);w:tick(7200);w:cooldown(900000);
+check(#w:list(RED)==0 and #w:list(BLUE)==0,"partial opening red expiry cleans the whole attempt");
+w,blues=opening();w:kill(blues[1]);w:load();w:tick(0);w:cooldown(900000);
+check(not w:one(RED),"reload of partial opening retries cleanly");
+w,blues=opening();w:kill(blues[1]);w:one(RED):Depop();w:load();w:tick(0);w:cooldown(900000);
+check(#w:list(BLUE)==0,"reload recovers tagged opening blues even when every red is already gone");
+w,blues=opening();w:kill(blues[1]);w:tick(5800);
+check(#w.writes==0 and not w:one(CONTROL),"opening phase does not start the 98-minute red-wave deadline early");
+for i=2,16 do w:kill(blues[i]);end
+local controller=w:one(CONTROL);check(controller~=nil,"sixteen native kills still start normal encounter");
+w:tick(5879);check(#w.writes==0,"full 98-minute event budget starts after opening wave");
+w:tick(1);w:cooldown(900000);
+check(w.logs[#w.logs]:find("Blue kills: 16/16",1,true),"failure debug retains completed blue-wave credit");
 
 print("PASS: "..checks.." Mud Ring recovery checks");
