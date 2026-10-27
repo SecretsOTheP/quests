@@ -5,7 +5,8 @@ local ProjectionEligibility = require("projection_eligibility");
 local MEZABLE, UNMEZABLE, AVATAR, PROJECTION = 222003,222039,222040,222041;
 local POINTS = {369377,369380,369382,369384,369386,369387,369376,369378,369379,369381,369383,369385};
 local TYPES={};for i,id in ipairs(POINTS)do TYPES[id]=i<=6 and MEZABLE or UNMEZABLE;end
-local COUNCIL_RESPAWN, AVATAR_IDLE, FAILURE, SUCCESS = 420,3000,900,496800;
+local COUNCIL_RESPAWN, AVATAR_IDLE, FAILURE, SUCCESS = 420,2100,900,496800;
+local LEGACY_AVATAR_IDLE = 3000; -- Accept saved 50-minute runs without resetting Council progress.
 local MISSING_GRACE, WATCHDOG_MS = 10,1000;
 local names={[0]="Ready","Council","Avatar","Retry","Success"};
 local phase,attempt,remaining,clockAt,paused,cooldownUntil,avatarID,nextWarning=0,0,AVATAR_IDLE,0,false,0,0,1;
@@ -55,7 +56,7 @@ local function Load()
         fallback={phase=h[1],attempt=h[2],untilTime=h[6]};
     end
     for i=1,9 do if not h[i]or h[i]<0 or h[i]~=math.floor(h[i])then return false,"Invalid saved header",fallback;end end
-    if h[1]>4 or h[3]>AVATAR_IDLE or h[5]>1 or h[8]<1 or h[8]>4 then return false,"Invalid saved phase/clock",fallback;end
+    if h[1]>4 or h[3]>LEGACY_AVATAR_IDLE or h[5]>1 or h[8]<1 or h[8]>4 then return false,"Invalid saved phase/clock",fallback;end
     fallback=fallback or{phase=h[1],attempt=h[2],untilTime=h[6]};
     if (h[1]==3 or h[1]==4)and h[6]==0 then return false,"Missing terminal deadline";end
     if #fields~=10 then return false,"Invalid saved field count",fallback;end
@@ -69,6 +70,8 @@ local function Load()
     end
     if count~=#POINTS then return false,"Incomplete saved Council",fallback;end
     phase,attempt,remaining,clockAt,paused,cooldownUntil,avatarID,nextWarning=h[1],h[2],h[3],h[4],h[5]==1,h[6],h[7],h[8];records=loaded;councilStarted=h[9];
+    -- Cap legacy saves at 35 minutes; shorter remaining budgets never refill.
+    remaining=math.min(remaining,AVATAR_IDLE);
     return true;
 end
 local function ArmSupervisor()eq.set_timer("watchdog",WATCHDOG_MS,encounter);end
@@ -151,12 +154,7 @@ local function Clock()
     local now=Now();if not paused then remaining=math.max(0,remaining-math.max(0,now-clockAt));end;clockAt=now;
 end
 local function SetAvatarCombat(engaged)
-    local wiped=paused and not engaged;
-    paused=engaged;
-    if wiped then
-        remaining=AVATAR_IDLE;clockAt=Now();nextWarning=1;Save(true);
-        Log("RESET","Avatar lost all aggro; a fresh fifty-minute idle budget started.");
-    end
+    paused=engaged; -- Resume the remaining idle budget after a wipe; never refill it.
 end
 local function ArmCombat(n)
     if n:GetNPCTypeID()==UNMEZABLE then eq.set_timer("checkhp",3000,n);end
@@ -178,8 +176,8 @@ local function SpawnAvatar()
     creatingAvatar=true;local ok,n=pcall(eq.unique_spawn,AVATAR,0,0,2050,410,-210,0);creatingAvatar=false;
     if not ok or not Live(n)or n:GetNPCTypeID()~=AVATAR or not Tagged(n,0,n:GetID(),false)then Fail("Avatar spawn failed or returned an untracked NPC");return;end
     avatarID=n:GetID();Save(true);ArmSupervisor();
-    RP("The Rathe speak through the towering Avatar of Earth: \"We remain as one while battle is joined. We shall tolerate fifty minutes of hesitation. No more.\"");
-    Log("PHASE","All twelve current Council deaths confirmed; Avatar spawned. Its idle budget is 50 minutes, paused during combat and refreshed after disengagement.");
+    RP("The Rathe speak through the towering Avatar of Earth: \"We remain as one while battle is joined. We shall tolerate thirty-five minutes of hesitation. No more.\"");
+    Log("PHASE","All twelve current Council deaths confirmed; Avatar spawned. Its idle budget is 35 minutes, paused during combat and resumed without refilling after disengagement.");
 end
 local function CouncilSpawn(e)
     ArmSupervisor();if not InInstance()then return;end
@@ -228,7 +226,7 @@ end
 local function AvatarCombat(e)
     ArmSupervisor();if not initialized then Initialize();end
     if phase~=2 or not Live(e.self)or not Tagged(e.self,0,avatarID,false)then return;end
-    Clock();if remaining==0 then Fail("Avatar's 50-minute idle budget expired");return;end
+    Clock();if remaining==0 then Fail("Avatar's 35-minute idle budget expired");return;end
     SetAvatarCombat(e.joined);Save(true);
     Log(paused and"ENGAGE"or"DISENGAGE",string.format("Avatar idle clock %s; %.1f minutes remain.",paused and"paused"or"running",remaining/60));
     if paused then RP("The Avatar of Earth plants its feet upon the stone of Ragrax. The Rathe speak as one through its towering form: \"We stand as one, Norrathians. We cannot permit your ambition to unravel what we are sworn to preserve. Your advance ends here.\"");end
@@ -291,10 +289,10 @@ Watchdog=function()
         ReconcileCouncil();if phase~=0 and phase~=1 then return;end
         if phase==0 and AllPresent()and not readyAnnounced then readyAnnounced=true;RP("The Rathe Council stands once more within Ragrax. Their voices rise as one: \"We stand united again. We shall not abandon what we are sworn to preserve. The balance of these planes shall be preserved.\"");Log("READY","All twelve native Council members are present; a fresh round can begin.");end
     elseif phase==2 then
-        Clock();if remaining==0 then Fail("Avatar's 50-minute idle budget expired");return;end
+        Clock();if remaining==0 then Fail("Avatar's 35-minute idle budget expired");return;end
         local n=Avatar();if not n then missing.avatar=missing.avatar or Now();if Now()-missing.avatar>=MISSING_GRACE then Fail("Avatar disappeared/replaced without a confirmed kill");return;end
         else missing.avatar=nil;SetAvatarCombat(n:IsEngaged());end
-        local thresholds={1800,2400,2700};local texts={
+        local thresholds={900,1500,1800};local texts={
             "Ragrax trembles as the Rathe Council speaks through the Avatar of Earth, \"Norrathians, you do not comprehend the power you seek. We must preserve the balance. We shall bring this advance to an end.\"",
             "Ragrax trembles as the Rathe Council speaks through the Avatar of Earth, \"Your time dwindles, Norrathians. We shall not leave this stronghold exposed to your ambition. Face what we have become.\"",
             "Ragrax trembles as the Rathe Council speaks through the Avatar of Earth, \"This must end now. We shall soon stand together once more. Your final chance is upon you, Norrathians. We will not yield.\""

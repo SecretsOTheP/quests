@@ -4,6 +4,10 @@ local checks = 0;
 local function check(ok, message) assert(ok, message); checks = checks + 1; end
 local function loadScript(path, env)
 	setmetatable(env, {__index = _G});
+	env.require = function(name)
+		assert(name == "earth_ring_progress");
+		return setfenv(assert(loadfile(root.."/lua_modules/"..name..".lua")), env)();
+	end;
 	setfenv(assert(loadfile(root.."/"..path)), env)();
 end
 
@@ -52,6 +56,7 @@ end
 do
 	local registry, timers, saved, enabled, removed = {}, {}, {}, {}, {};
 	local depopped = false;
+	local announcements, failureLog = {}, nil;
 	local events = {spawn = 1, timer = 2, death_complete = 3, combat = 4, waypoint_arrive = 5, signal = 6, hp = 7};
 	local elist = {};
 	function elist:GetSpawnByID(id)
@@ -66,7 +71,8 @@ do
 		update_spawn_timer = function(id, ms) saved[id] = ms; end,
 		depop_all = function(id) removed[id] = true; end,
 		depop = function() depopped = true; end,
-		debug = function() end
+		zone_emote = function(color, message) announcements[#announcements + 1] = message; end,
+		debug = function(message) failureLog = message; end
 	}};
 	loadScript("poeartha/encounters/MudRing.lua", env);
 	env.event_encounter_load({});
@@ -88,6 +94,11 @@ do
 		count = count + 1;
 	end
 	check(count == 16 and depopped, "all 16 Mud triggers recover on timeout");
+	check(#announcements == 1 and announcements[1]:find("15 minutes"), "players receive one RP retry message");
+	check(announcements[1]:find("The allotted time has passed.", 1, true) and not announcements[1]:find("Phase:"), "public RP explains timeout without diagnostics");
+	check(failureLog and failureLog:find("reason=98%-minute event timeout"), "debug records actual failure reason");
+	timeout({timer = "depop"});
+	check(#announcements == 1, "duplicate failure does not repeat announcement");
 	check(removed[218360] and removed[218365] and removed[218419], "timeout cleans up bosses and runners");
 end
 

@@ -1,3 +1,5 @@
+local progress = require("earth_ring_progress");
+
 local TAINTED_TYPE = 218019;
 local BLOODTHIRSTY_TYPE = 218362;
 local BOSS_TYPE = 218363; -- Derugoak_Bloodwalker
@@ -31,17 +33,62 @@ local BLOODTHIRSTY_LOCS = {
 
 local SUCCESS_RESPAWN_TIME = 237600 * 1000; -- 66 hours
 local FAILURE_RESPAWN_TIME = 900000; -- 15 minutes
-local taintedKills = 0;
+local taintedKills, bloodKills = 0, 0;
 local addWave = 0;
+
+local FailRing;
+local terminal = false;
+local guard = require("earth_ring_guard").new("VineRing", {BLOODTHIRSTY_TYPE, BOSS_TYPE, FAKE_BOSS_TYPE, MANGLED_TYPE, VEGDESPAWN_TYPE}, function(reason) FailRing(reason); end);
+-- Public failure text deliberately excludes raw errors, IDs and progress counters.
+local function FailureMessage(reason)
+    local text = tostring(reason);
+    local message;
+    if text:find("98-minute", 1, true) then
+        message = "The allotted time has passed. Living vines coil back beneath the temple, drawing its guardians into the roots.";
+    elseif text:find("orphaned", 1, true) or text:find("untracked", 1, true) then
+        message = "The temple's interrupted trial cannot be resumed. Writhing vines pull its remaining guardians beneath the roots.";
+    elseif text:find("timeout controller", 1, true) or text:find("type=218396", 1, true) then
+        message = "The power sustaining the temple's trial has faded. Its living vines loosen and draw the guardians beneath the earth.";
+    elseif text:find("failed to spawn", 1, true) or text:find("spawn failed", 1, true) or text == "incomplete red wave" then
+        message = "Living vines twist and strain beneath the temple, but no guardian rises from their coils. The trial cannot continue.";
+    elseif text:find("missing", 1, true) or text == "red mudwalker expired without a kill" then
+        message = "A guardian of the vine temple is drawn beneath a tangle of roots before its defeat. The trial cannot continue.";
+    else
+        message = "The power sustaining the temple's trial falters unexpectedly. Coiling vines drag its guardians beneath the roots and fall still.";
+    end
+    return message.." The Vine Ring has reset; you may attempt it again in 15 minutes.";
+end
+
+FailRing = function(reason)
+    if terminal then return; end
+    local phaseName = taintedKills < 30 and "Tainted guardians" or (bloodKills < 10 and "Bloodthirsty guardians" or "Final guardian");
+    local context = string.format("Phase: %s | Tainted kills: %d/30 | Bloodthirsty kills: %d/10 | Add wave: %d", phaseName, taintedKills, bloodKills, addWave);
+    terminal = true; guard:stop();
+    for _,typ in ipairs({BLOODTHIRSTY_TYPE, BOSS_TYPE, FAKE_BOSS_TYPE, MANGLED_TYPE, VEGDESPAWN_TYPE, TAINTED_TYPE}) do eq.depop_all(typ); end
+    taintedKills, bloodKills, addWave = 0, 0, 0;
+    local elist = eq.get_entity_list();
+    for _,id in ipairs(TAINTED_SPAWNIDS) do
+        eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
+        elist:GetSpawnByID(id):Enable();
+    end
+    eq.zone_emote(13, FailureMessage(reason));
+    eq.debug("[EarthRing:Vine] FAIL "..context.." reason="..tostring(reason).."; cleanup complete; retry=15m");
+end
+
+function event_timer(e)
+    guard:tick(e);
+end
 
 function TaintedDeath(e)
 
+	if not guard:once(e.self) then return; end
 	taintedKills = taintedKills + 1;
 	local elist = eq.get_entity_list();
 	
 	if ( taintedKills == 3 ) then
+		terminal = false; bloodKills = 0; guard:start({TAINTED_TYPE});
 		addWave = 0;
-		eq.spawn2(VEGDESPAWN_TYPE, 0, 0, 485, -835, 33.752, 0);
+		guard:spawn(VEGDESPAWN_TYPE, 0, 0, 485, -835, 33.752, 0);
 
 		for _, id in ipairs(TAINTED_SPAWNIDS) do
 			elist:GetSpawnByID(id):Disable(false);
@@ -50,11 +97,14 @@ function TaintedDeath(e)
 	
 	if ( taintedKills >= 3 and taintedKills <= 30 and taintedKills % 3 == 0 ) then
 		local loc = BLOODTHIRSTY_LOCS[taintedKills / 3];
-		eq.spawn2(BLOODTHIRSTY_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
+		guard:spawn(BLOODTHIRSTY_TYPE, 0, 0, loc[1], loc[2], loc[3], loc[4]);
 		if ( taintedKills < 30 ) then
-			elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "A creature rises from the dead bodies of three tainted rock beasts.");
+			elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 13, "Living vines twist through the remains of three tainted rock beasts, knotting into a bloodthirsty creature that lashes its tendrils.");
 		end
 	end
+	progress.announce(taintedKills, 30,
+		"Living vines snake through the shattered rock beasts, weaving their remains into new bodies. Coiled tendrils tighten around the temple's stonework.",
+		"Only a few tainted rock beasts remain. Atop the temple, bloodthirsty creatures writhe within coils of living vine.");
 	
 	if ( taintedKills >= 30 and not elist:IsMobSpawnedByNpcTypeID(TAINTED_TYPE) ) then
 	
@@ -71,16 +121,21 @@ function TaintedDeath(e)
 			end
 		end
 		
-		elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "The last of the tainted rock beasts crashes to the ground and yet another creature rises at the top of the temple.");
+		eq.zone_emote(13, "The last tainted rock beast crashes down. Living vines wrench its remains upright as the bloodthirsty creatures uncoil and lash out from the temple.");
 		eq.debug("Vine ring phase 2");
 	end
 end
 
 function BloodthirstyDeath(e)
+	if taintedKills ~= 30 or not guard:dead(e.self) then return; end
+	bloodKills = bloodKills + 1;
+	progress.announce(bloodKills, 10,
+		"Severed vines writhe across the stones as the bloodthirsty creatures fall. Those still standing twist their tendrils into grasping limbs.",
+		"The last bloodthirsty creature thrashes among the torn vines of its kin, its tendrils knotting and lashing at the air.");
 
 	local elist = eq.get_entity_list();
 	
-	if ( not elist:IsMobSpawnedByNpcTypeID(BLOODTHIRSTY_TYPE) ) then
+	if ( bloodKills == 10 ) then
 	
 		local runX, runY, runZ = e.self:GetX(), e.self:GetY(), e.self:GetZ();
 		local t = BOSS_TYPE;
@@ -88,11 +143,11 @@ function BloodthirstyDeath(e)
 		if ( not elist:IsMobSpawnedByNpcTypeID(VEGEROG_GUY_TYPE) ) then
 			t = FAKE_BOSS_TYPE;
 		end
-		mob = eq.spawn2(t, 0, 0, 483, -832, 39.376, 128);
+		local mob = guard:spawn(t, 0, 0, 483, -832, 39.376, 128);
 		mob:SetRunning(true);
 		mob:CastToNPC():MoveTo(runX, runY, runZ, -1, true);
 		
-		elist:MessageClose(elist:GetMobByNpcTypeID(VEGTXT_TYPE), true, 300, 0, "The ground shakes and trembles as Derugoak Bloodwalker rises to defend his temple.");
+		eq.zone_emote(13, "The last bloodthirsty creature collapses in a tangle of severed vines. Thick roots split the earth as the temple's final defender emerges, trailing coils of living growth.");
 		eq.debug("Vine ring boss spawned");
 	end
 end
@@ -126,6 +181,8 @@ function BossCombat(e)
 end
 
 function BossTimer(e)
+	-- Depop is deferred; an already-due adds timer may still arrive after cleanup.
+	if not guard:owns(e.self) then eq.stop_timer(e.timer); return; end
 	if ( e.timer == "drophate") then
 
 		if ( math.random() < 0.05 ) then -- averages to once every 20 seconds
@@ -152,11 +209,16 @@ function BossTimer(e)
 			while (yOffset > -30 and yOffset < 30) do
 				yOffset = math.random(-40, 40);
 			end
-			eq.spawn2(MANGLED_TYPE, 0, 0, x + xOffset, y + yOffset, z+5, 0);
+			local add = eq.spawn2(MANGLED_TYPE, 0, 0, x + xOffset, y + yOffset, z+5, 0);
+			-- Optional adds stay untracked, but an inner callback can fail the ring.
+			if not guard.active then
+				if add and add.valid then add:Depop(); end
+				return;
+			end
 			xOffset = 0;
 			yOffset = 0;
 		end
-		eq.get_entity_list():MessageClose(e.self, true, 200, 0, "Derugoak summons minions to his side.");
+		eq.get_entity_list():MessageClose(e.self, true, 200, 13, "The temple's defender drives its roots into the earth. Mangled creatures claw free amid a thrashing mass of vines.");
 		
 	elseif ( e.timer == "depop_adds" ) then
 		eq.stop_timer(e.timer);
@@ -165,6 +227,8 @@ function BossTimer(e)
 end
 
 function EventSuccess(e)
+	if bloodKills ~= 10 or not guard:dead(e.self) then return; end
+	terminal = true; guard:stop();
 	eq.debug("Vine ring completed");
 
 	eq.depop_all(MANGLED_TYPE);
@@ -181,6 +245,7 @@ function EventSuccess(e)
 	end
 	
 	eq.signal(ARBITOR_GUY_TYPE, 3);
+	eq.zone_emote(13, "The temple's final defender falls, its vines twisting in a final spasm before loosening across the stones. The trial of the Vine Ring is complete.");
 end
 
 function MangledSpawn(e)
@@ -206,48 +271,33 @@ function DespawnSpawn(e)
 end
 
 function DespawnTimer(e)
-
-	if ( e.timer == "depop" ) then
-		-- ring timeout fail
-		eq.depop_all(BLOODTHIRSTY_TYPE);
-		eq.depop_all(BOSS_TYPE);
-		eq.depop_all(FAKE_BOSS_TYPE);
-		eq.depop_all(MANGLED_TYPE);
-
-		taintedKills = 0;
-		
-		local elist = eq.get_entity_list();
-		for _, id in ipairs(TAINTED_SPAWNIDS) do
-			eq.update_spawn_timer(id, FAILURE_RESPAWN_TIME);
-			elist:GetSpawnByID(id):Enable();
-		end
-
-		eq.debug("Vine Ring failed and reset");
-		eq.depop();
-	end
+    if e.timer == "depop" and (not guard.active or guard:owns(e.self)) then
+        FailRing("98-minute controller timeout"); eq.depop();
+    end
 end
 
 function event_encounter_load(e)
+	guard:arm(e.encounter);
 
-	eq.register_npc_event("VineRing", Event.death_complete, TAINTED_TYPE, TaintedDeath);
-	
-	eq.register_npc_event("VineRing", Event.death_complete, BLOODTHIRSTY_TYPE, BloodthirstyDeath);
-	
-	eq.register_npc_event("VineRing", Event.spawn, BOSS_TYPE, BossSpawn);
-	eq.register_npc_event("VineRing", Event.combat, BOSS_TYPE, BossCombat);
-	eq.register_npc_event("VineRing", Event.timer, BOSS_TYPE, BossTimer);
-	eq.register_npc_event("VineRing", Event.death_complete, BOSS_TYPE, EventSuccess);
-	eq.register_npc_event("VineRing", Event.spawn, FAKE_BOSS_TYPE, BossSpawn);
-	eq.register_npc_event("VineRing", Event.combat, FAKE_BOSS_TYPE, BossCombat);
-	eq.register_npc_event("VineRing", Event.timer, FAKE_BOSS_TYPE, BossTimer);
-	eq.register_npc_event("VineRing", Event.death_complete, FAKE_BOSS_TYPE, EventSuccess);
-	
-	eq.register_npc_event("VineRing", Event.spawn, MANGLED_TYPE, MangledSpawn);
-	eq.register_npc_event("VineRing", Event.combat, MANGLED_TYPE, MangledCombat);
-	eq.register_npc_event("VineRing", Event.timer, MANGLED_TYPE, MangledTimer);
+	eq.register_npc_event("VineRing", Event.death_complete, TAINTED_TYPE, guard:wrap(TaintedDeath));
 
-	eq.register_npc_event("VineRing", Event.spawn, VEGDESPAWN_TYPE, DespawnSpawn);
-	eq.register_npc_event("VineRing", Event.timer, VEGDESPAWN_TYPE, DespawnTimer);
+	eq.register_npc_event("VineRing", Event.death_complete, BLOODTHIRSTY_TYPE, guard:wrap(BloodthirstyDeath));
+
+	eq.register_npc_event("VineRing", Event.spawn, BOSS_TYPE, guard:wrap(BossSpawn));
+	eq.register_npc_event("VineRing", Event.combat, BOSS_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("VineRing", Event.timer, BOSS_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("VineRing", Event.death_complete, BOSS_TYPE, guard:wrap(EventSuccess));
+	eq.register_npc_event("VineRing", Event.spawn, FAKE_BOSS_TYPE, guard:wrap(BossSpawn));
+	eq.register_npc_event("VineRing", Event.combat, FAKE_BOSS_TYPE, guard:wrap(BossCombat));
+	eq.register_npc_event("VineRing", Event.timer, FAKE_BOSS_TYPE, guard:wrap(BossTimer));
+	eq.register_npc_event("VineRing", Event.death_complete, FAKE_BOSS_TYPE, guard:wrap(EventSuccess));
+
+	eq.register_npc_event("VineRing", Event.spawn, MANGLED_TYPE, guard:wrap(MangledSpawn));
+	eq.register_npc_event("VineRing", Event.combat, MANGLED_TYPE, guard:wrap(MangledCombat));
+	eq.register_npc_event("VineRing", Event.timer, MANGLED_TYPE, guard:wrap(MangledTimer));
+
+	eq.register_npc_event("VineRing", Event.spawn, VEGDESPAWN_TYPE, guard:wrap(DespawnSpawn));
+	eq.register_npc_event("VineRing", Event.timer, VEGDESPAWN_TYPE, guard:wrap(DespawnTimer));
 
 
 end
