@@ -173,7 +173,7 @@ function SetBossKilled(phase, bossNum)
 	local now = os.time();
 	local t = 561600; -- original god lockout: 6 days, 12 hours
 	if ( phase == 1 ) then
-		t = 43200; -- original Phase 1 lockout: 12 hours
+		t = 43200; -- legacy fallback when no guild cycle is available
 	elseif ( phase == 2 or phase == 3 ) then
 		t = 302400; -- original Phase 2/3 lockout: 3 days, 12 hours
 	end
@@ -192,9 +192,10 @@ function SetBossKilled(phase, bossNum)
 		return false;
 	end
 	zoneBossTable[phase][bossNum] = 1;
-	if ( phase > 3 or zoneTimers[timerNum] == 0 ) then -- first kill starts a Phase 1-3 timer
+	-- Phase 1 loot is once per cycle; Phase 2/3 keep their first-kill timers.
+	if ( phase == 1 or phase > 3 or zoneTimers[timerNum] == 0 ) then
 		zoneTimers[timerNum] = guildCycle and
-			(phase > 3 and guildCycle.ends or math.min(now + t, guildCycle.ends)) or now + t;
+			((phase == 1 or phase > 3) and guildCycle.ends or math.min(now + t, guildCycle.ends)) or now + t;
 	end
 	
 	SetInstanceGlobals();
@@ -218,8 +219,9 @@ function CheckPhaseStatus(phase)
 			timerNum = 12;
 		end
 
-		-- God kills last for this cycle, including after loading rounded legacy timers.
-		if ( phase > 3 and guildCycle and zoneBossTable[phase][i] == 1 ) then
+		-- Phase 1 and god kills last for this cycle. Preserve saved Phase 1 kills
+		-- before an old 12-hour deadline or rounded timer can clear their shadow credit.
+		if ( (phase == 1 or phase > 3) and guildCycle and zoneBossTable[phase][i] == 1 ) then
 			zoneTimers[timerNum] = guildCycle.ends;
 		end
 		if ( zoneBossTable[phase][i] == 1 and now >= zoneTimers[timerNum] ) then
