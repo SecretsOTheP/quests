@@ -250,4 +250,19 @@ s:advance(120);check(#s:warnings()==3,"fourteen-minute warning survives forced-r
 s:advance(60);check(s:phase()==4,"fifteen-minute failure survives forced-repop timer clearing");
 s:advance(2);check(#s:actors()==0 and not s:boss(),"independent cleanup follows expiry after forced repop");
 
+-- Troubleshooting: faults are loud and traced; the fifteen-minute deadline is not a fault.
+local function rpHas(s,text)for _,e in ipairs(s.rp)do if e.text:find(text,1,true)then return true;end end;return false;end
+s=world();s:start();first=s:fiends()[1];first:Depop();s:advance(14);
+check(s:phase()==4 and rpHas(s,"[Server] The Coirnav event was reset by a server fault"),"non-deadline failure tells players it was a server fault");
+check(s.saved["coirnav-last-fault-66"]:find("phase=Waves",1,true) and s.saved["coirnav-last-fault-66"]:find("records=26",1,true),"fault snapshot keeps pre-reset state");
+check(s.saved["coirnav-trace-66"]:find("[FAIL]",1,true)~=nil,"fault trace persists independently of logging");
+s=world();s:start();s:advance(902);check(s:phase()==4 and not rpHas(s,"[Server]") and (s.saved["coirnav-last-fault-66"]or"")=="","deadline expiry stays a normal raid failure");
+
+-- Ready state with Coirnav missing self-repairs instead of swallowing Guardian kills.
+s=world();s:load();s:advance(1);check(s:phase()==0 and s:boss(),"ready baseline");
+s:boss():Depop();s:kill(s.points[GUARDIAN].npc);
+check(s:phase()==0 and rpHas(s,"[Server] Coirnav is not in place"),"Guardian kill without Coirnav is announced, not silently ignored");
+s:advance(12);check(s:boss() and s.points[GUARDIAN].npc and s.points[GUARDIAN].npc.valid,"Coirnav and Guardian are restored after the grace period");
+s:kill(s.points[GUARDIAN].npc);check(s:phase()==1 and #s:fiends()==25,"restored Guardian starts a normal attempt");
+
 print(checks.." Coirnav recovery, scheduling, ownership and RP checks passed.");

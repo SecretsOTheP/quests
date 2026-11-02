@@ -88,6 +88,12 @@ local function Log(kind,text)
     local message=string.format("[Coirnav guild=%s attempt=%d phase=%s fiends=%d/75] [%s] %s",tostring(eq.get_zone_guild_id()),attempt,phaseNames[phase],kills,kind,text);
     eq.debug(message);local list=eq.get_entity_list():GetClientList();
     for c in list.entries do if c.valid and c:GetGM()then c:Message(15,message);end end
+    -- Troubleshooting: keep the most recent problems per guild instance, independent of log settings.
+    if kind=="WARN"or kind=="ERROR"or kind=="FAIL"or kind=="RESET"then
+        local key="coirnav-trace-"..tostring(eq.get_zone_guild_id());
+        local trace=os.time().." "..message.."\n"..(eq.get_data(key)or"");
+        eq.set_data(key,trace:sub(1,4000));
+    end
 end
 local function Notice(key,kind,text)if not notices[key]or Now()-notices[key]>=30 then notices[key]=Now();Log(kind,text);end end
 local function Save()
@@ -174,9 +180,20 @@ local function Ready(n,announce)
 end
 Fail=function(reason,force)
     if not Active()and not force then return;end
+    -- Only the fifteen-minute deadline is a raid failure. Anything else means the encounter lost
+    -- track of its own NPCs; snapshot the state before it is reset so the cause can be traced.
+    local fault=Now()<deadline;
+    local snapshot=string.format("time=%d attempt=%d phase=%s waves=%d kills=%d records=%d elapsed=%ds | %s",
+        Now(),attempt,phaseNames[phase]or tostring(phase),waves,kills,#records,started>0 and Now()-started or 0,reason);
     local n=Boss();phase=4;cooldownUntil=Now()+FAILURE_SECONDS;cleanupAt=Now()+2;ownState=true;released=false;cooldownArmed=false;records={};missing={};Save();
     local g=GuardianPoint();if g then g:Disable();end
     RP("Three voices thunder as one through Coirnav. \"The Triumvirate has spoken! These waters reject you. Be banished from our domain!\" A crushing surge tears through the reef as his summoned defenders dissolve into water, ice and vapor.");
+    if fault then
+        -- Loud on purpose (troubleshooting): players see the reason, and it is kept per guild
+        -- instance regardless of log settings.
+        RP("[Server] The Coirnav event was reset by a server fault, not by your raid: "..reason.." Coirnav and his Guardian return in twenty minutes. Please screenshot this and let a GM know.");
+        eq.set_data("coirnav-last-fault-"..tostring(eq.get_zone_guild_id()),snapshot);
+    end
     Log("FAIL",reason.." Cleanup follows the banishment after two seconds; retry is twenty minutes.");
     if Live(n)then n:CastSpell(1099,n:GetID());end
 end
@@ -266,7 +283,11 @@ end
 local function GuardianDeath(e)
     EnsureInitialized();if e.self:GetSpawnPointID()~=GUARDIAN_SPAWNID then Notice("foreign-guardian","WARN","Ignored Guardian death outside the event spawnpoint.");return;end
     if phase~=0 then Notice("guardian-death","WARN","Ignored Guardian death during an active attempt/cooldown.");return;end
-    local n=Boss();if not n then Notice("boss-missing","ERROR","Guardian killed while Coirnav was missing; preserving native boss cooldown.");return;end
+    local n=Boss();if not n then
+        Notice("boss-missing","ERROR","Guardian killed while Coirnav was missing; preserving native boss cooldown.");
+        if ownState and eq.get_zone_guild_id()~=1 then RP("[Server] Coirnav is not in place to answer his Guardian. The reef will restore them shortly; kill the Guardian again once it returns.");end
+        return;
+    end
     Cleanup(false);attempt=attempt+1;phase=1;started=Now();deadline=started+EVENT_SECONDS;waves=0;kills=0;nextWarning=1;nextLing=0;cooldownUntil=0;cleanupAt=0;notices={};ownState=true;
     TagBoss(n);ConfigureBoss(n);Save();SpawnWave(1);ArmSupervisor();
 end
@@ -312,7 +333,17 @@ local function Watchdog()
         if Now()<cooldownUntil then local p=BossPoint();if p and(not cooldownArmed or not p:Enabled())then ApplyCooldown();end
         elseif not released then ApplyCooldown();else Notice("boss-wait","WARN","Cooldown expired; waiting for native boss spawn/quake policy.");end
     elseif n then
+        missing.readyBoss=nil;
         local g=GuardianPoint();if g and not Live(g:GetNPC())then g:Enable();g:Repop();elseif not g then Notice("guardian-point","ERROR","Guardian spawnpoint missing; ready supervision will retry.");end
+    elseif ownState and eq.get_zone_guild_id()~=1 then
+        -- Ready state we recorded ourselves, but Coirnav is gone: restore him instead of leaving the
+        -- encounter stuck. Unowned/native cooldowns and Guild 1 quake policy are left alone.
+        missing.readyBoss=missing.readyBoss or Now();
+        if Now()-missing.readyBoss>=MISSING_GRACE then
+            local p=BossPoint();
+            if p then missing.readyBoss=nil;p:Enable();p:Repop();Notice("ready-boss","RESET","Coirnav missing while Ready; spawnpoint repopped.");
+            else Notice("boss-point","ERROR","Coirnav spawnpoint missing; ready supervision will retry.");end
+        end
     end
 end
 local function Legacy(e)
