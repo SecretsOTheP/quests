@@ -849,22 +849,21 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 				eq.debug("Critical Error: All instance qglobals are in use.");
 				return;
 			end
-			-- Original entry flow: every attempt must complete all five Phase 1
-			-- trials together. Saved kills still control shadow loot on retries.
+			-- Saved kills control shadows on partial retries and skip a fully cleared P1.
 			zonePhase = 1;
 			zoneRaidID = raidID;
 			phase3Completed = false;
 			phaseAdvancePending, forceClose = false, false;
 			phaseOneStarted = false;
 			emptySince = nil;
-			CheckPhaseStatus(1);
+			local phaseOneUp = CheckPhaseStatus(1);
 			eq.set_timer("cycle_end", math.max(1, guildCycle.ends - os.time()) * 1000);
 			SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
 			SetInstanceGlobals();
 			eq.set_timer("phase1", 45000);
 			eq.set_timer("check_trial_start", 2000);
 			for i = 1, #trialStates do
-				trialStates[i] = 0;
+				trialStates[i] = phaseOneUp and 0 or 2;
 			end
 
 		elseif ( zonePhase > 0 ) then
@@ -1344,7 +1343,11 @@ function SetupPhaseOne()
 	if ( phaseOneStarted or zonePhase ~= 1 or phaseAdvancePending ) then return end
 	phaseOneStarted = true;
 	eq.stop_timer("phase1");
-	if ( guildCycle and guildCycle.checkpoint ) then
+	local phaseOneCleared = true;
+	for _, state in ipairs(trialStates) do
+		if ( state ~= 2 ) then phaseOneCleared = false; break end
+	end
+	if ( not phaseOneCleared and guildCycle and guildCycle.checkpoint ) then
 		eq.zone_emote(0, "Your guild has already cleared Phase 3 this cycle. After Phase 1 you will continue against the remaining gods.");
 	end
 	zonePhase = 1;
@@ -1353,4 +1356,9 @@ function SetupPhaseOne()
 	SetFailWarningTimer();
 	eq.set_timer("pulse", 20000);
 	pulses = 0;
+	if ( phaseOneCleared ) then
+		-- Resume through the normal transition without spawning trials or shadows.
+		eq.stop_timer("check_trial_start");
+		PhaseDialog();
+	end
 end
