@@ -104,4 +104,102 @@ load_say("poknowledge/Grand_Librarian_Maelin.lua", "hail");
 assert(globals.cipher=="1" and not globals.mmarr and not globals.saryrn and not globals.zebuxoruk);
 reset(); globals.zebuxoruk="2"; slots[22]=29165;
 load_say("poinnovation/#Chronographer_Muon.lua", "yes"); assert(#moves==1);
-print("PASS: carried Quintessence completes prior progression; absent/banked/uncombined items rejected; NPC/machine flow, repeat safety and unrelated lockouts preserved");
+
+-- Exercise consumers of the completed flags, not just the helper's flag list.
+local level, raid, signals, guild, raid_window, timeline;
+function client:GetGM() return false; end
+function client:GetLevel() return level or 65; end
+function client:GetPet() return {valid=false}; end
+function client:KeyRingCheck() return false; end
+function client:CharacterID() return 123; end
+function client:GetRaid() return raid or {valid=false}; end
+local function travel_setup()
+    level, raid, signals, guild, raid_window, timeline = 65, nil, {}, 42, true, {};
+    eq.get_data = function() return "0"; end -- alternate access disabled after attunement
+    eq.get_entity_list = function() return {
+        IsMobSpawnedByNpcTypeID=function() return false; end,
+        RemoveFromHateLists=function() end
+    }; end
+    eq.get_zone_guild_id = function() return guild; end
+    eq.guild_one_raid_window_open = function() return raid_window; end
+    eq.signal = function(...) signals[#signals+1]={...}; end
+    local original=eq.get_qglobals;
+    eq.get_qglobals=function(who,...)
+        if type(who)=="number" then return timeline; end
+        return original(who,...);
+    end;
+end
+local function door(file,id)
+    assert(loadfile(file))();
+    event_click_door({self=client,door={GetDoorID=function() return id; end}});
+end
+reset(); travel_setup(); slots[22]=29165;
+load_say("poknowledge/Grand_Librarian_Maelin.lua","hail");
+slots={}; -- flags persist without the item and without a raid/85-15 allowance
+for _,id in ipairs({16,21,12,93,48,23,24,22,82,81,83,84}) do
+    messages={}; door("potranquility/player.lua",id);
+    assert(#messages==0,"completed character denied Tranquility door "..id);
+end
+messages={}; door("potranquility/player.lua",18);
+assert(messages[1]:find("lack the will",1,true),"Maelin alone must not grant Time");
+messages={};
+for _,spec in ipairs({{"povalor/player.lua",3},{"hohonora/player.lua",19},
+    {"ponightmare/player.lua",59},{"codecay/player.lua",7},{"solrotower/player.lua",44},
+    {"poeartha/player.lua",9}}) do
+    door(spec[1],spec[2]);
+end
+assert(#messages==0,"earlier internal progression gate still blocked");
+assert(moves[#moves][1]==222,"Earth B access missing");
+local before=writes;
+assert(loadfile("poknowledge/Seer_Mal_Nae-Shi.lua"))();
+GuidedMeditation(client); UnlockMemories(client);
+assert(writes==before and deletes==0,"Seer changed completed flags"); complete(); no_time();
+
+-- Muon -> machine -> permanent Time entry, still enforcing level/raid/locks.
+slots[22]=29165;
+load_say("poinnovation/#Chronographer_Muon.lua","yes");
+assert(moves[#moves][1]==206);
+click(145); slots={};
+messages={}; door("potranquility/player.lua",18);
+assert(messages[1]:find("ages begin",1,true),"permanent Time A admission failed");
+assert(globals.time=="1" and zones[219] and zones[223]);
+level=64; messages={}; door("potranquility/player.lua",18);
+assert(messages[1]:find("lack the will",1,true),"Time A level gate bypassed");
+level=65; messages={}; door("potimea/player.lua",8);
+assert(#signals==0 and messages[1]:find("sufficient power",1,true),"Time B raid gate bypassed");
+raid={valid=true,RaidCount=function() return 7; end,GetID=function() return 456; end};
+door("potimea/player.lua",8); assert(#signals==1,"normal Time B request blocked");
+local count=#signals; level=64; door("potimea/player.lua",8);
+assert(#signals==count,"Time B level gate bypassed"); level=65;
+guild=1; raid_window=false; door("potimea/player.lua",8);
+assert(#signals==count,"Guild 1 quake window bypassed"); guild=42; raid_window=true;
+globals.time_instance="55001"; globals.time_instance_guild="99";
+local future=tostring(math.ceil(os.time()/100)+1000);
+timeline.time_timers_55001=table.concat({future,"0","0","0","0","0","0","0","0","0","0","0"},";");
+timeline.time_kills_55001="11111;11111;00000000000000000000;0000;0000;0";
+messages={}; door("potimea/player.lua",8);
+assert(#signals==count and messages[#messages]:find("bound to another guild",1,true),"foreign loot lock bypassed");
+
+-- Every combination of partial HoH/Sol Ro bits and Zek progression normalizes
+-- cleanly, including pending memories that otherwise could reapply old states.
+local function bits(n,width)
+    local out="";
+    for _=1,width do out=tostring(n%2)..out; n=math.floor(n/2); end
+    return out;
+end
+local cases=0;
+for z=0,7 do for h=0,7 do for sol=0,31 do
+    reset(); slots[22]=29165;
+    globals.zeks=tostring(z); globals.hohtrials=bits(h,3); globals.sol_room=bits(sol,5);
+    globals.cl_tallon="1"; globals.cl_vallon="1"; globals.cl_mmarr="1";
+    globals.cl_mmarr_book="1"; globals.cl_solusek="1";
+    globals.time_instance="55001"; globals.time_instance_generation="55001:1234";
+    Q.Complete(client); complete(); no_time();
+    assert(loadfile("poknowledge/Seer_Mal_Nae-Shi.lua"))();
+    local writesBefore=writes; local deletesBefore=deletes;
+    GuidedMeditation(client); UnlockMemories(client); Q.Complete(client);
+    assert(writes==writesBefore and deletes==deletesBefore,"normalization was not stable");
+    assert(globals.time_instance=="55001" and globals.time_instance_generation=="55001:1234");
+    cases=cases+1;
+end end end
+print("PASS Quintessence: actual prior-zone portals, Seer, Muon/machine/Time entry, level/raid/quake/foreign-lock guards; "..cases.." partial-state combinations; carried/banked/absent-item checks");
