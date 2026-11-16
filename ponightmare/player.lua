@@ -1,3 +1,5 @@
+local RaidWilling = require("pop_raid_willing");
+
 function event_click_door(e)
 	local qglobals = eq.get_qglobals(e.self);
 	local door_id = e.door:GetDoorID();
@@ -7,7 +9,7 @@ function event_click_door(e)
 			if ( e.self:HasZoneFlag(221) == false ) then
 				e.self:SetZoneFlag(221);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, 221) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end
