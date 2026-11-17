@@ -1,3 +1,6 @@
+local RaidWilling = require("pop_raid_willing");
+local ELEMENTAL_DESTINATIONS = { [81] = 215, [83] = 218, [84] = 216 };
+
 -- Disabled level-bypass thresholds. Keep these documented in case access policy changes.
 -- local level_for_tier_two = 55;
 -- local level_for_tier_three = 62;
@@ -17,7 +20,7 @@ function event_click_door(e)
 				e.self:SetZoneFlag(210);
 				e.self:SetZoneFlag(208);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, door_id == 16 and 210 or 208) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end
@@ -35,7 +38,7 @@ function event_click_door(e)
 			-- if ( e.self:GetLevel() >= level_for_tier_two or e.self:KeyRingCheck(9294) ) then
 			if (alternate_access_enabled and e.self:KeyRingCheck(9294)) then
 				e.self:SetZoneFlag(200);
-			else
+			elseif ( not RaidWilling.CanEnter(e.self, 200) ) then
 				e.self:Message(13, "You lack the will to pass through this portal safely.");
 			end
 		end
@@ -51,7 +54,7 @@ function event_click_door(e)
 			if(e.self:HasZoneFlag(207) == false) then
 				e.self:SetZoneFlag(207);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, 207) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end
@@ -64,7 +67,7 @@ function event_click_door(e)
 			if(e.self:HasZoneFlag(209) == false) then
 				e.self:SetZoneFlag(209);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, 209) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end
@@ -82,7 +85,7 @@ function event_click_door(e)
 			-- if ( e.self:GetLevel() >= level_for_tier_three or e.self:KeyRingCheck(29214) ) then
 			if (alternate_access_enabled and e.self:KeyRingCheck(29214)) then
 				e.self:SetZoneFlag(211);
-			else
+			elseif ( not RaidWilling.CanEnter(e.self, 211) ) then
 				e.self:Message(13, "You lack the will to pass through this portal safely.");
 			end		
 		end
@@ -99,7 +102,7 @@ function event_click_door(e)
 			if(e.self:HasZoneFlag(214) == false) then
 				e.self:SetZoneFlag(214);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, 214) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end  
@@ -112,7 +115,7 @@ function event_click_door(e)
 			if(e.self:HasZoneFlag(212) == false) then
 				e.self:SetZoneFlag(212);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, 212) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end
@@ -120,7 +123,7 @@ function event_click_door(e)
 	-- pofire
 	if(door_id == 82) then
 
-		if ( not e.self:HasZoneFlag(217) ) then
+		if ( not e.self:HasZoneFlag(217) and not RaidWilling.CanEnter(e.self, 217) ) then
 			-- if ( e.self:GetLevel() >= level_for_elemental ) then
 			-- 	e.self:SetZoneFlag(217);
 			-- else
@@ -138,7 +141,7 @@ function event_click_door(e)
 				e.self:SetZoneFlag(215);
 				e.self:SetZoneFlag(218);
 			end
-		else
+		elseif ( not RaidWilling.CanEnter(e.self, ELEMENTAL_DESTINATIONS[door_id]) ) then
 			e.self:Message(13, "You lack the will to pass through this portal safely.");
 		end
 	end
@@ -146,7 +149,7 @@ function event_click_door(e)
 	-- potimea
 	if(door_id == 18) then
 		
-		if ( e.self:GetGM() or ( e.self:GetLevel() >= 65 and e.self:HasZoneFlag(219) and qglobals.time ) ) then
+		if ( e.self:GetGM() or ( e.self:GetLevel() >= 65 and ((e.self:HasZoneFlag(219) and qglobals.time) or RaidWilling.CanEnter(e.self, 219)) ) ) then
 			e.self:Message(0, "The ages begin to tear through your body.  You wake to find yourself in another time.");
 			-- e.self:MovePC(219, 223, 140, 9, 170*2);
 		else

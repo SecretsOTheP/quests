@@ -1,7 +1,10 @@
+local Quintessence = require("quintessence_progression");
+
 function event_say(e)
 	local qglobals = eq.get_qglobals(e.other);
 
 	if ( e.message:findi("hail") ) then
+		Quintessence.Complete(e.other, qglobals);
 	
 		if ( qglobals.time or (qglobals.zebuxoruk == "2" and e.other:HasItem(29165)) ) then
 			e.other:Message(0, "Maelin tells you, 'The Quintessence! Oh my this is amazing! I have come into contact with Chronographer Muon in the realm of innovation. Go to him, show him you have the power to activate machine. I shall meet you there, this I must see!'");

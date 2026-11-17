@@ -1,3 +1,5 @@
+local Quintessence = require("quintessence_progression");
+
 function event_enter_zone(e)
 	if ( e.self:GetY() < -500 and e.self:GetY() > -1000 and e.self:GetX() < -150 and e.self:GetX() > -500 ) then
 		-- move player out of trial areas if they log in from camping there
@@ -16,7 +18,7 @@ function event_click_door(e)
 		
 	elseif ( id == 145 ) then
 		local qglobals = eq.get_qglobals(e.self);
-		if ( qglobals.zebuxoruk == "2" and e.self:HasItem(29165) ) then
+		if ( Quintessence.Complete(e.self, qglobals) ) then
 			eq.set_global("time", "1", 5, "F");
 			e.self:SetZoneFlag(219);
 			e.self:SetZoneFlag(223);

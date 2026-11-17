@@ -1,3 +1,5 @@
+local RaidWilling = require("pop_raid_willing");
+
 function event_click_door(e)
 	local door_id = e.door:GetDoorID();
 	local adUp = eq.get_entity_list():IsMobSpawnedByNpcTypeID(208074); -- #Aerin`Dar
@@ -12,7 +14,9 @@ function event_click_door(e)
 		end
 		
 		if ( not qglobals.aerindar ) then
-			e.self:Message(13, "You lack the will to pass through this portal safely.");
+			if ( not RaidWilling.CanEnter(e.self, 211) ) then
+				e.self:Message(13, "You lack the will to pass through this portal safely.");
+			end
 		else
 			eq.set_global("aerindar", "2", 5, "F");
 			e.self:Message(15, "You have received a character flag!");
