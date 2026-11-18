@@ -32,38 +32,38 @@ eq = {
     set_global = function(key, value) globals[key] = value; writes = writes + 1; end,
     delete_global = function(key) globals[key] = nil; writes = writes + 1; end
 };
-local access = require("solro_chamber_access");
+local access = require("pop_internal_access");
 for _, size in ipairs({7, 20, 40, 54, 72}) do
     for percent = 1, 100 do
         local required = math.ceil(size * percent / 100);
         reset(size, required, percent);
-        check(access.CanRaidWill(client), "exact threshold denied");
+        check(access.CanRaidWill(client, "solro"), "exact threshold denied");
         reset(size, required - 1, percent);
-        check(not access.CanRaidWill(client), "below threshold admitted");
+        check(not access.CanRaidWill(client, "solro"), "below threshold admitted");
     end
 end
 reset(40, 34);
 buckets.pop_alt_access_enabled = "0";
-check(not access.CanRaidWill(client), "disabled access admitted");
+check(not access.CanRaidWill(client, "solro"), "disabled access admitted");
 reset(40, 34); raid.valid = false;
-check(not access.CanRaidWill(client), "no raid admitted");
+check(not access.CanRaidWill(client, "solro"), "no raid admitted");
 reset(0, 0);
-check(not access.CanRaidWill(client), "empty raid admitted");
+check(not access.CanRaidWill(client, "solro"), "empty raid admitted");
 reset(40, 34);
 local outsider = {GetName = function() return "Outsider"; end, GetRaid = function() return raid; end};
-check(not access.CanRaidWill(outsider), "nonmember admitted");
+check(not access.CanRaidWill(outsider, "solro"), "nonmember admitted");
 for _, raw in ipairs({"", "invalid", "0", "101", "-1", "85.9", "85suffix"}) do
     reset(40, 34); buckets.pop_raid_flagged_percent = raw;
-    check(access.CanRaidWill(client), "native percentage parsing mismatch");
+    check(access.CanRaidWill(client, "solro"), "native percentage parsing mismatch");
     roster[33] = nil;
-    check(not access.CanRaidWill(client), "invalid percentage default mismatch");
+    check(not access.CanRaidWill(client, "solro"), "invalid percentage default mismatch");
 end
 reset(40, 34);
 roster[33].valid = false;
-check(not access.CanRaidWill(client), "absent member supplied flags");
+check(not access.CanRaidWill(client, "solro"), "absent member supplied flags");
 for _, flags in ipairs({{}, {sol_room = "11110", zeks = "7"}, {sol_room = "11111", zeks = "6"}}) do
     reset(40, 34); roster[33].flags = flags;
-    check(not access.CanRaidWill(client), "incomplete member counted");
+    check(not access.CanRaidWill(client, "solro"), "incomplete member counted");
 end
 local function script(path)
     local env = setmetatable({}, {__index = _G});

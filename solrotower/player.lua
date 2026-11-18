@@ -1,4 +1,4 @@
-local ChamberAccess = require("solro_chamber_access");
+local ChamberAccess = require("pop_internal_access");
 
 function event_click_door(e)
 	local door_id = e.door:GetDoorID();
@@ -7,7 +7,7 @@ function event_click_door(e)
 	
 		local qglobals = eq.get_qglobals(e.self);
 		local pass = true;
-		local borrowed = not ChamberAccess.HasFlags(qglobals) and ChamberAccess.CanRaidWill(e.self);
+		local borrowed = not ChamberAccess.HasFlags(qglobals, "solro") and ChamberAccess.CanRaidWill(e.self, "solro");
 		
 		if ( not borrowed and (not qglobals.sol_room or qglobals.sol_room ~= "11111") ) then
 			e.self:Message(0, "The lava runes scorch your skin as you run your hand across them.");

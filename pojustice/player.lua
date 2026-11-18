@@ -1,3 +1,5 @@
+local InternalAccess = require("pop_internal_access");
+
 local SEVENTH_HAMMER_TYPE = 201074;
 
 function event_enter_zone(e)
@@ -10,12 +12,14 @@ end
 function event_timer(e)
 	if ( e.timer == "seventh" ) then
 		eq.stop_timer("seventh");
+		if not InternalAccess.CanUseSeventhPortal(e.self) then return; end
 	
 		if ( eq.get_entity_list():IsMobSpawnedByNpcTypeID(SEVENTH_HAMMER_TYPE) ) then
 			if ( eq.get_entity_list():GetNPCByNPCTypeID(SEVENTH_HAMMER_TYPE):IsEngaged() ) then
 				return;
 			end
 		end
+		e.self:SetEntityVariable(InternalAccess.SeventhRequest, "");
 		e.self:MovePC(201, 76, 1310, 10, 256); -- pojustice, seventh hammer room
 	end
 end
@@ -23,7 +27,7 @@ end
 function event_click_door(e)
 	local id = e.door:GetDoorID();
 
-	if ( id >= 1 and id <= 6 and e.self:GetItemIDAt(0) == 31599 ) then		-- The Mark of Justice
+	if ( id >= 1 and id <= 6 and InternalAccess.CanUseSeventhPortal(e.self) ) then		-- The Mark of Justice
 		eq.set_timer("seventh", 1); -- need timer because script executes before normal door teleport
 	end
 end
