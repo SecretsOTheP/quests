@@ -26,14 +26,10 @@ function event_say(e)
 	
 	if ( ProjectionEligibility.CanFlag(e.self, e.other) ) then
 
-		-- this will need to be removed if the 85/15 thing gets implemented
-		if ( not qglobals.sol_room or qglobals.sol_room ~= "11111" ) then			
-			return;
-		end
-		
+		-- Borrowed entrants can record the kill without receiving missing mini flags.
 		if ( e.message:findi("hail") and flags < FLAG_LIMIT and (not qglobals.pofire or qglobals.pofire ~= "2") ) then 
 		
-			if ( qglobals.pofire and qglobals.pofire == "1" and qglobals.zeks and qglobals.zeks == "7" ) then
+			if ( qglobals.sol_room == "11111" and qglobals.pofire == "1" and qglobals.zeks == "7" ) then
 			
 					e.other:Message(0, "Miak the Searedsoul's thoughts enter into your own.  'That is it!  The portal into the Plane of Fire lies within the Lava Well of Ro.  You must now fall into this well to gain access into that plane.  I will make adjustments to the Plane of Tranquility portal so that you can access that Element from here as well.'");
 					eq.set_global("pofire", "2", 5, "F");

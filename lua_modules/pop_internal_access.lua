@@ -1,0 +1,57 @@
+-- Borrow internal planar access using the gate's prerequisites, not zone flags.
+local M = {};
+
+function M.HasFlags(qglobals, gate)
+    if gate == "solro" then
+        return qglobals.sol_room == "11111" and qglobals.zeks == "7";
+    elseif gate == "crypt" then
+        return qglobals.bertox_key ~= nil;
+    elseif gate == "seventh" then
+        return qglobals.seventh ~= nil;
+    elseif gate == "tylis" then
+        return qglobals.tylis ~= nil;
+    end
+    return false;
+end
+
+local function Qualified(client, gate)
+    return M.HasFlags(eq.get_qglobals(client), gate)
+        or (gate == "seventh" and client:GetItemIDAt(0) == 31599);
+end
+
+function M.CanRaidWill(client, gate)
+    if not eq.get_data or eq.get_data("pop_alt_access_enabled") ~= "1" then return false; end
+    local raid = client:GetRaid();
+    if not raid or not raid.valid or not raid:IsRaidMember(client:GetName()) then
+        return false;
+    end
+
+    -- Match the native percentage setting (atoi parsing, default 85).
+    local configured = eq.get_data("pop_raid_flagged_percent") or "";
+    local percent = tonumber(configured:match("^%s*([+-]?%d+)")) or 0;
+    if percent < 1 or percent > 100 then percent = 85; end
+
+    -- Count the entire roster in the denominator. Lua only exposes clients in
+    -- this zone: absent members cannot supply flags or shrink the denominator.
+    local total = raid:RaidCount();
+    if total <= 0 then return false; end
+    local qualified = 0;
+    for i = 0, 71 do
+        local member = raid:GetMember(i);
+        if member and member.valid and Qualified(member, gate) then
+            qualified = qualified + 1;
+        end
+    end
+    return qualified * 100 >= total * percent;
+end
+
+-- These six portals also serve ordinary trials. Borrowers opt in through the
+-- Tribunal's knowledge dialogue; a live ratio check is still required on use.
+M.SeventhRequest = "pop_seventh_raid_willing_until";
+function M.CanUseSeventhPortal(client)
+    if client:GetItemIDAt(0) == 31599 then return true; end
+    local deadline = tonumber(client:GetEntityVariable(M.SeventhRequest)) or 0;
+    return deadline > eq.clock() and M.CanRaidWill(client, "seventh");
+end
+
+return M;

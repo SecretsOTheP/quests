@@ -1,10 +1,12 @@
+local InternalAccess = require("pop_internal_access");
+
 function event_click_door(e)
 	local id = e.door:GetDoorID();
 
 	if ( id == 7 ) then
 	
 		local qglobals = eq.get_qglobals(e.self);
-		if ( qglobals.bertox_key ) then
+		if ( qglobals.bertox_key or InternalAccess.CanRaidWill(e.self, "crypt") ) then
 		
 			e.self:MovePC(200, 0, -16, -290, 128*2);
 			
