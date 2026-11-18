@@ -28,11 +28,7 @@ function event_say(e)
 
 		if ( e.message:findi("hail") and flags < FLAG_LIMIT ) then 
 		
-			if ( not qglobals.bertox_key ) then
-                ProjectionEligibility.Notice(e.self, "bertox_key_" .. e.other:CharacterID(), "REJECT: " .. e.other:GetName() .. " lacks bertox_key.");
-				return;
-			end
-			
+			-- Carprin's key gates entry; eligible raid-willed participants still earn kill credit.
 			local fuirstel = tonumber(qglobals.fuirstel or 0);
 			
 			if ( fuirstel == 3 ) then

@@ -166,17 +166,17 @@ for _,spec in ipairs(specs)do
  check(not rewarded(capped,spec),spec[1].." existing reward cap cannot reset on reload");
 end
 w=world();killer=w:client(1,100);n=w.module.Spawn(200269,0,0,0,0,0,0,killer);local h=w:handler("codecay/A_Planar_Projection.lua",n);
-killer.globals.fuirstel="3";h.hail(killer);check(killer.globals.fuirstel=="3","Bertox key still required");
-killer.globals.bertox_key="1";h.hail(killer);check(killer.globals.fuirstel=="4","Bertox valid prerequisite path grants credit");
+killer.globals.fuirstel="3";h.hail(killer);check(killer.globals.fuirstel=="4","Bertox grants earned credit without the borrowed entrance key");
+check(not killer.globals.bertox_key,"Bertox reward does not grant the missing entrance key");
 local before=w.module.Count(n);h.hail(killer);check(w.module.Count(n)==before,"duplicate Bertox hail consumes no additional credit");
 -- Pending checklist flags must also be idempotent when prerequisites are missing.
 local pending={
- {"codecay/A_Planar_Projection.lua",{bertox_key="1"},1},
+ {"codecay/A_Planar_Projection.lua",{},1},
  {"hohonorb/A_Planar_Projection.lua",{},2},
  {"nightmareb/A_Planar_Projection.lua",{},1},
  {"podisease/A_Planar_Projection.lua",{},2},
  {"potorment/A_Planar_Projection.lua",{},1},
- {"solrotower/A_Planar_Projection.lua",{sol_room="11111"},1},
+ {"solrotower/A_Planar_Projection.lua",{},1},
  {"potactics/214322.lua",{},1},
  {"potactics/214323.lua",{},1},
  {"potactics/214324.lua",{},1},
