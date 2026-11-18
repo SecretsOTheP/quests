@@ -1,3 +1,5 @@
+local ChamberAccess = require("solro_chamber_access");
+
 function event_click_door(e)
 	local door_id = e.door:GetDoorID();
 
@@ -5,11 +7,12 @@ function event_click_door(e)
 	
 		local qglobals = eq.get_qglobals(e.self);
 		local pass = true;
+		local borrowed = not ChamberAccess.HasFlags(qglobals) and ChamberAccess.CanRaidWill(e.self);
 		
-		if ( not qglobals.sol_room or qglobals.sol_room ~= "11111" ) then
+		if ( not borrowed and (not qglobals.sol_room or qglobals.sol_room ~= "11111") ) then
 			e.self:Message(0, "The lava runes scorch your skin as you run your hand across them.");
 			pass = false;
-		elseif ( not qglobals.zeks or qglobals.zeks ~= "7" ) then
+		elseif ( not borrowed and (not qglobals.zeks or qglobals.zeks ~= "7") ) then
 			e.self:Message(0, "The runes of lava begin to radiate, the knowledge of passing through slips through your mind but is lost.  The lack of experience and a warring spirit prevents your passage.");
 			pass = false;
 		end
