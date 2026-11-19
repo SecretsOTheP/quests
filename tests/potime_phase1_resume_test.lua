@@ -2,11 +2,11 @@
 local source = arg[1] or "potimeb/223077.lua";
 package.path = "lua_modules/?.lua;"..package.path;
 local NOW = 1800000000;
-local function fixture(p1, p2, p3, deadline, checkpoint)
+local function fixture(p1, p2, p3, deadline, checkpoint, p4, p5, p6)
     local globals = {
         time_guild_55001="53", time_expires_55001=tostring(NOW+583200),
         time_cycle_55001=NOW..";"..(NOW+583200)..";"..(checkpoint and "1" or "0"),
-        time_kills_55001=table.concat({p1,p2 or "00000",p3 or string.rep("0",18),"0000","0000","0"},";")
+        time_kills_55001=table.concat({p1,p2 or "00000",p3 or string.rep("0",18),p4 or "0000",p5 or "0000",p6 or "0"},";")
     };
     local values={};
     for i=1,12 do values[i]=tostring(math.floor((deadline or NOW+10000)/100)); end
@@ -92,4 +92,32 @@ assert(tonumber(g.time_timers_55001:match("^[^;]+"))*100==NOW+43200,"normal kill
 local saved=g.time_timers_55001;
 env.SetBossKilled(1,2);
 assert(g.time_timers_55001==saved,"later kill restarted phase timer");
+-- Once P4 is earned, P1 is skipped regardless of its kills or 12-hour timer.
+-- Exercise every P1 mask, including the player's 01000 save, before/after expiry,
+-- and resume at the first remaining god phase without rewriting loot lockouts.
+local cases = 0;
+for mask=0,31 do
+    local p1="";
+    for bit=4,0,-1 do p1=p1..tostring(math.floor(mask/2^bit)%2); end
+    for _, deadline in ipairs({NOW-100,NOW+10000}) do
+        for _, phase in ipairs({4,5,6}) do
+            local p4=phase==4 and "1110" or "1111";
+            local p5=phase<=5 and "0000" or "1111";
+            local env,g,t,s,c=fixture(p1,"11111",string.rep("1",18),deadline,true,p4,p5,"0");
+            local kills,timers,cycle=g.time_kills_55001,g.time_timers_55001,g.time_cycle_55001;
+            assert(kills:sub(1,5)==(deadline <= NOW and "00000" or p1),"normal P1 expiry bookkeeping changed");
+            env.TryStartTrials();
+            for i=1,5 do assert(not t["trial"..i.."start"],"checkpoint queued P1 trial"); end
+            env.event_timer({timer="phase1"});
+            assert(#s==1 and s[1][2]==phase*100+1,"checkpoint resumed incorrect god phase");
+            assert(c[#c][4]=="456;55001;"..phase,"Time A checkpoint route incorrect");
+            assert(not t.check_trial_start and not t.dialog,"checkpoint still running early phases");
+            assert(g.time_kills_55001==kills and g.time_timers_55001==timers and g.time_cycle_55001==cycle,"checkpoint changed lockouts");
+            env.event_timer({timer="phase1"});
+            assert(#s==1,"checkpoint startup repeated");
+            cases=cases+1;
+        end
+    end
+end
+print("PASS: "..cases.." P4-checkpoint cases skip P1-P3 across all P1 masks and expired/live timers; god lockouts and Time A routing preserved");
 print("PASS: cleared P1 resumes at P2 or the saved P4 checkpoint; no replay; partial clears preserved; expiry restores bosses; saved and normal kill timers unchanged");

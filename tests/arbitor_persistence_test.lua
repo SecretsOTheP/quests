@@ -84,12 +84,12 @@ for a = 1, 4 do for b = 1, 4 do for c = 1, 4 do for d = 1, 4 do
 	end
 end end end end
 
-do
+for _, hours in ipairs({22, 24, 25, 36, 47}) do
 	local w = world();
 	w:load(72):signal(1);
-	w.now = w.now + 22 * 3600;
+	w.now = w.now + hours * 3600;
 	finish(w:load(72), {2, 3, 4});
-	check(w.spawns == 1, "overnight 22-hour visit gap still qualifies");
+	check(w.spawns == 1, tostring(hours).."-hour visit gap survives unload without redoing rings");
 end
 
 do
@@ -106,15 +106,15 @@ end
 do
 	local w = world();
 	w:load(72):signal(1);
-	w.now = w.now + 86400;
+	w.now = w.now + 172800;
 	finish(w:load(72), {2, 3, 4});
-	check(w.spawns == 1, "exact 24-hour boundary retains original eligibility");
+	check(w.spawns == 1, "exact 48-hour boundary remains eligible");
 end
 
 do
 	local w = world();
 	w:load(72):signal(1);
-	w.now = w.now + 86401;
+	w.now = w.now + 172801;
 	finish(w:load(72), {2, 3, 4});
 	check(w.spawns == 0, "expired bucket cannot supply old credit");
 	w:load(72):signal(1);
@@ -124,9 +124,9 @@ end
 do
 	local w = world();
 	w:load(72):signal(1);
-	w.now = w.now + 23 * 3600;
+	w.now = w.now + 47 * 3600;
 	w:load(72):signal(2);
-	check(w.buckets[key(72)].value == "1000000|1082800|0|0", "later kill preserves earlier timestamp");
+	check(w.buckets[key(72)].value == "1000000|1169200|0|0", "later kill preserves earlier timestamp");
 	w.now = w.now + 3601;
 	finish(w:load(72), {3, 4});
 	check(w.spawns == 0, "refreshing bucket expiry does not extend earlier ring credit");
@@ -134,14 +134,14 @@ end
 
 for _, invalid in ipairs({"garbage", "1|2|3", "1|2|3|4|5", "-1|0|0|0", "nan|0|0|0"}) do
 	local w = world();
-	w.buckets[key(72)] = {value = invalid, expires = w.now + 86401};
+	w.buckets[key(72)] = {value = invalid, expires = w.now + 172801};
 	finish(w:load(72), {2, 3, 4});
 	check(w.spawns == 0, "malformed saved progress cannot unlock Arbitor");
 end
 
-for _, timestamp in ipairs({1000001, 913599}) do
+for _, timestamp in ipairs({1000001, 827199}) do
 	local w = world();
-	w.buckets[key(72)] = {value = timestamp.."|1000000|1000000|1000000", expires = w.now + 86401};
+	w.buckets[key(72)] = {value = timestamp.."|1000000|1000000|1000000", expires = w.now + 172801};
 	w:load(72);
 	check(w.spawns == 0, "future or expired saved timestamp cannot unlock Arbitor");
 end
@@ -181,7 +181,7 @@ end
 do
 	local w = world(); w.failure = "nil";
 	local controller = w:load(72); finish(controller);
-	w.now = w.now + 86401; controller:retry();
+	w.now = w.now + 172801; controller:retry();
 	check(w.attempts == 1 and not controller:hasRetry() and w.depops == 0, "retry stops when original completion window expires");
 end
 
@@ -189,7 +189,7 @@ do
 	local w = world(); local controller = w:load(72);
 	finish(controller);
 	local born = w.npcs[72].born;
-	w.buckets[key(72)] = {value = "1000000|1000000|1000000|1000000", expires = w.now + 86401};
+	w.buckets[key(72)] = {value = "1000000|1000000|1000000|1000000", expires = w.now + 172801};
 	w.now = w.now + 60; w:load(72);
 	check(w.spawns == 1 and w.npcs[72].born == born, "existing Arbitor is not duplicated or given a fresh lifetime");
 end
@@ -198,7 +198,7 @@ for _, invalid in ipairs({"corpse", "dead", "zero_id"}) do
 	local w = world(); finish(w:load(72));
 	local npc = w.npcs[72];
 	if invalid == "corpse" then npc.corpse = true; elseif invalid == "dead" then npc.hp = 0; else npc.id = 0; end
-	w.buckets[key(72)] = {value = "1000000|1000000|1000000|1000000", expires = w.now + 86401};
+	w.buckets[key(72)] = {value = "1000000|1000000|1000000|1000000", expires = w.now + 172801};
 	local controller = w:load(72);
 	check(w.depops == 1 and w.buckets[key(72)] ~= nil and controller:hasRetry(), "nonliving NPC does not consume completions");
 end

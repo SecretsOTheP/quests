@@ -849,14 +849,15 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 				eq.debug("Critical Error: All instance qglobals are in use.");
 				return;
 			end
-			-- Saved kills control shadows on partial retries and skip a fully cleared P1.
+			-- The P4 checkpoint skips all early phases for the rest of this cycle.
+			-- Before that checkpoint, saved P1 kills still control retries and shadows.
 			zonePhase = 1;
 			zoneRaidID = raidID;
 			phase3Completed = false;
 			phaseAdvancePending, forceClose = false, false;
 			phaseOneStarted = false;
 			emptySince = nil;
-			local phaseOneUp = CheckPhaseStatus(1);
+			local phaseOneUp = not guildCycle.checkpoint and CheckPhaseStatus(1);
 			eq.set_timer("cycle_end", math.max(1, guildCycle.ends - os.time()) * 1000);
 			SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
 			SetInstanceGlobals();
@@ -1247,7 +1248,7 @@ function PhaseDialog()
 	eq.set_timer("fail", (failTime - now)*1000);
 	SetFailWarningTimer();
 	if ( zonePhase == 1 and guildCycle.checkpoint ) then
-		eq.zone_emote(0, "Phase 1 is complete. Your saved progress opens the way to Phase "..nextPhase..".");
+		eq.zone_emote(0, "Your guild has already cleared Phases 1 through 3 this cycle. Your saved progress opens the way to Phase "..nextPhase..".");
 		PhaseStart();
 		return;
 	end
@@ -1346,9 +1347,6 @@ function SetupPhaseOne()
 	local phaseOneCleared = true;
 	for _, state in ipairs(trialStates) do
 		if ( state ~= 2 ) then phaseOneCleared = false; break end
-	end
-	if ( not phaseOneCleared and guildCycle and guildCycle.checkpoint ) then
-		eq.zone_emote(0, "Your guild has already cleared Phase 3 this cycle. After Phase 1 you will continue against the remaining gods.");
 	end
 	zonePhase = 1;
 	failTime = os.time() + 3601;
