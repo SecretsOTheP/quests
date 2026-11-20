@@ -3,6 +3,8 @@
 local M = {};
 local PULSE = "air_ring_recovery";
 local CYCLE = 237600; -- existing 66-hour island repop
+local Trash = require("air_trash_retention");
+local CLEAR_BASE = Trash.BASE; -- shared with travel trash on the same island
 local RETRY = 900; -- 15 minutes after an unfinished attempt times out
 local ATTEMPT = 10800; -- TAKP three-hour ring window; Dust waves also have a one-hour limit
 local IDLE = 9000; -- existing 2.5-hour Avatar budget, paused in combat
@@ -58,6 +60,9 @@ function M.install(name, opts)
     local key = "poair-ring-v1-"..name:lower().."-"..eq.get_zone_guild_id();
     local s, initialized, controller, busy, missing = nil, false, nil, false, {};
     local check_zone_restore, controller_bound=false, false;
+    -- Separate from encounter state: retrying a ring must not erase a paid-for
+    -- clear, and extending trash must never extend boss/Avatar loot cooldowns.
+    local trash=Trash.new(name:lower());
     local erratics_enabled, inherited_hate = nil, {};
     local move={-452,640,437.576};
     local island={}; for _, id in ipairs(opts.island) do island[id]=true; end
@@ -68,6 +73,8 @@ function M.install(name, opts)
     local function tagged(n)
         return n and n.valid and n:GetEntityVariable(tag.."_cycle") == tostring(s.cycle);
     end
+    local function held(id) return trash:Held(id); end
+    local function suppress_trash(n) trash:Suppress(n); end
     local function save()
         local fields={"1",s.cycle,s.phase,s.deadline,s.stage_at,s.dust_end,s.remaining,
             s.clock,s.paused,s.consumed,s.real,s.position,list(s.island),list(s.dead),s.traps,s.add_loc};
@@ -130,7 +137,7 @@ function M.install(name, opts)
             debug("restored "..s.phase.."; island reset remaining "..math.max(0,s.deadline-os.time()).." seconds");
         else
             if raw~="" then debug("invalid saved state; using a fresh island cycle"); end
-            s=new_state(os.time(),1080+c.offset); save();
+            s=new_state(os.time(),CLEAR_BASE+c.offset); save();
         end
     end
     local function enable_erratics(on)
@@ -230,24 +237,35 @@ function M.install(name, opts)
     end
     local function reset_island()
         cleanup({}); enable_erratics(false);
-        for _,id in ipairs(opts.island) do local p=point(id); if p and p.valid then p:Repop(); end end
+        for _,id in ipairs(opts.island) do local p=point(id); if p and p.valid and not held(id) then p:Repop(); end end
         if name=="Dust" and (live(find(c.boss)) or live(find(c.marker))) then
             local p=point(c.boss_point); if p and p.valid then p:Repop(); end
         end
-        s=new_state(math.max(os.time(),s.cycle+1),1080); missing={}; save();
-        debug("island reset; new 18-minute clearing window");
+        s=new_state(math.max(os.time(),s.cycle+1),CLEAR_BASE); missing={};
+        if os.time()<trash.deadline then
+            s.deadline=trash.deadline;
+            for id in pairs(trash.dead) do if island[id] then s.island[id]=true; end end
+        end
+        save();
+        debug("ring reset; retained unexpired trash clear");
     end
     local function ensure()
         if busy then return; end
         busy=true;
-        load(); avatar_clock();
+        load(); avatar_clock(); trash:Refresh();
+        if s.phase=="island" and os.time()>=s.deadline and trash.first>=s.deadline then
+            reset_island(); -- travel kills after expiry belong to a new clear
+        end
+        if s.phase=="island" and os.time()<trash.deadline then
+            s.deadline=math.max(s.deadline,trash.deadline);
+        end
         if check_zone_restore then
             check_zone_restore=false;
             local same_zone=live(controller) and controller:GetEntityVariable(tag.."_controller_cycle")==tostring(s.cycle);
             -- Reloaded quests keep the controller and its entity variables.
-            -- A fresh zone resets unfinished rings instead of replaying waves.
-            -- Earned Avatars and completed cooldowns are preserved separately.
-            if not same_zone and s.phase~="avatar" and s.phase~="cooldown" and s.phase~="failed" then
+            -- A fresh zone restarts unfinished waves but retains paid-for trash.
+            -- Partial clearing, earned Avatars and cooldowns retain their state.
+            if not same_zone and s.phase~="island" and s.phase~="avatar" and s.phase~="cooldown" and s.phase~="failed" then
                 reset_island();
                 debug("zone unload interrupted the ring; reset for a fresh attempt");
             end
@@ -265,6 +283,26 @@ function M.install(name, opts)
             end
         end
         if os.time()>=s.deadline and s.phase~="avatar" then reset_island(); end
+        -- Suppress saved native trash even if a fresh zone/Spawn2 loaded it.
+        for _,id in ipairs(opts.island) do
+            local p=point(id); if p and p.valid then suppress_trash(p:GetNPC()); end
+        end
+        -- A failed/unloaded event can retry its waves without making the raid
+        -- clear the same protected trash again. Existing attempt budgets apply.
+        if s.phase=="island" then
+            local cleared=true;
+            for _,id in ipairs(opts.island) do
+                local p=point(id);
+                if not s.island[id] or not p or not p.valid or live(p:GetNPC()) then cleared=false; break; end
+            end
+            if cleared then
+                s.deadline=os.time()+CYCLE;
+                if name=="Wind" then transition("priest");
+                elseif name=="Smoke" then transition("champions");
+                elseif name=="Mist" then transition("fire");
+                else s.dust_end=os.time()+3600; transition("arch1"); end
+            end
+        end
         local rows=expected(); cleanup(rows);
         enable_erratics(active_dust());
         local present={};
@@ -355,12 +393,17 @@ function M.install(name, opts)
         return true;
     end
     local function island_death(e)
-        load();
+        load(); trash:Refresh();
+        if s.phase=="island" and os.time()>=s.deadline and trash.first>=s.deadline then ensure();return;end
+        if s.phase=="island" and os.time()<trash.deadline then s.deadline=math.max(s.deadline,trash.deadline); end
         local id=e.self:GetSpawnPointID();
         if s.phase~="island" or not island[id] or e.self:GetEntityVariable(tag.."_native_counted")~="" then return; end
+        -- Do not let a delayed death callback revive an already expired clear.
+        if os.time()>=s.deadline then ensure(); return; end
         e.self:SetEntityVariable(tag.."_native_counted",tostring(s.cycle));
         s.island[id]=true; move={e.self:GetX(),e.self:GetY(),e.self:GetZ()};
-        s.deadline=os.time()+1080;
+        trash:Record(id);
+        s.deadline=trash.deadline;
         local cleared=true;
         for _,pid in ipairs(opts.island) do
             local p=point(pid);
@@ -461,6 +504,7 @@ function M.install(name, opts)
     for _,npc in ipairs(c.natives) do
         -- Mist's wizard retains its separate Ardent spawn on EVENT_DEATH.
         if not (name=="Mist" and npc==215450) then reg(Event.death,npc,function() end); end
+        reg(Event.spawn,npc,function(e) trash:Refresh(); suppress_trash(e.self); end);
         reg(Event.death_complete,npc,island_death);
     end
     for _,npc in ipairs(c.tracked) do
