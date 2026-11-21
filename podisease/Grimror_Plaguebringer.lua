@@ -18,7 +18,7 @@ function event_say(e)
 	end
 
 	if(e.message:findi("hail")) then
-		e.self:Say("Grimror no have time ta talk. Gots stuffs ta do.");
+		e.self:Say("Grimror gots alchemy " .. eq.say_link("stuff", false, "stuffs") .. " ta gadder. Maybe yuuz keen help Grimror?");
 	elseif(e.message:findi("stuff")) then
 		e.self:Say("I wuz sent here by Zulort to, err. . . To gadder some alchemy type stuffs. Him have big plan, and need me to travel lots.");
 	elseif(e.message:findi("big plan")) then
@@ -43,14 +43,11 @@ function event_trade(e)
 	
 	if(item_lib.check_turn_in(e.self, e.trade, {item1 = 9290,item2 = 9291,item3 = 9292,item4 = 9293},1,text)) then
 		e.self:Say("Yuuz dun guud! But Grimror keent geeve you anyting, but Grimror have dis. Grimror also have seekret information. Krypt of Deekay in in here. Dunt tink yuuz wanna go in dere. Dere be mean old rotten keengs in dere, yuuz dunt want ta mess wif dem, dere also be udder sortz uf baddies in dere, be carefuul if yuuz goin dat way. I hurd stories dat Bertoshulus es in dere too, Grimror even saw him in here one time. In dis place yuuz only gots ta worry about Grummus, him fatter dan Grimror, got theek skin too. Him have key ta get inna de Krypt,but Grimror knew da seekret way een. Dat bracer keen make da portil into de Krypt tink dat yuuz belongz dere. Guud barshin!");
-		-- if(not e.other:KeyRingCheck(9294)) then
-			-- e.other:KeyRingAdd(9294);
-			-- Confirmed Live Experience
-		e.other:QuestReward(e.self,{itemid = 9294,exp = 1});
-			--if(e.other:HasZoneFlag(200) == false) then
-			--	e.other:SetZoneFlag(200);
-			--end
-		-- end
+        -- Register alternate entrance access on completion; no cursor/key dance required.
+        -- This does not grant the Grummus progression global or any boss credit.
+        if not e.other:KeyRingCheck(9294) then e.other:KeyRingAdd(9294); end
+        if not e.other:HasZoneFlag(200) then e.other:SetZoneFlag(200); end
+        e.other:QuestReward(e.self,{itemid = 9294,exp = 1});
 	end
 	item_lib.return_items(e.self, e.other, e.trade)
 end
