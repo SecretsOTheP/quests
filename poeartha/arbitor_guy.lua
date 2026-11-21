@@ -1,4 +1,4 @@
-local WINDOW = 86400;
+local WINDOW = 48 * 3600; -- Four-ring completion window, not the ring respawn timer.
 local RETRY_TIMER = "arbitor_spawn_retry";
 local killTimes = {};
 local loaded, completed, retryPending = false, false, false;
@@ -38,7 +38,7 @@ local function SaveProgress(now)
 	end
 	if stateKey then
 		-- Original timestamps enforce each ring's window even if a later kill
-		-- refreshes the bucket's expiry. Include the exact 24-hour boundary.
+		-- refreshes the bucket's expiry. Include the exact 48-hour boundary.
 		eq.set_data(stateKey, table.concat(values, "|"), tostring(WINDOW + 1));
 	end
 end
@@ -52,7 +52,7 @@ local function TrySpawn()
 			if retryPending then
 				eq.stop_timer(RETRY_TIMER);
 				retryPending = false;
-				eq.debug("Arbitor spawn retry stopped: ring "..i.." is outside the 24-hour window");
+				eq.debug("Arbitor spawn retry stopped: ring "..i.." is outside the 48-hour window");
 			end
 			return;
 		end

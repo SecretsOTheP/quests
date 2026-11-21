@@ -62,6 +62,7 @@ local function world(name,guild)
  end
  function w:point(id,kind)
   local p={valid=true,id=id,kind=kind,enabled=true};self.points[id]=p;
+  function p:RespawnTimer() return 1080;end
   function p:GetNPC() return self.npc and self.npc.valid and self.npc or {valid=false};end
   function p:Repop()
    if self.npc then self.npc.valid=false;end
@@ -126,9 +127,11 @@ local function world(name,guild)
   function elist:IsMobSpawnedByNpcTypeID(id) return w:find(id).valid;end
   local eq={
    get_zone_guild_id=function() return w.guild;end,
+   get_rule=function() return w.controls==false and "false" or "true";end,
+   update_spawn_timer=function(id,ms) w.points[id].normal_timer=ms;w.timer_updates=(w.timer_updates or 0)+1;end,
    guild_one_raid_window_open=function() return false;end,
    get_entity_list=function() return elist;end,
-   get_data=function(k) w.reads=w.reads+1;return w.buckets[k] or "";end,
+   get_data=function(k) w.reads=w.reads+1;if k=="guild_instance_respawns:"..w.guild then return w.restored and "1" or "0";end;return w.buckets[k] or "";end,
    set_data=function(k,v) w.writes=w.writes+1;w.buckets[k]=v;end,
    set_timer=function(k,v,n) w.timers[k..":"..(n and n.id or 0)]=v;end,
    stop_timer=function() end,pause_timer=function() end,resume_timer=function() end,
@@ -148,7 +151,7 @@ local function world(name,guild)
   local env={eq=eq,Event=Event,os={time=function() return w.now;end}};
   setmetatable(env,{__index=_G});
   env.require=function(module)
-   check(module=="air_ring_recovery","only recovery dependency loaded");
+   check(module=="air_ring_recovery" or module=="air_trash_retention" or module=="air_trash_spawns","only Air dependencies loaded");
    return setfenv(assert(loadfile(root.."/lua_modules/"..module..".lua")),env)();
   end
   setfenv(assert(loadfile(root.."/poair/encounters/"..name..".lua")),env)();env.event_encounter_load({});w.env=env;
@@ -219,7 +222,7 @@ for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
  check(not w:role("avatar"),name.." killed Avatar is never restored");
  check(tonumber(w:state()[4])==finish,name.." completion keeps original island deadline");
  w.now=finish;w:pulse();check(w:phase()=="island",name.." original deadline permits next island cycle");
- check(tonumber(w:state()[4])==finish+1080,name.." normal clearing timer remains 18 minutes");
+ check(tonumber(w:state()[4])==finish+3600,name.." new clearing window starts at one hour");
  for _,id in ipairs(w.island) do check(w.points[id].npc.valid and w.points[id].npc.hp>0,name.." island repopped");end
 end
 
@@ -252,8 +255,8 @@ end
 do
  local w=world("Smoke");w:kill_island(20);
  local p=w.points[w.island[1]];p:Repop();
- w:kill(w.points[w.island[21]].npc);check(w:phase()=="island","respawned native prevents a premature clear");
- w:kill(p.npc);check(w:phase()=="champions","re-killing a respawned native can finish the clearing stage");
+ check(not p.npc.valid,"protected native is suppressed on spawn");
+ w:kill(w.points[w.island[21]].npc);check(w:phase()=="champions","saved native deaths allow normal completion");
 end
 for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
  local w=world(name,1);
@@ -262,16 +265,16 @@ for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
  local g2=world(name);g2:kill_island();local other=world(name,73);other.buckets=g2.buckets;other:load(false);
  check(other:phase()=="island","saved progress is isolated to its guild");
 end
--- Approved policy: unfinished rings reset on zone unload; completed cooldowns
--- and earned Avatar handoffs above are exempt from that fresh-attempt reset.
+-- Unfinished waves restart on unload, but unexpired trash clear survives.
+-- Completed cooldowns and earned Avatar handoffs retain their existing policy.
 for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
  local w=world(name);w:kill_island();local old_cycle=w:state()[2];
  w:load(true,60);w:pulse();
- check(w:phase()=="island" and w:state()[2]~=old_cycle,name.." unload resets the unfinished ring");
- check(w:state()[13]=="" and w:state()[14]=="",name.." fresh attempt clears old counters");
- check(tonumber(w:state()[4])==w.now+1080,name.." fresh attempt uses original 18-minute clearing timer");
+ check(w:phase()==w.c.first and w:state()[2]~=old_cycle,name.." unload restarts waves with cleared trash");
+ check(w:state()[13]~="" and w:state()[14]=="",name.." fresh attempt retains native deaths only");
+ check(tonumber(w:state()[4])==w.now+237600,name.." restarted waves retain the existing event cycle");
  check(w:find(w.c.marker).valid and w.consumes==0,name.." reset does not consume availability");
- for _,id in ipairs(w.island) do check(w.points[id].npc.valid and w.points[id].npc.hp>0,name.." fresh native island respawns");end
+ for _,id in ipairs(w.island) do check(not w.points[id]:GetNPC().valid,name.." cleared native remains absent after unload");end
  w:kill_island();to_boss(w);w:kill_role("boss");
  check(w:role("avatar")~=nil,name.." reset ring can complete normally");
 end
@@ -280,7 +283,7 @@ for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
  -- A forced repop replaces the controller within the same Lua VM.
  local controller=w:find(w.c.controller);controller.valid=false;
  local replacement=w:new_npc(w.c.controller,nil,nil,true);w:pulse();
- check(w:phase()=="island",name.." controller replacement resets the unfinished attempt");
+ check(w:phase()==w.c.first,name.." controller replacement restarts waves without cleared trash");
  w:kill_island();to_boss(w);w:kill_role("boss");
  local avatar=w:role("avatar");w.now=w.now+9000;w:pulse();
  check(w:phase()=="cooldown" and not avatar.valid,name.." idle expiry depops Avatar without restoring it");
@@ -306,7 +309,7 @@ for _,name in ipairs({"Dust","Wind","Smoke","Mist"}) do
  w:load(true,100);w:pulse();
  check(w:phase()=="failed",name.." zone unload does not bypass cooldown");
  w.now=started+limit+899;w:pulse();check(w:phase()=="failed",name.." no early retry");
- w.now=started+limit+900;w:pulse();check(w:phase()=="island",name.." retry available at exact boundary");
+ w.now=started+limit+900;w:pulse();check(w:phase()==w.c.first,name.." retry available without another trash clear at exact boundary");
  w:kill_island();to_boss(w);w:kill_role("boss");w:kill_role("avatar");
  check(w:phase()=="cooldown",name.." retry can succeed");
  check(tonumber(w:state()[4])==w.now+237600,name.." successful retry retains 66h");
@@ -315,7 +318,7 @@ for _,name in ipairs({"Dust","Wind","Smoke","Mist"}) do
  -- A delayed callback uses the actual deadline, not callback time.
  local late=world(name);late:pulse();late:kill_island();
  local start=late.now;late.now=start+limit+901;late:pulse();
- check(late:phase()=="island",name.." late callback does not extend retry");
+ check(late:phase()==late.c.first,name.." late callback does not extend retry");
 
  -- A kill arriving after timeout cannot earn an Avatar before the next pulse.
  local stale=world(name);stale:pulse();stale:kill_island();to_boss(stale);
@@ -366,3 +369,69 @@ old.buckets[old.key]=table.concat(fields,"|");old:load(false);old:pulse();
 check(tonumber(old:state()[4])==old.now+800,"old failed save capped at failure plus 15m");
 old:load(false,100);old:pulse();check(tonumber(old:state()[4])==old.now+700,"old failed migration is idempotent");
 print("Additional Air retry checks passed: "..(checks-before).." (includes callback registrations)");
+
+-- Trash extension is independent of encounter timers and persists across zones.
+local trash_checks=checks;
+for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
+ local w=world(name);w:pulse();
+ check(tonumber(w:state()[4])>=w.now+3600,name.." initial clear has one hour");
+ w.now=w.now+100;
+ local first=w.now;local dead=w.points[w.island[1]].npc;
+ w:kill(dead);
+ check(tonumber(w:state()[4])==first+3600+2700,name.." first kill adds 45m to one-hour base");
+ w.now=w.now+300;w:kill(w.points[w.island[2]].npc);
+ local deadline=tonumber(w:state()[4]);local saved=w.buckets[w.key.."-trash"];
+ check(deadline==first+3600+2*2700,name.." second kill adds time instead of refreshing from now");
+ w:dispatch(Event.death_complete,dead);
+ check(w.buckets[w.key.."-trash"]==saved,name.." duplicate death cannot extend clear");
+ local unrelated=w:new_npc(w.c.native);w:kill(unrelated);
+ check(w.buckets[w.key.."-trash"]==saved,name.." unrelated native cannot extend clear");
+ w:load(true,120);w:pulse();
+ check(tonumber(w:state()[4])==deadline,name.." partial clear retains exact deadline after unload");
+ for i=1,2 do
+  local point=w.points[w.island[i]];point:Repop();
+  check(not point.npc.valid,name.." native Spawn2 repop remains suppressed");
+ end
+ check(w.points[w.island[3]]:GetNPC().valid,name.." unearned trash remains alive");
+ check(w.buckets[w.key.."-trash"]==saved,name.." reload never grants extra time");
+ w.now=deadline-1;w:pulse();check(w:state()[13]~="",name.." saved deaths remain until expiry");
+ w.now=deadline;w:pulse();check(w:phase()=="island" and w:state()[13]=="",name.." exact expiry starts a fresh clear");
+ for _,id in ipairs(w.island) do check(w.points[id]:GetNPC().valid,name.." expired clear repops native trash");end
+ w:kill(w.points[w.island[1]].npc);
+ check(tonumber(w:state()[4])==w.now+6300,name.." next clear gets its own first-kill anchor");
+end
+for _,name in ipairs({"Wind","Dust"}) do
+ local w=world(name);w:pulse();local first=w.now;
+ w:kill_island(#w.island-1);
+ local deadline=tonumber(w:state()[4]);
+ check(deadline==first+64800,name.." many distinct kills cap at exactly 18 hours");
+ w:load(true,3600);w:pulse();
+ check(tonumber(w:state()[4])==deadline,name.." capped clear survives fresh zone");
+ w.now=deadline-1;w:pulse();check(w:phase()=="island",name.." cap does not auto-complete uncleared island");
+ w.now=deadline;w:pulse();
+ check(w:state()[13]=="",name.." cap expires even with one mob left");
+end
+print("PASS: "..(checks-trash_checks).." trash retention checks; "..checks.." total Air checks");
+
+-- Timekeeper modes change trash policy without resetting encounter/boss state.
+for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
+ local w=world(name);w.restored=true;w:pulse();
+ check(tonumber(w:state()[4])<=w.now+1080,"restored partial clear uses original 18 minutes");
+ w:kill_island(1);check(tonumber(w:state()[4])==w.now+1080,"normal native death refreshes 18-minute clear window");
+ local t=w.env.require("air_trash_retention").new(name:lower());check(t.deadline==0,"normal ring does not save extended hold");
+ w:kill_island();to_boss(w);local phase,deadline=w:phase(),w:state()[4];
+ w.env.require("air_trash_retention").restore_guild(w.guild);w:pulse();
+ check(w:phase()==phase and w:state()[4]==deadline,"restore leaves active boss and success deadline intact");
+ local boss=w:role("boss");check(boss and boss.valid,"restoration leaves existing boss alive");
+ w.restored=false;w:pulse();check(w:role("boss")==boss,"slowing does not duplicate boss");
+end
+for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
+ local w=world(name);w:kill_island(2);local t=w.env.require("air_trash_retention").new(name:lower());
+ check(t.deadline>w.now+1080,"slowed ring has extended clear");
+ w.restored=true;w.env.require("air_trash_retention").restore_guild(w.guild);w:pulse();
+ check(tonumber(w:state()[4])<=w.now+1080 and w:state()[13]=="","restore discards partial extended trash credit");
+ check(w.points[w.island[1]].normal_timer==1080000,"native ring trash receives normal countdown");
+ local writes=w.timer_updates;w:load(false);w:pulse();check(w.timer_updates==writes,"ring quest reload cannot refresh countdown");
+ w.restored=false;w:load(false);w:pulse();check(w.env.require("air_trash_retention").new(name:lower()).deadline==0,"slowing does not resurrect ring clear");
+end
+print("PASS: Air mode-switch regressions; "..checks.." total checks");

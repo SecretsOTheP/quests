@@ -143,8 +143,39 @@ local function Tag(n,r,slot)
 end
 local function BossPoint()local p=eq.get_entity_list():GetSpawnByID(COIRNAV_SPAWNID);return p and p.valid and p or nil;end
 local function GuardianPoint()local p=eq.get_entity_list():GetSpawnByID(GUARDIAN_SPAWNID);return p and p.valid and p or nil;end
+local function NativeBoss(n)
+    return Live(n) and n:GetNPCTypeID()==COIRNAV_TYPE and n:GetSpawnPointID()==COIRNAV_SPAWNID
+        and n:GetEntityVariable("coirnav_retired")~="1";
+end
 local function Boss()
-    local p=BossPoint();local n=p and p:GetNPC();return Live(n)and n or nil;
+    if eq.get_zone_guild_id()==1 then
+        -- A quake's newly admitted native boss always supersedes the old entity.
+        local p=BossPoint();local n=p and p:GetNPC();return NativeBoss(n)and n or nil;
+    end
+    local el=eq.get_entity_list();
+    -- A duplicate spawn can overwrite Spawn2's pointer. Prefer the already
+    -- tracked encounter boss before consulting that pointer.
+    local owned=el:GetNPCByID(bossID);
+    if (phase==0 or Active()) and NativeBoss(owned) then return owned;end
+    local p=BossPoint();local n=p and p:GetNPC();if NativeBoss(n)then return n;end
+    for _,id in ipairs(NPCIDs())do local candidate=el:GetNPCByID(id);if NativeBoss(candidate)then return candidate;end end
+end
+local function RetireBoss(n)
+    eq.stop_all_timers(n);n:SetEntityVariable("coirnav_retired","1");n:Depop(false);
+end
+local function ReconcileBoss()
+    local keep=Boss();if not keep then return;end
+    if eq.get_zone_guild_id()==1 then return keep;end
+    local el=eq.get_entity_list();
+    for _,id in ipairs(NPCIDs())do local n=el:GetNPCByID(id);
+        if NativeBoss(n)and n:GetID()~=keep:GetID()then
+            RetireBoss(n);Notice("duplicate-boss","WARN","Removed duplicate native Coirnav; retained encounter identity.");
+        end
+    end
+    -- NPC::Depop clears its Spawn2 pointer, even when it points at a different
+    -- duplicate. Rebind only after retiring duplicates; never create a new boss.
+    local p=BossPoint();if p then p:SetNPCPointer(keep);end
+    return keep;
 end
 local function OwnedBoss(n,death)
     return n and n.valid and n:GetNPCTypeID()==COIRNAV_TYPE and n:GetSpawnPointID()==COIRNAV_SPAWNID and
@@ -156,7 +187,9 @@ local function Cleanup(removeBoss)
         if Live(n)and ACTORS[n:GetNPCTypeID()]and n:GetSpawnPointID()==0 then eq.stop_all_timers(n);n:Depop();end
     end
     local guardian=GuardianPoint();if guardian then guardian:Disable();end
-    if removeBoss then local boss=Boss();if boss then eq.stop_all_timers(boss);boss:Depop();end end
+    if removeBoss then
+        for _,id in ipairs(NPCIDs())do local boss=el:GetNPCByID(id);if NativeBoss(boss)then RetireBoss(boss);end end
+    end
     records={};missing={};creatingSlot=nil;creatingLing=false;building=false;
 end
 local function ApplyCooldown()
@@ -174,6 +207,8 @@ local function ConfigureBoss(n)
     else n:SetSpecialAbility(24,0);n:SetSpecialAbility(25,0);n:SetSpecialAbility(35,0);n:SetBodyType(1,false);end
 end
 local function Ready(n,announce)
+    if not NativeBoss(n)then return;end
+    n=ReconcileBoss() or n;
     Cleanup(false);phase=0;started=0;deadline=0;waves=0;kills=0;nextWarning=1;nextLing=0;cooldownUntil=0;cleanupAt=0;bossID=n:GetID();ownState=true;released=false;cooldownArmed=false;
     ConfigureBoss(n);local g=GuardianPoint();if g then g:Enable();g:Repop();else Notice("guardian-point","ERROR","Guardian spawnpoint missing; ready supervision will retry.");end
     Save();if announce then RP("The reef stirs as Coirnav and his Guardian return. Vapor, ice and water gather once more beneath the will of the Triumvirate.");Log("READY","Coirnav and Guardian are ready for a fresh attempt.");end
@@ -273,11 +308,13 @@ local function BossDeath(e)
 end
 local function BossSpawn(e)
     ArmSupervisor();
-    EnsureInitialized();if e.self:GetSpawnPointID()~=COIRNAV_SPAWNID then return;end
+    EnsureInitialized();if not NativeBoss(e.self)then return;end
+    local canonical=ReconcileBoss();
+    if canonical and canonical:GetID()~=e.self:GetID()then return;end
     if eq.get_zone_guild_id()==1 then Ready(e.self,false);Log("QUAKE","Native Guild 1 Coirnav repop superseded old state.");
     elseif Active()then if not OwnedBoss(e.self,false)then Fail("Coirnav unexpectedly respawned during an active attempt.");end
     elseif phase==4 or phase==5 then
-        if Now()<cooldownUntil then e.self:Depop();ApplyCooldown();Notice("early-boss","WARN","Suppressed early Coirnav without extending cooldown.");else Ready(e.self,true);end
+        if Now()<cooldownUntil then RetireBoss(e.self);ApplyCooldown();Notice("early-boss","WARN","Suppressed early Coirnav without extending cooldown.");else Ready(e.self,true);end
     else Ready(e.self,false);end
 end
 local function GuardianDeath(e)
@@ -297,9 +334,11 @@ Initialize=function()
     if n and eq.get_zone_guild_id()==1 and(not saved or not Active()or not OwnedBoss(n,false))then Ready(n,false);Log("QUAKE","Native Guild 1 boss admitted a fresh encounter.");
     elseif saved and Active()then
         if not n or not OwnedBoss(n,false)then Fail("Reload found a missing/replaced Coirnav.");else ConfigureBoss(n);local g=GuardianPoint();if g then g:Disable();end;Expired();end
-    elseif saved and(phase==4 or phase==5)then if Now()>=cleanupAt then Cleanup(true);ApplyCooldown();end
+    elseif saved and(phase==4 or phase==5)then
+        if Now()>=cooldownUntil and n then Ready(n,false);
+        elseif Now()>=cleanupAt then Cleanup(true);ApplyCooldown();end
     elseif not saved and fallback and(fallback.phase==4 or fallback.phase==5)then
-        phase=fallback.phase;attempt=fallback.attempt;cooldownUntil=fallback.untilTime;cleanupAt=fallback.cleanupAt;ownState=true;records={};Save();if Now()>=cleanupAt then Cleanup(true);ApplyCooldown();end
+        phase=fallback.phase;attempt=fallback.attempt;cooldownUntil=fallback.untilTime;cleanupAt=fallback.cleanupAt;ownState=true;records={};Save();if Now()>=cooldownUntil and n then Ready(n,false);elseif Now()>=cleanupAt then Cleanup(true);ApplyCooldown();end
         Log("ERROR",why.."; retained recorded terminal cooldown.");
     elseif not saved and fallback and fallback.phase>=1 and fallback.phase<=3 then attempt=fallback.attempt;Fail(why.."; interrupted attempt cannot be verified.",true);
     elseif not saved then
@@ -329,9 +368,23 @@ local function Watchdog()
         Advance();if phase==3 and Now()>=nextLing then LingWave();end
     elseif phase==4 or phase==5 then
         if Now()<cleanupAt then return;end
-        Cleanup(true);
-        if Now()<cooldownUntil then local p=BossPoint();if p and(not cooldownArmed or not p:Enabled())then ApplyCooldown();end
-        elseif not released then ApplyCooldown();else Notice("boss-wait","WARN","Cooldown expired; waiting for native boss spawn/quake policy.");end
+        if Now()<cooldownUntil then
+            Cleanup(true);
+            local p=BossPoint();if p and(not cooldownArmed or not p:Enabled())then ApplyCooldown();end
+        else
+            -- Never clean up an eligible returning boss while waiting for its
+            -- spawn callback. Retry a lost native wakeup only in guild instances.
+            local returned=ReconcileBoss();
+            if returned then Ready(returned,true);
+            elseif not released then ApplyCooldown();missing.retryBoss=Now();
+            elseif eq.get_zone_guild_id()>1 then
+                missing.retryBoss=missing.retryBoss or Now();
+                if Now()-missing.retryBoss>=MISSING_GRACE then
+                    missing.retryBoss=Now();ApplyCooldown();
+                    Notice("retry-boss","RESET","Expired reuse had no native Coirnav; rearmed the existing spawnpoint.");
+                end
+            else Notice("boss-wait","WARN","Cooldown expired; waiting for native boss spawn/quake policy.");end
+        end
     elseif n then
         missing.readyBoss=nil;
         local g=GuardianPoint();if g and not Live(g:GetNPC())then g:Enable();g:Repop();elseif not g then Notice("guardian-point","ERROR","Guardian spawnpoint missing; ready supervision will retry.");end

@@ -1,7 +1,10 @@
 local CONTROLLER_TYPE = 215419; -- POACastellanController
+local Trash = require("air_trash_retention");
 local INLOKHER_TYPE = 215409; -- #Inlokher_the_Warlord
 
 function event_death_complete(e)
+    local trash=Trash.new("castellan");
+    if trash then trash:Record(e.self:GetSpawnPointID()); end
 
 	eq.signal(CONTROLLER_TYPE, 1);
 	eq.signal(215383, e.killer:GetID(), 1000); -- #Constable_Alranderisan
