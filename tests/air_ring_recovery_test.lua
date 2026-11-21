@@ -62,6 +62,7 @@ local function world(name,guild)
  end
  function w:point(id,kind)
   local p={valid=true,id=id,kind=kind,enabled=true};self.points[id]=p;
+  function p:RespawnTimer() return 1080;end
   function p:GetNPC() return self.npc and self.npc.valid and self.npc or {valid=false};end
   function p:Repop()
    if self.npc then self.npc.valid=false;end
@@ -126,9 +127,11 @@ local function world(name,guild)
   function elist:IsMobSpawnedByNpcTypeID(id) return w:find(id).valid;end
   local eq={
    get_zone_guild_id=function() return w.guild;end,
+   get_rule=function() return w.controls==false and "false" or "true";end,
+   update_spawn_timer=function(id,ms) w.points[id].normal_timer=ms;w.timer_updates=(w.timer_updates or 0)+1;end,
    guild_one_raid_window_open=function() return false;end,
    get_entity_list=function() return elist;end,
-   get_data=function(k) w.reads=w.reads+1;return w.buckets[k] or "";end,
+   get_data=function(k) w.reads=w.reads+1;if k=="guild_instance_respawns:"..w.guild then return w.restored and "1" or "0";end;return w.buckets[k] or "";end,
    set_data=function(k,v) w.writes=w.writes+1;w.buckets[k]=v;end,
    set_timer=function(k,v,n) w.timers[k..":"..(n and n.id or 0)]=v;end,
    stop_timer=function() end,pause_timer=function() end,resume_timer=function() end,
@@ -409,3 +412,26 @@ for _,name in ipairs({"Wind","Dust"}) do
  check(w:state()[13]=="",name.." cap expires even with one mob left");
 end
 print("PASS: "..(checks-trash_checks).." trash retention checks; "..checks.." total Air checks");
+
+-- Timekeeper modes change trash policy without resetting encounter/boss state.
+for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
+ local w=world(name);w.restored=true;w:pulse();
+ check(tonumber(w:state()[4])<=w.now+1080,"restored partial clear uses original 18 minutes");
+ w:kill_island(1);check(tonumber(w:state()[4])==w.now+1080,"normal native death refreshes 18-minute clear window");
+ local t=w.env.require("air_trash_retention").new(name:lower());check(t.deadline==0,"normal ring does not save extended hold");
+ w:kill_island();to_boss(w);local phase,deadline=w:phase(),w:state()[4];
+ w.env.require("air_trash_retention").restore_guild(w.guild);w:pulse();
+ check(w:phase()==phase and w:state()[4]==deadline,"restore leaves active boss and success deadline intact");
+ local boss=w:role("boss");check(boss and boss.valid,"restoration leaves existing boss alive");
+ w.restored=false;w:pulse();check(w:role("boss")==boss,"slowing does not duplicate boss");
+end
+for _,name in ipairs({"Wind","Smoke","Mist","Dust"}) do
+ local w=world(name);w:kill_island(2);local t=w.env.require("air_trash_retention").new(name:lower());
+ check(t.deadline>w.now+1080,"slowed ring has extended clear");
+ w.restored=true;w.env.require("air_trash_retention").restore_guild(w.guild);w:pulse();
+ check(tonumber(w:state()[4])<=w.now+1080 and w:state()[13]=="","restore discards partial extended trash credit");
+ check(w.points[w.island[1]].normal_timer==1080000,"native ring trash receives normal countdown");
+ local writes=w.timer_updates;w:load(false);w:pulse();check(w.timer_updates==writes,"ring quest reload cannot refresh countdown");
+ w.restored=false;w:load(false);w:pulse();check(w.env.require("air_trash_retention").new(name:lower()).deadline==0,"slowing does not resurrect ring clear");
+end
+print("PASS: Air mode-switch regressions; "..checks.." total checks");

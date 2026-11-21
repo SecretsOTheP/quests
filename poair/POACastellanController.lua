@@ -49,7 +49,9 @@ local function LoadProgress(t)
     final_type,final_dead=values[9],values[10]==1;
 end
 local function TrashState()
-    local t=Trash.new("castellan");LoadProgress(t);return t;
+    local t=Trash.new("castellan");
+    if t and not t.active then return nil; end
+    LoadProgress(t);return t;
 end
 local function RestorePending()
     local t=TrashState();if not t or os.time()>=t.deadline then return;end
@@ -103,9 +105,20 @@ function RepopIsland()
     SaveProgress(t);
 end
 
+local mode_epoch,mode_active=nil,nil;
+local function CheckMode()
+    local t=Trash.new("castellan");if not t then return;end
+    if mode_epoch~=nil and (mode_epoch~=t.epoch or (mode_active and not t.active)) then
+        -- Let the existing event finish; discard only its extended trash timer.
+        eq.set_timer("castellan_repop",Trash.NORMAL*1000);
+    end
+    mode_epoch,mode_active=t.epoch,t.active;
+end
+
 function event_spawn(e)
 	if ( RaidContentEnabled() ) then
         local t=TrashState();
+        if eq.get_zone_guild_id()>1 then CheckMode();eq.set_timer("castellan_mode",30000);end
         eq.set_timer("castellan_repop",t and math.max(1,t.deadline>os.time() and t.deadline-os.time() or Trash.BASE)*1000 or 1080000);
         if t then eq.set_timer("castellan_restore",1000);end
 	end
@@ -117,6 +130,7 @@ function event_timer(e)
 		return;
 	end
 
+    if e.timer=="castellan_mode" then CheckMode();return;end
     if e.timer=="castellan_restore" then eq.stop_timer(e.timer);RestorePending();return;end
 	if ( e.timer == "castellan_repop" ) then
 		RepopIsland();

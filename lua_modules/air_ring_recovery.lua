@@ -4,7 +4,7 @@ local M = {};
 local PULSE = "air_ring_recovery";
 local CYCLE = 237600; -- existing 66-hour island repop
 local Trash = require("air_trash_retention");
-local CLEAR_BASE = Trash.BASE; -- shared with travel trash on the same island
+local function clear_base() return Trash.enabled() and Trash.BASE or Trash.NORMAL; end
 local RETRY = 900; -- 15 minutes after an unfinished attempt times out
 local ATTEMPT = 10800; -- TAKP three-hour ring window; Dust waves also have a one-hour limit
 local IDLE = 9000; -- existing 2.5-hour Avatar budget, paused in combat
@@ -137,7 +137,20 @@ function M.install(name, opts)
             debug("restored "..s.phase.."; island reset remaining "..math.max(0,s.deadline-os.time()).." seconds");
         else
             if raw~="" then debug("invalid saved state; using a fresh island cycle"); end
-            s=new_state(os.time(),CLEAR_BASE+c.offset); save();
+            s=new_state(os.time(),clear_base()+c.offset); save();
+        end
+    end
+    local function sync_trash_mode()
+        trash:Refresh();
+        local reset_key=key.."-trash-reset";
+        local previous=tonumber(eq.get_data(reset_key)) or 0;
+        if previous~=trash.epoch or (not trash.active and s.phase=="island" and s.deadline>os.time()+Trash.NORMAL) then
+            -- Discard partial trash credit only; active stages, earned Avatars,
+            -- failed-attempt retries and successful boss cooldowns are untouched.
+            if s.phase=="island" then
+                s.island={};s.deadline=math.min(s.deadline,os.time()+Trash.NORMAL);save();
+            end
+            eq.set_data(reset_key,tostring(trash.epoch));
         end
     end
     local function enable_erratics(on)
@@ -241,7 +254,7 @@ function M.install(name, opts)
         if name=="Dust" and (live(find(c.boss)) or live(find(c.marker))) then
             local p=point(c.boss_point); if p and p.valid then p:Repop(); end
         end
-        s=new_state(math.max(os.time(),s.cycle+1),CLEAR_BASE); missing={};
+        s=new_state(math.max(os.time(),s.cycle+1),clear_base()); missing={};
         if os.time()<trash.deadline then
             s.deadline=trash.deadline;
             for id in pairs(trash.dead) do if island[id] then s.island[id]=true; end end
@@ -252,7 +265,7 @@ function M.install(name, opts)
     local function ensure()
         if busy then return; end
         busy=true;
-        load(); avatar_clock(); trash:Refresh();
+        load(); avatar_clock(); sync_trash_mode();
         if s.phase=="island" and os.time()>=s.deadline and trash.first>=s.deadline then
             reset_island(); -- travel kills after expiry belong to a new clear
         end
@@ -393,7 +406,7 @@ function M.install(name, opts)
         return true;
     end
     local function island_death(e)
-        load(); trash:Refresh();
+        load(); sync_trash_mode();
         if s.phase=="island" and os.time()>=s.deadline and trash.first>=s.deadline then ensure();return;end
         if s.phase=="island" and os.time()<trash.deadline then s.deadline=math.max(s.deadline,trash.deadline); end
         local id=e.self:GetSpawnPointID();
@@ -403,7 +416,7 @@ function M.install(name, opts)
         e.self:SetEntityVariable(tag.."_native_counted",tostring(s.cycle));
         s.island[id]=true; move={e.self:GetX(),e.self:GetY(),e.self:GetZ()};
         trash:Record(id);
-        s.deadline=trash.deadline;
+        s.deadline=trash.active and trash.deadline or os.time()+Trash.NORMAL;
         local cleared=true;
         for _,pid in ipairs(opts.island) do
             local p=point(pid);

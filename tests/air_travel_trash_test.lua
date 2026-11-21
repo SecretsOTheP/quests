@@ -40,6 +40,7 @@ local function world(guild)
  end
  for id,row in pairs(fixture) do
   local p={valid=true,id=id,kind=row[2][1]};w.points[id]=p;
+  function p:RespawnTimer() return 1080;end
   function p:GetNPC() return self.npc and self.npc.valid and self.npc or {valid=false};end
   function p:Repop() if self.npc then self.npc.valid=false;end;w:new_npc(self.kind,self.id,true);end
  end
@@ -53,9 +54,11 @@ local function world(guild)
   function elist:GetClientByID() return {valid=false};end
   local eq={
    get_zone_guild_id=function() return w.guild;end,
+   get_rule=function() return w.controls==false and "false" or "true";end,
+   update_spawn_timer=function(id,ms) w.points[id].normal_timer=ms;w.timer_updates=(w.timer_updates or 0)+1;end,
    guild_one_raid_window_open=function() return true;end,
    get_entity_list=function() return elist;end,
-   get_data=function(k) w.reads=w.reads+1;return w.buckets[k] or "";end,
+   get_data=function(k) w.reads=w.reads+1;if k=="guild_instance_respawns:"..w.guild then return w.restored and "1" or "0";end;return w.buckets[k] or "";end,
    set_data=function(k,v) w.writes=w.writes+1;w.buckets[k]=v;end,
    set_timer=function(k,v) w.timers[k]=v;end,stop_timer=function(k) w.timers[k]=nil;end,
    debug=function() end,
@@ -172,5 +175,70 @@ for _,guild in ipairs({0,1}) do
  local w=world(guild);local before=w.writes;local id=map.groups.castellan[1];w:kill(w.points[id].npc);
  check(w.reads==0 and w.writes==before,"public/Guild 1 perform no trash persistence writes");
  w.points[id]:Repop();check(w.points[id].npc.valid,"public/Guild 1 trash unaffected");
+end
+-- Restored mode never starts a retention cycle, including all travel/Castellan points.
+do
+ local w=world();w.restored=true;w:load(false);
+ for id,group in pairs(map.extra) do
+  w:kill(w.points[id].npc);local t=w:tracker(group);
+  check(not t.active and not t:Held(id) and t.deadline==0,"restored travel has no extended hold");
+  w.points[id]:Repop();check(w.points[id].npc.valid,"restored travel uses native respawn");
+ end
+ check((w.timer_updates or 0)==0,"normal kills do not rewrite native timers");
+end
+-- Restore releases only held dead trash once and survives a second mode change/unload.
+do
+ local w=world();local ids=map.groups.lower_west;local corpse=w.points[ids[1]].npc;
+ w:kill(corpse);w:kill(w.points[ids[2]].npc);
+ w.now=w.now+60;local reset=w.now;
+ w.restored=true;w.env.require("air_trash_retention").restore_guild(w.guild);
+ w:pulse();local updates=w.timer_updates;
+ check(updates==2,"only previously held dead spawns get normal countdowns");
+ check(w.points[ids[1]].normal_timer==1080000,"normal interval begins at restoration");
+ check(corpse.valid and corpse.hp==0,"restoration preserves corpses");
+ check(not w:tracker("lower_west"):Held(ids[1]),"restoration removes saved hold");
+ w:pulse();w:load(false);w:pulse();check(w.timer_updates==updates,"pulse/reload do not restart restored timers");
+ w.restored=false;w:pulse();check(w:tracker("lower_west").deadline==0,"slowing again cannot revive old clear");
+ w:kill(w.points[ids[3]].npc);check(w:tracker("lower_west").deadline==w.now+6300,"new slowed death starts a fresh clear");
+ -- No Air pulse between restore and slow: persistent revision still invalidates it.
+ w.restored=true;w.env.require("air_trash_retention").restore_guild(w.guild);w.restored=false;
+ w.now=w.now+120;w:load(false);w:pulse();
+ check(w:tracker("lower_west").deadline==0,"offline restore/slow invalidates old saved clear");
+ check(w.points[ids[3]].normal_timer==960000,"offline time is deducted from normal countdown");
+ check(w:find(215056).valid and w:find(215375).valid,"mode changes leave bosses present");
+ check(w.consumes==0,"mode changes never consume loot markers");
+end
+-- Legacy saves and missing points are released safely, even without a Timekeeper revision.
+do
+ local w=world();local id=map.groups.upper_west[1];local key="poair-ring-v1-upper_west-"..w.guild.."-trash";
+ w:kill(w.points[id].npc);w.buckets[key]="1|"..w.now.."|"..(w.now+64800).."|"..id;
+ w.restored=true;w.points[id].valid=false;w:pulse();check((w.timer_updates or 0)==0,"missing spawn cleanup remains pending");
+ w.points[id].valid=true;w.now=w.now+60;w:pulse();
+ check(w.points[id].normal_timer==1020000,"pending cleanup retains its original restoration timestamp");
+ local writes=w.timer_updates;w:pulse();check(w.timer_updates==writes,"legacy hold cleared once");
+ w.controls=false;check(w:tracker("upper_west").active,"admin-disabled controls match forced slowed server mode");
+end
+-- Timekeeper hook runs only after a successful restore, never a rejected change.
+do
+ local w=world();local revision="poair-trash-reset-"..w.guild;local succeed=false;
+ local client={GuildID=function() return w.guild;end,GuildRank=function() return 2;end,Message=function() end,
+ GetGuildInstanceRespawnsEnabled=function() return false;end,SetGuildInstanceRespawnsEnabled=function() return succeed;end};
+ local e=setmetatable({}, {__index=w.env});
+ setfenv(assert(loadfile(root.."/potranquility/Timekeeper_of_Druzzil_Ro.lua")),e)();
+ local message={findi=function(_,v) return v=="restore";end};
+ e.event_say({message=message,other=client});check(not w.buckets[revision],"rejected restore leaves Air state intact");
+ succeed=true;e.event_say({message=message,other=client});check(w.buckets[revision]=="1|"..w.now,"successful restore records revision");
+ e.event_say({message=message,other=client});check(w.buckets[revision]=="2|"..w.now,"same-second changes have distinct revisions");
+end
+-- Restoring during Castellan progression leaves living named NPCs alone.
+do
+ local w=world();local ids=map.groups.castellan;
+ for i=1,5 do w:kill(w.points[ids[i]].npc);end
+ local constable=w:find(215383);check(constable.valid,"constable baseline before mode switch");
+ w.restored=true;w.env.require("air_trash_retention").restore_guild(w.guild);w:timer("castellan_mode");w:pulse();
+ check(w.timers.castellan_repop==1080000,"Castellan extended timer replaced with normal 18 minutes");
+ check(w:find(215383)==constable and constable.valid,"restoring does not replace or remove earned constable");
+ local writes=w.timer_updates;w:timer("castellan_mode");check(w.timer_updates==writes,"mode polling does not restart countdown");
+ check(w.consumes==0,"Castellan restore does not touch armor loot marker");
 end
 print("PASS: "..checks.." travel trash and Castellan checks");
