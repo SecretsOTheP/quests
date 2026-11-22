@@ -4,6 +4,8 @@ local MAX_CLIENTS = 90;
 local POTIMEA_CONTROLLER_TYPE = 219053;
 local POTIMEB_CONTROLLER_TYPE = 223077;
 local Cycle = require("potime_cycle");
+local EARLY_PHASE_LOCKOUT = 302400; -- Phases 1-3: 3 days, 12 hours
+local LEGACY_PHASE_ONE_LOCKOUT = 43200;
 local EVENTS_CONTROLLER_TYPE = 223078;
 local QUARM_TYPE = 223008;
 
@@ -172,10 +174,8 @@ function SetBossKilled(phase, bossNum)
 	local alreadyKilled = zoneBossTable[phase][bossNum] == 1;
 	local now = os.time();
 	local t = 561600; -- original god lockout: 6 days, 12 hours
-	if ( phase == 1 ) then
-		t = 43200; -- original Phase 1 lockout: 12 hours
-	elseif ( phase == 2 or phase == 3 ) then
-		t = 302400; -- original Phase 2/3 lockout: 3 days, 12 hours
+	if ( phase <= 3 ) then
+		t = EARLY_PHASE_LOCKOUT;
 	end
 	
 	local timerNum = phase;
@@ -407,6 +407,7 @@ function SetInstanceGlobals()
 	eq.set_global("time_expires_"..zoneInstanceID, tostring(guildCycle and guildCycle.ends or 0), 2, "D7");
 	if ( guildCycle ) then
 		eq.set_global("time_cycle_"..zoneInstanceID, Cycle.encode(guildCycle), 2, "D30");
+		eq.set_global("time_p1_lockout_"..zoneInstanceID, tostring(guildCycle.started)..":84h", 2, "D30");
 	end
 	if ( zoneInstanceGeneration ) then
 		eq.set_global("time_generation_"..zoneInstanceID, zoneInstanceGeneration, 2, "D30");
@@ -706,6 +707,12 @@ function LoadGuildCycle(qglobals, instanceID)
 		value = Cycle.new(os.time(), checkpoint);
 	end
 	guildCycle = value;
+	-- Upgrade the old 12-hour deadline from its original first kill, not from now.
+	-- Do this before expiry clears saved kills, and only once for this cycle.
+	if ( qglobals["time_p1_lockout_"..instanceID] ~= tostring(guildCycle.started)..":84h"
+		and zoneTimers[1] > 0 ) then
+		zoneTimers[1] = math.min(zoneTimers[1] + EARLY_PHASE_LOCKOUT - LEGACY_PHASE_ONE_LOCKOUT, guildCycle.ends);
+	end
 	for phase = 1, 6 do CheckPhaseStatus(phase) end
 	return true;
 end

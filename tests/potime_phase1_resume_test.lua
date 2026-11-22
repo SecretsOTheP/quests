@@ -2,17 +2,23 @@
 local source = arg[1] or "potimeb/223077.lua";
 package.path = "lua_modules/?.lua;"..package.path;
 local NOW = 1800000000;
-local function fixture(p1, p2, p3, deadline, checkpoint, p4, p5, p6)
+local function fixture(p1, p2, p3, deadline, checkpoint, p4, p5, p6, options)
+    options = options or {};
+    local started = options.started or NOW;
     local globals = {
         time_guild_55001="53", time_expires_55001=tostring(NOW+583200),
-        time_cycle_55001=NOW..";"..(NOW+583200)..";"..(checkpoint and "1" or "0"),
+        time_cycle_55001=started..";"..(started+583200)..";"..(checkpoint and "1" or "0"),
         time_kills_55001=table.concat({p1,p2 or "00000",p3 or string.rep("0",18),p4 or "0000",p5 or "0000",p6 or "0"},";")
     };
     local values={};
     for i=1,12 do values[i]=tostring(math.floor((deadline or NOW+10000)/100)); end
     globals.time_timers_55001=table.concat(values,";");
+    if not options.legacy then globals.time_p1_lockout_55001=started..":84h"; end
+    globals = options.saved or globals;
     local timers, signals, cross = {}, {}, {};
     local env=setmetatable({os={time=function() return NOW; end}}, {__index=_G});
+    env.now=NOW;
+    env.os.time=function() return env.now; end
     env.eq={};
     function env.eq.get_qglobals() return globals; end
     function env.eq.get_zone_guild_id() return 53; end
@@ -88,11 +94,11 @@ for i=1,5 do
     assert(s[i][3]=="0","expired boss remained a shadow");
 end
 env.SetBossKilled(1,1);
-assert(tonumber(g.time_timers_55001:match("^[^;]+"))*100==NOW+43200,"normal kill timer changed");
+assert(tonumber(g.time_timers_55001:match("^[^;]+"))*100==NOW+302400,"P1 must use the same 84-hour timer as P2/P3");
 local saved=g.time_timers_55001;
 env.SetBossKilled(1,2);
 assert(g.time_timers_55001==saved,"later kill restarted phase timer");
--- Once P4 is earned, P1 is skipped regardless of its kills or 12-hour timer.
+-- Once P4 is earned, P1 is skipped regardless of its kills or 84-hour timer.
 -- Exercise every P1 mask, including the player's 01000 save, before/after expiry,
 -- and resume at the first remaining god phase without rewriting loot lockouts.
 local cases = 0;
@@ -119,5 +125,43 @@ for mask=0,31 do
         end
     end
 end
+-- All early phases share 84 hours from their first kill; later kills never restart it.
+local function timer_values(g)
+    local out={};for n in g.time_timers_55001:gmatch("[^;]+") do out[#out+1]=tonumber(n)*100;end;return out;
+end
+local env,g=fixture("00000",nil,nil,0);
+for phase=1,3 do env.SetBossKilled(phase,1);end
+local initial=timer_values(g);
+for phase=1,3 do assert(initial[phase]==NOW+302400,"early-phase lockouts differ");end
+local before=g.time_timers_55001;env.now=NOW+3600;
+for phase=1,3 do env.SetBossKilled(phase,2);end
+assert(g.time_timers_55001==before,"later early-phase kill restarted timer");
+-- Convert old saves once, including an elapsed 12-hour deadline still inside 84h.
+for _,deadline in ipairs({NOW+10000,NOW-100,NOW-259300}) do
+ local env,g=fixture("11000",nil,nil,deadline,false,nil,nil,nil,{legacy=true});
+ local wanted=deadline+259200;
+ local expired=wanted<=NOW;
+ assert(g.time_kills_55001:sub(1,5)==(expired and "00000" or "11000"),"legacy P1 kill retention incorrect");
+ assert(timer_values(g)[1]==(expired and 0 or wanted),"legacy P1 timer not based on original first kill");
+ assert(g.time_p1_lockout_55001==NOW..":84h","P1 migration marker not saved");
+ local kills,timers,cycle=g.time_kills_55001,g.time_timers_55001,g.time_cycle_55001;
+ local reloaded,reloadedGlobals=fixture("00000",nil,nil,nil,false,nil,nil,nil,{saved=g});
+ assert(reloadedGlobals.time_timers_55001==timers and reloadedGlobals.time_kills_55001==kills and reloadedGlobals.time_cycle_55001==cycle,"reloading extended or reset the save again");
+end
+-- Neither migration nor fresh kills can extend the fixed cycle deadline.
+local started=NOW-583200+5000;
+local env,g=fixture("11000",nil,nil,NOW+1000,false,nil,nil,nil,{legacy=true,started=started});
+assert(timer_values(g)[1]==NOW+5000,"legacy P1 extends past cycle");
+local env,g=fixture("00000",nil,nil,0,false,nil,nil,nil,{started=started});
+for phase=1,3 do env.SetBossKilled(phase,1);end
+for phase=1,3 do assert(timer_values(g)[phase]==NOW+5000,"new early-phase timer extends past cycle");end
+-- A migrated P1 expires at 84 hours before P4; no already-cleared bits are invented.
+local env,g=fixture("11111",nil,nil,NOW+1000,false,nil,nil,nil,{legacy=true});
+env.now=NOW+260199;assert(not env.CheckPhaseStatus(1),"P1 respawned before migrated deadline");
+env.now=NOW+260200;assert(env.CheckPhaseStatus(1),"P1 did not respawn at migrated deadline");env.SetInstanceGlobals();
+assert(g.time_kills_55001:sub(1,5)=="00000","P1 expired kill mask not cleared");
+local env,g=fixture("00000",nil,nil,0,false,nil,nil,nil,{legacy=true});
+assert(g.time_kills_55001:sub(1,5)=="00000" and timer_values(g)[1]==0,"migration invented lost kills");
+print("PASS: P1/P2/P3 share 84 hours; legacy deadlines migrate once, expire normally and stay within cycle bounds");
 print("PASS: "..cases.." P4-checkpoint cases skip P1-P3 across all P1 masks and expired/live timers; god lockouts and Time A routing preserved");
-print("PASS: cleared P1 resumes at P2 or the saved P4 checkpoint; no replay; partial clears preserved; expiry restores bosses; saved and normal kill timers unchanged");
+print("PASS: cleared P1 resumes at P2 or the saved P4 checkpoint; no replay; partial clears preserved; expiry restores bosses; saved 84-hour timers retained; later kills do not restart timers");
