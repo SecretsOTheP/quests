@@ -137,7 +137,7 @@ local specs={
  {"poeartha/A_Planar_Projection.lua",{},"earthb_key","1",72},
  {"potorment/A_Planar_Projection.lua",{tylis="2"},"saryrn","1",72,1800},
  {"povalor/A_Planar_Projection.lua",{mavuin="3"},"aerindar","1",72},
- {"solrotower/A_Planar_Projection.lua",{sol_room="11111",pofire="1",zeks="7"},"pofire","2",72},
+ {"solrotower/A_Planar_Projection.lua",{pofire="1",zeks="7"},"pofire","2",72},
  {"potactics/214322.lua",{zeks="6"},"zeks","7",72},
  {"potactics/214323.lua",{zeks="2"},"zeks","4",72},
  {"potactics/214324.lua",{zeks="2"},"zeks","3",72},
@@ -166,17 +166,17 @@ for _,spec in ipairs(specs)do
  check(not rewarded(capped,spec),spec[1].." existing reward cap cannot reset on reload");
 end
 w=world();killer=w:client(1,100);n=w.module.Spawn(200269,0,0,0,0,0,0,killer);local h=w:handler("codecay/A_Planar_Projection.lua",n);
-killer.globals.fuirstel="3";h.hail(killer);check(killer.globals.fuirstel=="3","Bertox key still required");
-killer.globals.bertox_key="1";h.hail(killer);check(killer.globals.fuirstel=="4","Bertox valid prerequisite path grants credit");
+killer.globals.fuirstel="3";h.hail(killer);check(killer.globals.fuirstel=="4","Bertox grants earned credit without the borrowed entrance key");
+check(not killer.globals.bertox_key,"Bertox reward does not grant the missing entrance key");
 local before=w.module.Count(n);h.hail(killer);check(w.module.Count(n)==before,"duplicate Bertox hail consumes no additional credit");
 -- Pending checklist flags must also be idempotent when prerequisites are missing.
 local pending={
- {"codecay/A_Planar_Projection.lua",{bertox_key="1"},1},
+ {"codecay/A_Planar_Projection.lua",{},1},
  {"hohonorb/A_Planar_Projection.lua",{},2},
  {"nightmareb/A_Planar_Projection.lua",{},1},
  {"podisease/A_Planar_Projection.lua",{},2},
  {"potorment/A_Planar_Projection.lua",{},1},
- {"solrotower/A_Planar_Projection.lua",{sol_room="11111"},1},
+ {"solrotower/A_Planar_Projection.lua",{},1},
  {"potactics/214322.lua",{},1},
  {"potactics/214323.lua",{},1},
  {"potactics/214324.lua",{},1},
@@ -190,6 +190,31 @@ for _,spec in ipairs(pending)do
  check(w.module.Count(n)==spec[3],spec[1].." 100 pending-repeat hails consume no extra claims");
  w:loadHelper();h=w:handler(spec[1],n);h.hail(killer);
  check(w.module.Count(n)==spec[3],spec[1].." pending-repeat hail after reload consumes no extra claims");
+end
+-- Sol Ro raid-willed entrants need no mini flags, but keep quest prerequisites,
+-- kill eligibility, the 72-claim cap, and the projection's expiration.
+for _,mini in ipairs({"absent","00000","01010","11111"}) do
+ w=world();killer=w:client(1,100);earner=w:client(2,100);stranger=w:client(3,200);
+ n=w.module.Spawn(212420,0,0,0,0,0,0,killer);
+ local h=w:handler("solrotower/A_Planar_Projection.lua",n);
+ for _,c in ipairs({earner,stranger}) do
+  c.globals.pofire="1";c.globals.zeks="7";
+  if mini~="absent" then c.globals.sol_room=mini;end
+ end
+ h.hail(stranger);check(stranger.globals.pofire=="1" and not stranger.globals.cl_solusek,"Sol Ro rejects unrelated raid with "..mini.." mini flags");
+ check(w.module.Count(n)==0,"ineligible Sol Ro hail consumes no claim");
+ h.hail(earner);check(earner.globals.pofire=="2","eligible Sol Ro entrant earns Fire with "..mini.." mini flags");
+ check(earner.globals.sol_room==(mini~="absent" and mini or nil),"Sol Ro does not fabricate mini flags");
+ h.hail(earner);check(w.module.Count(n)==1,"repeated Sol Ro success consumes no extra claim");
+ local capped=w:client(4,100);capped.globals.pofire="1";capped.globals.zeks="7";
+ w.module.SaveCount(n,72);h.hail(capped);check(capped.globals.pofire=="1","Sol Ro refuses exactly at 72 claims");
+ w.module.SaveCount(n,1);w.now=2200;h.hail(capped);check(capped.globals.pofire=="1","expired Sol Ro projection grants no Fire flag");
+end
+for _,pre in ipairs({{}, {pofire="1"}, {zeks="7"}, {pofire="1",zeks="6"}}) do
+ w=world();killer=w:client(1,100);killer.globals=pre;
+ n=w.module.Spawn(212420,0,0,0,0,0,0,killer);local h=w:handler("solrotower/A_Planar_Projection.lua",n);
+ h.hail(killer);check(killer.globals.pofire~="2" and killer.globals.cl_solusek=="1","missing Miak/Rallos prerequisites retain pending Sol Ro credit");
+ h.hail(killer);check(w.module.Count(n)==1,"pending Sol Ro credit remains idempotent without minis");
 end
 -- Explicit GM status requests are read-only and do not write server logs.
 w=world();killer=w:client(1,100);n=w.module.Spawn(220025,0,0,0,0,0,0,killer);

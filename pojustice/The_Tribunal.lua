@@ -1,3 +1,5 @@
+local InternalAccess = require("pop_internal_access");
+
 local PREPARED_TEXT = {
 	"nods slightly.  'Very well.  When you are ready, you may begin the trial of lashing.  You must protect the victims from their tormentors.  Be wary of the scourge of honor - you cannot fight it directly.  You must find and destroy its life force to defeat it.  We shall judge the mark of your success.'",
 	"nods slightly.  'Very well.  When you are ready, you may begin the trial of execution.  The victim will perish should the hooded executioner reach him.  Its life will end only when all of the nemeses which accompany it also perish.  We shall judge the mark of your success.'",
@@ -297,6 +299,9 @@ function event_say(e)
 			if ( not e.other:HasItem(31599) ) then
 				e.other:SummonItem(31599); -- Item: The Mark of Justice
 			end
+		elseif ( InternalAccess.CanRaidWill(e.other, "seventh") ) then
+			e.other:SetEntityVariable(InternalAccess.SeventhRequest, tostring(eq.clock() + 300));
+			e.other:Message(0, "The Tribunal tells you, 'Your companions have proven themselves. For the next five minutes, enter a trial portal with their support to face the Seventh Hammer.'");
 		elseif ( marks > 0 ) then
 			e.other:Message(0, "The Tribunal tells you, 'You have done well, mortal, but there are more trials yet for you to complete.'");
 		else

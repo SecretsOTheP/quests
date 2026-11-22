@@ -1,3 +1,4 @@
+local InternalAccess = require("pop_internal_access");
 local FlaggingTravel = require("flagging_travel");
 
 local KEY_ITEM_ID = 22954; -- Screaming Sphere
@@ -53,12 +54,13 @@ function event_say(e)
 		local qglobals = eq.get_qglobals(e.other);
 		local noflag = false;
 		-- Only Keeper's post-death entrance copy has this route marker.
-		-- CanUse above enforces its window; every visitor still needs the preflag.
+		-- CanUse above enforces its window; raid willing borrows only the preflag.
+		local has_access = qglobals.tylis or InternalAccess.CanRaidWill(e.other, "tylis");
 		local keeper_defeated = tonumber(e.self:GetEntityVariable("flagging_travel_fixed_deadline")) ~= nil;
 		
 		if ( e.message:findi("will assist you") ) then
 		
-			if ( qglobals.tylis and (keeper_defeated or RaidHasKey(e.other)) ) then
+			if ( has_access and (keeper_defeated or RaidHasKey(e.other)) ) then
 				e.self:Say("Please tell me when you are ready.  I do not know if I have enough energy to channel all of you, but I can try.  When you are ready, I will channel you into my pain.");
 			else
 				noflag = true;
@@ -66,7 +68,7 @@ function event_say(e)
 		
 		elseif ( e.message:findi("we are ready") or e.message:findi("i am ready") ) then
 		
-			if ( qglobals.tylis and (keeper_defeated or RaidHasKey(e.other)) ) then
+			if ( has_access and (keeper_defeated or RaidHasKey(e.other)) ) then
 				e.self:CastSpell(1134, e.other:GetID()); -- Insanity of Tylis
 			else
 				noflag = true;
@@ -74,7 +76,7 @@ function event_say(e)
 		end
 			
 		if ( noflag ) then
-			if ( qglobals.tylis ) then
+			if ( has_access ) then
 				e.other:Message(0, "Tylis Newleaf tells you, 'The Screaming Sphere carries an echo of this place.  Bring one near, and perhaps I can channel you into the shadows of my pain.'");
 			else
 				e.other:Message(0, "Tylis Newleaf tells you, 'I sense the desire in you to help, but I don't know if you possess the kind of power needed to release me from my anguish.  Please seek out my companion Fahlia and see if she can offer you a way to better yourself before undertaking this task.'");
