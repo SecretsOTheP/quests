@@ -8,3 +8,6 @@ if ( guild_id > 1 or (guild_id == 1 and eq.guild_one_raid_window_open()) ) then
 	eq.load_encounter("Dust");
 	eq.load_encounter("Xegony");
 end
+
+-- Persistent travel clears are limited to guild instances.
+if guild_id > 1 then eq.load_encounter("TravelTrash"); end

@@ -63,6 +63,7 @@ function event_say(e)
 		end
 
 		if (e.other:SetGuildInstanceRespawnsEnabled(true)) then
+			require("air_trash_retention").restore_guild(e.other:GuildID());
 			e.other:Message(0,
 				"The Timekeeper of Druzzil Ro tells you, 'And... released! The temporal thread settles back into its proper rhythm. Creatures that fall from this point forward will once again return as they normally would. In the Planes beyond Tranquility, your guild may now walk its own Planar Thread without gathering companions. I have returned everyone within the thread to Tranquility while it settles. Only your guild may enter the restored Thread."
 			);

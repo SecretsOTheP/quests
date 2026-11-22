@@ -23,6 +23,7 @@ local function world(options)
     local function point(id,typ,enabled,seconds)
         local p={valid=true,id=id,typ=typ,enabled=enabled,seconds=seconds,deadline=s.now+(seconds or 0)};
         function p:GetNPC()return self.npc or {valid=false};end
+        function p:SetNPCPointer(n)self.npc=n;end
         function p:Enabled()return self.enabled;end
         function p:Enable()self.enabled=true;end
         function p:Repop()if live(self.npc)then self.npc:Depop();end;self.enabled=true;self.deadline=s.now;return s:spawnNative(self.id);end
@@ -49,7 +50,11 @@ local function world(options)
         function n:CastSpell(id,target)s.banish=s.banish or {};s.banish[#s.banish+1]=id;end
         function n:SetEntityVariable(k,v)self.vars[k]=v;end;function n:GetEntityVariable(k)return self.vars[k]or"";end
         function n:GetX()return self.x;end;function n:GetY()return self.y;end;function n:GetZ()return self.z;end
-        function n:Depop()self.valid=false;self.hp=0;local p=s.points[self.spawnid];if p and p.npc==self then p.npc=nil;end end
+        function n:Depop()
+            local p=s.points[self.spawnid];if p then p.npc=nil;end -- actual NPC::Depop clears even a replaced pointer
+            if options.deferredDepop then self.depopAt=self.depopAt or s.now+0.1;
+            else self.valid=false;self.hp=0;end
+        end
         s.npcs[n.uid]=n;local p=s.points[n.spawnid];if p then p.npc=n;end
         return n;
     end
@@ -141,9 +146,13 @@ local function world(options)
             for id,p in pairs(self.points)do if p.enabled and not live(p.npc)and p.deadline<=target and not(self.guild==1 and (id==GUARDIAN or id==365647)and not self.quakeOpen)then
                 if not deadline or p.deadline<deadline then event={point=id};deadline=p.deadline;end
             end end
+            for _,n in pairs(self.npcs)do
+                if n.valid and n.depopAt and n.depopAt<=target and (not deadline or n.depopAt<deadline)then event={retire=n};deadline=n.depopAt;end
+            end
             if not event then break;end
             self.now=deadline;
-            if event.timer then
+            if event.retire then event.retire.valid=false;event.retire.hp=0;
+            elseif event.timer then
                 local t=event.timer;t.deadline=self.now+t.duration;self.owner=t.owner;
                 if t.owner.encounter then env.event_timer({timer=t.name});end;self.owner=nil;
             else local p=self.points[event.point];p.deadline=self.now+p.seconds;self:spawnNative(event.point);end
@@ -265,4 +274,45 @@ check(s:phase()==0 and rpHas(s,"[Server] Coirnav is not in place"),"Guardian kil
 s:advance(12);check(s:boss() and s.points[GUARDIAN].npc and s.points[GUARDIAN].npc.valid,"Coirnav and Guardian are restored after the grace period");
 s:kill(s.points[GUARDIAN].npc);check(s:phase()==1 and #s:fiends()==25,"restored Guardian starts a normal attempt");
 
+-- A native timer overwritten/disabled after release must not strand a guild retry.
+s=world();s:start();
+for attempt=1,2 do
+ s:openBoss();s:advance(601);check(s:phase()==4,"completed waves can still time out");s:advance(2);
+ local untilTime=tonumber(s:state()[9]);s:jump(untilTime-s.now); -- releases the native timer
+ s.points[365647].deadline=s.now+496800; -- reproduce the stalled native wakeup
+ s:advance(15);
+ check(s:phase()==0 and s:boss() and s.points[GUARDIAN].npc,"expired retry repairs native wakeup without zone repop");
+ s:kill(s.points[GUARDIAN].npc);
+ check(s:phase()==1 and tonumber(s:state()[2])==attempt+1,"recovered Guardian starts next attempt");
+end
+-- Initial spawn after a zone reload must not be removed by terminal-state initialization.
+s=world();s:start();s:advance(902);local untilTime=tonumber(s:state()[9]);
+s.now=untilTime+1;s:load();local fresh=s:spawnNative(365647);
+check(fresh.valid and s:boss()==fresh and s:phase()==0,"overdue native spawn survives saved retry initialization");
+-- A duplicate native spawn must not reset progress or leave two unattackable bosses.
+s=world();s:start();local original=s:boss();local attempt=s:state()[2];
+local duplicate=s:spawnNative(365647);
+check(original.valid and not duplicate.valid and s:boss()==original,"duplicate native Coirnav removed and canonical pointer repaired");
+check(s:phase()==1 and s:state()[2]==attempt,"duplicate cannot reset an active attempt");
+-- The fallback must never bypass Guild 1's quake policy.
+s=world({guild=1});s:start();s:advance(902);local untilTime=tonumber(s:state()[9]);s:jump(untilTime-s.now);s:advance(40);
+check(s:phase()==4 and not s:boss(),"Guild 1 expired retry still waits for native quake admission");
+-- Real NPC::Depop retires entities asynchronously and clears the Spawn2 pointer.
+s=world({deferredDepop=true});s:start();local original=s:boss();local duplicate=s:spawnNative(365647);
+check(s:boss()==original and original.valid and duplicate.vars.coirnav_retired=="1","pending duplicate cannot steal native identity");
+s:advance(0.2);check(not duplicate.valid and s:phase()==1,"asynchronous retirement leaves active event intact");
+s:advance(902);local untilTime=tonumber(s:state()[9]);s:jump(untilTime-s.now);s:advance(3);
+check(s:phase()==0 and s:boss() and s.points[GUARDIAN].npc,"asynchronous failure cleanup returns exactly one ready encounter");
+local count=0;for _,n in pairs(s.npcs)do if n.valid and n.hp>0 and n.typ==216048 then count=count+1;end end
+check(count==1,"recovery has exactly one living native Coirnav");
+-- A successful kill must keep its entire reuse even if the native timer is damaged.
+s=world();s:start();s:openBoss();s:kill(s:boss());local untilTime=tonumber(s:state()[9]);
+s.points[365647].deadline=s.now+1;s:advance(5);
+check(s:phase()==5 and not s:boss() and tonumber(s:state()[9])==untilTime,"early native spawn cannot bypass 138-hour success reuse");
+s:jump(untilTime-s.now);s.points[365647].deadline=s.now+496800;s:advance(15);
+check(s:phase()==0 and s:boss() and s.projection==1,"success reuse repairs only after expiry and never duplicates reward");
+-- A quake's new native entity wins even while the old entity awaits retirement.
+s=world({guild=1,deferredDepop=true});s:start();local old=s:boss();old:Depop();s.quakeOpen=true;
+local quakeBoss=s:spawnNative(365647);s:advance(0.2);
+check(s:phase()==0 and s:boss()==quakeBoss and quakeBoss.valid,"Guild 1 quake admission supersedes asynchronously retiring boss");
 print(checks.." Coirnav recovery, scheduling, ownership and RP checks passed.");
