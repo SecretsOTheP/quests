@@ -17,7 +17,7 @@ function client:Message(_,text) messages[#messages+1]=text; end
 function client:MovePC(...) moves[#moves+1]={...}; end
 local function reset()
  globals,zones,items,keyring,messages,moves,requests={},{},{},{},{},{},{};
- writes,allowed,level=0,nil,65;
+ writes,allowed,level=0,nil,54;
  client.CanRaidWillIntoPopZone=native;
  eq={get_qglobals=function() return globals; end,
      get_data=function() return "1"; end,
@@ -44,7 +44,7 @@ local portals={
 };
 for _,p in ipairs(portals) do
  for _,state in ipairs({"eligible","denied","wrong_destination","old_binary"}) do
-  reset();globals.time_instance="55001";globals.time_instance_generation="55001:1234";
+  reset();if p[3]==219 then level=65;end;globals.time_instance="55001";globals.time_instance_generation="55001:1234";
   if state=="eligible" then allowed=p[3];
   elseif state=="wrong_destination" then allowed=999;
   elseif state=="old_binary" then client.CanRaidWillIntoPopZone=nil; end
@@ -90,7 +90,7 @@ reset();zones[222]=true;click("poeartha/player.lua",9);
 check(#moves==1 and writes==0 and #requests==0,"existing Earth B flag not honored");
 reset();allowed=219;level=64;click("potranquility/player.lua",18);
 check(#messages==1 and messages[1]:find("lack the will",1,true) and writes==0,"Time level gate bypassed");
-reset();globals.time="1";zones[219]=true;click("potranquility/player.lua",18);
+reset();level=65;globals.time="1";zones[219]=true;click("potranquility/player.lua",18);
 check(#messages==1 and messages[1]:find("ages begin",1,true) and #requests==0,"permanent Time access changed");
 for _,file in ipairs({"potranquility/player.lua","poeartha/player.lua","hohonora/player.lua","ponightmare/player.lua","povalor/player.lua","postorms/player.lua"}) do
  reset();allowed=222;click(file,999);
