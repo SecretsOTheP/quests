@@ -28,7 +28,8 @@ function event_say(e)
 
 		if ( e.message:findi("hail") and flags < FLAG_LIMIT and not qglobals.saryrn and not qglobals.cipher ) then 
 		
-			if ( qglobals.tylis and qglobals.tylis == "2" ) then
+			-- Fahlia's preflag remains required; the Keeper rescue is optional.
+			if ( qglobals.tylis == "1" or qglobals.tylis == "2" ) then
 			
 					e.other:Message(0, "The Planar Projection's thoughts enter your own.  'You have done well, now receive the knowledge that Saryrn once held!'  You look down at your arms to see a set of unintelligible runes being burnt into your arms.  The pain is terrible and searing.  Suddenly the sensation is gone and the runes slowly fade.");
 					eq.set_global("saryrn", "1", 5, "F");

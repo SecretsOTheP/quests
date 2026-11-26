@@ -23,6 +23,10 @@ local function world()
   function c:GetName()return"Character"..self.character;end
   function c:Message(color,text)w.messages[#w.messages+1]={gm=self:GetGM(),color=color,text=text};end
   function c:HasItem(id)return self.items[id]or false;end
+  function c:GetItemIDAt()return 0;end
+  function c:IsSitting()return true;end
+  function c:IsSelfFound()return 0;end
+  function c:IsSoloOnly()return 0;end
   function c:SummonCursorItem(id)self.items[id]=true;end
   w.clients[#w.clients+1]=c;w.mobs[c.id]=c;return c;
  end
@@ -75,7 +79,7 @@ local function world()
  function w:handler(file,npc)
   local scriptEnv=setmetatable({eq=eq,require=function(name)
    if name=="projection_eligibility" then return w.module;end
-   assert(name=="flagging_travel");local chunk=assert(loadstring(read("lua_modules/flagging_travel.lua")));setfenv(chunk,w.env);return chunk();
+   assert(name=="flagging_travel" or name=="quintessence_progression" or name=="self_found_imbue_gems");local chunk=assert(loadstring(read("lua_modules/"..name..".lua")));setfenv(chunk,w.env);return chunk();
   end},{__index=_G});
   local f=assert(loadstring(read(file),file));setfenv(f,scriptEnv);f();
   function scriptEnv.hail(c)
@@ -215,6 +219,118 @@ for _,pre in ipairs({{}, {pofire="1"}, {zeks="7"}, {pofire="1",zeks="6"}}) do
  n=w.module.Spawn(212420,0,0,0,0,0,0,killer);local h=w:handler("solrotower/A_Planar_Projection.lua",n);
  h.hail(killer);check(killer.globals.pofire~="2" and killer.globals.cl_solusek=="1","missing Miak/Rallos prerequisites retain pending Sol Ro credit");
  h.hail(killer);check(w.module.Count(n)==1,"pending Sol Ro credit remains idempotent without minis");
+end
+-- Borrowed entrants retain earned Terris credit without completing
+-- earlier quests. Exercise real eligibility, saved counts and repeat hails.
+for _,spec in ipairs({
+ {"nightmareb/A_Planar_Projection.lua","thelin",false,"cl_terris","1","thelin","3"},
+ {"potorment/A_Planar_Projection.lua","tylis",false,"cl_saryrn","1","saryrn","1"}
+}) do
+ local label=spec[1].." "..spec[2].."="..tostring(spec[3]);
+ w=world();killer=w:client(1,100);earner=w:client(2,100);stranger=w:client(3,200);
+ for _,c in ipairs({earner,stranger})do c.globals[spec[2]]=spec[3]or nil;end
+ n=w.module.Spawn(100,0,0,0,0,0,0,killer);local h=w:handler(spec[1],n);
+ h.hail(stranger);check(not stranger.globals[spec[4]] and w.module.Count(n)==0,label.." unrelated raid refused");
+ h.hail(earner);check(earner.globals[spec[4]]=="1",label.." pending kill credit recorded");
+ check(earner.globals[spec[2]]==(spec[3]or nil),label.." earlier progression unchanged");
+ check(earner.globals[spec[6]]~=spec[7],label.." no completed boss flag before prerequisites");
+ check(w.module.Count(n)==1,label.." pending credit uses one claim");
+ for i=1,100 do h.hail(earner);end
+ w:loadHelper();h=w:handler(spec[1],n);h.hail(earner);
+ check(w.module.Count(n)==1,label.." repeat/reload does not consume claims");
+ earner.globals[spec[2]]=spec[5];h.hail(earner);
+ check(earner.globals[spec[6]]==spec[7] and not earner.globals[spec[4]],label.." normal progression completes and clears pending credit");
+ local used=w.module.Count(n);h.hail(earner);check(w.module.Count(n)==used,label.." completed flag is idempotent");
+ local capped=w:client(4,100);capped.globals[spec[2]]=spec[3]or nil;
+ w.module.SaveCount(n,72);h.hail(capped);
+ check(not capped.globals[spec[4]] and w.module.Count(n)==72,label.." pending credit respects exact cap");
+ capped.globals[spec[2]]=spec[5];h.hail(capped);
+ check(capped.globals[spec[6]]~=spec[7],label.." normal reward respects exact cap");
+ w.module.SaveCount(n,1);w.now=2200;capped.globals[spec[2]]=spec[3]or nil;h.hail(capped);
+ check(not capped.globals[spec[4]],label.." expired projection refuses pending credit");
+end
+-- Already-completed players must not acquire fresh pending credit.
+for _,spec in ipairs({
+ {"nightmareb/A_Planar_Projection.lua","thelin","3","cl_terris"},
+ {"nightmareb/A_Planar_Projection.lua","thelin","4","cl_terris"}
+})do
+ w=world();killer=w:client(1,100);killer.globals[spec[2]]=spec[3];
+ n=w.module.Spawn(100,0,0,0,0,0,0,killer);local h=w:handler(spec[1],n);h.hail(killer);
+ check(not killer.globals[spec[4]] and w.module.Count(n)==0,spec[1].." completed player receives no new checklist claim");
+end
+-- Optional events: both preflag-only and original event-complete paths award
+-- exactly one boss credit, only to eligible players within the original cap/lifetime.
+for _,spec in ipairs({
+ {"nightmareb/A_Planar_Projection.lua","thelin","thelin","3","cl_terris",1200},
+ {"potorment/A_Planar_Projection.lua","tylis","saryrn","1","cl_saryrn",1800}
+})do
+ for _,pre in ipairs({"1","2"})do
+  w=world();killer=w:client(1,100);earner=w:client(2,100);stranger=w:client(3,200);
+  for _,c in ipairs({earner,stranger})do c.globals[spec[2]]=pre;end
+  n=w.module.Spawn(100,0,0,0,0,0,0,killer,spec[6]);local h=w:handler(spec[1],n);
+  h.hail(stranger);check(stranger.globals[spec[3]]~=spec[4] and not stranger.globals[spec[5]],"optional event does not waive kill eligibility");
+  earner.globals[spec[5]]="1";h.hail(earner);
+  check(earner.globals[spec[3]]==spec[4] and not earner.globals[spec[5]],"preflag/event path completes boss and clears pending credit");
+  if spec[2]=="tylis" then check(earner.globals.tylis==pre,"Saryrn does not invent Keeper rescue");end
+  for i=1,10 do h.hail(earner);end
+  w:loadHelper();h=w:handler(spec[1],n);h.hail(earner);check(w.module.Count(n)==1,"optional event path remains idempotent after reload");
+  local last=w:client(4,100);last.globals[spec[2]]=pre;w.module.SaveCount(n,71);h.hail(last);
+  check(last.globals[spec[3]]==spec[4] and w.module.Count(n)==72,"72nd eligible claim succeeds");
+  local over=w:client(5,100);over.globals[spec[2]]=pre;h.hail(over);
+  check(over.globals[spec[3]]~=spec[4] and w.module.Count(n)==72,"73rd claim refused");
+  w.module.SaveCount(n,0);w.now=1000+spec[6];h.hail(over);
+  check(over.globals[spec[3]]~=spec[4] and not over.globals[spec[5]],"expired projection refuses optional-event path");
+ end
+end
+local function say(h,c,phrase)
+ w.currentClient=c;
+ h.event_say({self=n,other=c,message={findi=function(_,needle)return phrase:lower():find(needle:lower(),1,true);end}});
+end
+-- Reconcile old pending kills with either preflag or completed event. Missing
+-- preflags remain blocked, and dialogue alone cannot fabricate boss credit.
+for _,spec in ipairs({{"thelin","cl_terris","thelin","3"},{"tylis","cl_saryrn","saryrn","1"}})do
+ for _,pre in ipairs({false,"1","2"})do
+  for _,pending in ipairs({false,true})do
+   w=world();earner=w:client(1);earner.globals[spec[1]]=pre or nil;
+   earner.globals[spec[2]]=pending and "1" or nil;
+   n=w:npc(1);local seer=w:handler("poknowledge/Seer_Mal_Nae-Shi.lua",n);
+   say(seer,earner,"unlock memories");
+   local expected=pre and pending;
+   check((earner.globals[spec[3]]==spec[4])==not not expected,"Seer requires earned boss credit and preflag");
+   if pending then check((earner.globals[spec[2]]==nil)==not not expected,"Seer only consumes reconciled credit");end
+   local completed=earner.globals[spec[3]];say(seer,earner,"unlock memories");
+   check(earner.globals[spec[3]]==completed,"repeat Seer reconciliation is stable");
+  end
+ end
+end
+-- Stale checklist flags cannot regress completed Thelin or recreate Saryrn
+-- after Maelin has consumed it for the Cipher.
+for _,flags in ipairs({{thelin="3",cl_terris="1"},{thelin="4",cl_terris="1"},
+ {tylis="1",saryrn="1",cl_saryrn="1"},{tylis="1",cipher="1",cl_saryrn="1"}})do
+ w=world();earner=w:client(1);earner.globals=flags;
+ local beforeThelin,beforeSaryrn=flags.thelin,flags.saryrn;
+ n=w:npc(1);say(w:handler("poknowledge/Seer_Mal_Nae-Shi.lua",n),earner,"unlock memories");
+ check(flags.thelin==beforeThelin and flags.saryrn==beforeSaryrn and not flags.cl_terris and not flags.cl_saryrn,"stale checklist cleanup preserves completed progress");
+end
+-- Actual dialogue chain: out-of-order Terris -> Adroha -> Seer -> Elder ->
+-- Fahlia -> saved Saryrn -> Maelin. Neither optional event is claimed.
+w=world();earner=w:client(1);earner.globals={cl_terris="1",cl_saryrn="1",fuirstel="5",mmarr="1"};n=w:npc(1);
+local seer=w:handler("poknowledge/Seer_Mal_Nae-Shi.lua",n);
+say(seer,earner,"unlock memories");check(not earner.globals.thelin and not earner.globals.saryrn,"missing preflags block pending bosses");
+say(w:handler("potranquility/Adroha_Jezith.lua",n),earner,"tortured by nightmares");
+check(earner.globals.thelin=="1","Adroha preflag still required and available");
+say(seer,earner,"unlock memories");check(earner.globals.thelin=="3","pending Terris reconciles without maze");
+w:handler("potranquility/Elder_Poxbourne.lua",n).hail(earner);check(earner.globals.thelin=="4","Elder final hail still completes Thelin");
+say(w:handler("potranquility/Fahlia_Shadyglade.lua",n),earner,"will go");check(earner.globals.tylis=="1","Fahlia grants preflag after completed earlier chains");
+say(seer,earner,"unlock memories");check(earner.globals.saryrn=="1" and earner.globals.tylis=="1","pending Saryrn reconciles without Keeper rescue");
+w:handler("poknowledge/Grand_Librarian_Maelin.lua",n).hail(earner);
+check(earner.globals.cipher=="1" and not earner.globals.mmarr and not earner.globals.saryrn,"Maelin combines earned halves normally");
+check(not earner.globals.time and not earner.globals.zebuxoruk and not earner.globals.zeks,"optional events grant no unrelated progression");
+-- Fahlia continues to reject incomplete Terris or Bertox chains.
+for _,flags in ipairs({{}, {thelin="3",fuirstel="5"}, {thelin="4",fuirstel="4"}})do
+ w=world();earner=w:client(1);earner.globals=flags;n=w:npc(1);
+ say(w:handler("potranquility/Fahlia_Shadyglade.lua",n),earner,"will go");
+ check(not earner.globals.tylis,"Fahlia's earlier progression requirements remain intact");
 end
 -- Explicit GM status requests are read-only and do not write server logs.
 w=world();killer=w:client(1,100);n=w.module.Spawn(220025,0,0,0,0,0,0,killer);
