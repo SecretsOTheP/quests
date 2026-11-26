@@ -28,8 +28,9 @@ function event_say(e)
 
 		if ( e.message:findi("hail") ) then 
 		
-			if ( qglobals.thelin ) then
-				if ( qglobals.thelin == "2" and flags < FLAG_LIMIT ) then
+			-- The Adroha preflag remains required; the Hedge Maze is optional.
+			if ( qglobals.thelin == "1" or qglobals.thelin == "2" ) then
+				if ( flags < FLAG_LIMIT ) then
 					e.other:Message(0, "You recognize the voice in your mind to be Thelin Poxbourne's.  The words echo, 'The cruel hand of Terris no longer shall torment my dreams.  Thank you friends, you are my savior.  Please return to me in the Plane of Tranquility.  I would like to express to you my gratitude.'");
 					eq.set_global("thelin", "3", 5, "F");
 					e.other:Message(15, "You have received a character flag!");
@@ -39,9 +40,9 @@ function event_say(e)
 						eq.delete_global("cl_terris");
 					end
 				end
-			elseif ( not qglobals.thelin or qglobals.thelin == "1" ) then
-				if ( not qglobals.cl_terris and flags <= FLAG_LIMIT ) then
-					-- no text for this checklist flag; probably because it wasn't possible to enter the zone without the maze flag when the first made it
+			elseif ( not qglobals.thelin ) then
+				if ( not qglobals.cl_terris and flags < FLAG_LIMIT ) then
+					-- Keep kill credit for eligible entrants who have not obtained the preflag.
 					eq.set_global("cl_terris", "1", 5, "F");
 					e.other:Message(15, "You have received a new checklist flag!");
 					flags = flags + 1;

@@ -352,7 +352,16 @@ function UnlockMemories(client)
 				end
 			end
 			
-			if ( qglobals[reqFlagName] and qglobals[reqFlagName] == reqFlagValue ) then
+			-- These boss flags need their preflag dialogue, but no longer require
+			-- the Hedge Maze or Keeper rescue. Preserve the original completed-event path.
+			local optionalEvent = (flagName == "cl_terris" or flagName == "cl_saryrn")
+				and qglobals[reqFlagName] == "1";
+			local alreadyComplete = (flagName == "cl_terris" and (qglobals.thelin == "3" or qglobals.thelin == "4"))
+				or (flagName == "cl_saryrn" and (qglobals.saryrn or qglobals.cipher));
+			if ( alreadyComplete ) then
+				-- Stale checklist credit must not recreate a consumed flag or regress progress.
+				eq.delete_global(flagName);
+			elseif ( optionalEvent or (qglobals[reqFlagName] and qglobals[reqFlagName] == reqFlagValue) ) then
 				
 				client:Message(257, unlockedText);
 				eq.set_global(newFlagName, newFlagValue, 5, "F");
