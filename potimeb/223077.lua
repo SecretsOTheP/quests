@@ -408,6 +408,10 @@ function SetInstanceGlobals()
 	if ( guildCycle ) then
 		eq.set_global("time_cycle_"..zoneInstanceID, Cycle.encode(guildCycle), 2, "D30");
 		eq.set_global("time_p1_lockout_"..zoneInstanceID, tostring(guildCycle.started)..":84h", 2, "D30");
+		if ( guildCycle.phase3_checkpoint ) then
+			-- Keep the existing cycle format readable by Time A and #timelockout.
+			eq.set_global("time_p3_checkpoint_"..zoneInstanceID, tostring(guildCycle.started), 2, "D30");
+		end
 	end
 	if ( zoneInstanceGeneration ) then
 		eq.set_global("time_generation_"..zoneInstanceID, zoneInstanceGeneration, 2, "D30");
@@ -707,6 +711,8 @@ function LoadGuildCycle(qglobals, instanceID)
 		value = Cycle.new(os.time(), checkpoint);
 	end
 	guildCycle = value;
+	-- A marker from an older allocation must not unlock a new timeline.
+	guildCycle.phase3_checkpoint = qglobals["time_p3_checkpoint_"..instanceID] == tostring(guildCycle.started);
 	-- Upgrade the old 12-hour deadline from its original first kill, not from now.
 	-- Do this before expiry clears saved kills, and only once for this cycle.
 	if ( qglobals["time_p1_lockout_"..instanceID] ~= tostring(guildCycle.started)..":84h"
@@ -856,15 +862,15 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 				eq.debug("Critical Error: All instance qglobals are in use.");
 				return;
 			end
-			-- The P4 checkpoint skips all early phases for the rest of this cycle.
-			-- Before that checkpoint, saved P1 kills still control retries and shadows.
+			-- P3/P4 checkpoints preserve completed early phases for this cycle.
+			-- Before either checkpoint, saved P1 kills control retries and shadows.
 			zonePhase = 1;
 			zoneRaidID = raidID;
 			phase3Completed = false;
 			phaseAdvancePending, forceClose = false, false;
 			phaseOneStarted = false;
 			emptySince = nil;
-			local phaseOneUp = not guildCycle.checkpoint and CheckPhaseStatus(1);
+			local phaseOneUp = not guildCycle.checkpoint and not guildCycle.phase3_checkpoint and CheckPhaseStatus(1);
 			eq.set_timer("cycle_end", math.max(1, guildCycle.ends - os.time()) * 1000);
 			SendSignalRequestConfirm(1, charID..";"..dialNum..";"..raidID..";"..instanceID);
 			SetInstanceGlobals();
@@ -941,7 +947,11 @@ eq.debug("zone inactive and player has no instance; creating new instance and no
 		end
 		
 	elseif ( e.signal == 7 ) then		-- phase 2 completed
-		if ( zonePhase == 2 ) then
+		if ( zonePhase == 2 and not phaseAdvancePending and not forceClose
+			and os.time() < failTime and not Cycle.expired(guildCycle, os.time()) ) then
+			-- Save immediately, even if everyone leaves during the transition dialogue.
+			guildCycle.phase3_checkpoint = true;
+			SetInstanceGlobals();
 			PhaseDialog();
 		end
 
@@ -1183,10 +1193,11 @@ function GetAdditionalHours(phase)
 end
 
 function GetNextPhase()
-	-- Early phases must finish in this attempt until the P4 checkpoint is earned.
+	-- P2 completion unlocks a P3 retry; only P3 completion unlocks the gods.
 	if ( zonePhase < 3 and not guildCycle.checkpoint ) then
-		CheckPhaseStatus(zonePhase + 1);
-		return zonePhase + 1;
+		local nextPhase = guildCycle.phase3_checkpoint and 3 or zonePhase + 1;
+		CheckPhaseStatus(nextPhase);
+		return nextPhase;
 	end
 	local p = math.max(4, zonePhase + 1);
 	for i = p, 6 do
@@ -1254,8 +1265,9 @@ function PhaseDialog()
 	failTime = math.max(failTime, now) + 3600*GetAdditionalHours(nextPhase);
 	eq.set_timer("fail", (failTime - now)*1000);
 	SetFailWarningTimer();
-	if ( zonePhase == 1 and guildCycle.checkpoint ) then
-		eq.zone_emote(0, "Your guild has already cleared Phases 1 through 3 this cycle. Your saved progress opens the way to Phase "..nextPhase..".");
+	if ( zonePhase == 1 and (guildCycle.checkpoint or guildCycle.phase3_checkpoint) ) then
+		local clearedPhase = guildCycle.checkpoint and 3 or 2;
+		eq.zone_emote(0, "Your guild has already cleared Phases 1 through "..clearedPhase.." this cycle. Your saved progress opens the way to Phase "..nextPhase..".");
 		PhaseStart();
 		return;
 	end
